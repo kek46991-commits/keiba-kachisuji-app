@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🏇 勝ち筋解析システム</title>
+  <meta name="description" content="かずさん理論 × 物理統計 — パドック解析で期待値を最大化する競馬分析サイト" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <h1 class="logo">🏇 勝ち筋解析システム</h1>
+      <p class="tagline">かずさん理論 × 物理統計 — パドック解析で期待値を最大化</p>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- サイドバー: レース設定 -->
+    <aside class="sidebar">
+      <h2 class="sidebar-title">🏟️ レース設定</h2>
+
+      <label class="field">
+        <span>開催場所</span>
+        <select id="location"></select>
+      </label>
+      <p id="course-info" class="course-info"></p>
+
+      <h2 class="sidebar-title">🌤️ 環境データ</h2>
+
+      <label class="field">
+        <span>天候</span>
+        <select id="weather"></select>
+      </label>
+
+      <label class="field">
+        <span>気温 (℃): <b id="temp-val">22</b></span>
+        <input type="range" id="temp" min="-5" max="40" value="22" />
+      </label>
+
+      <label class="field">
+        <span>湿度 (%): <b id="humidity-val">55</b></span>
+        <input type="range" id="humidity" min="0" max="100" value="55" />
+      </label>
+
+      <label class="field">
+        <span>馬場含水率: <b id="cond-val">0.04</b></span>
+        <input type="range" id="track_cond" min="0" max="0.30" step="0.01" value="0.04" />
+      </label>
+
+      <label class="field">
+        <span>馬場</span>
+        <select id="track_type"></select>
+      </label>
+
+      <label class="field">
+        <span>距離 (m)</span>
+        <select id="distance"></select>
+      </label>
+
+      <p class="baba-state">馬場状態: <strong id="baba-label">良</strong></p>
+
+      <button id="analyze-btn" class="primary-btn">🚀 解析実行</button>
+    </aside>
+
+    <!-- メインコンテンツ -->
+    <main class="content">
+      <nav class="tabs">
+        <button class="tab active" data-tab="input">📝 馬データ入力</button>
+        <button class="tab" data-tab="results">📊 解析結果</button>
+        <button class="tab" data-tab="box">🎰 買い目計算</button>
+      </nav>
+
+      <!-- 馬データ入力 -->
+      <section id="tab-input" class="tab-panel active">
+        <h2>🐴 出走馬データ入力</h2>
+        <div class="controls">
+          <label class="inline-field">
+            頭数
+            <input type="number" id="num-horses" min="1" max="18" value="5" />
+          </label>
+          <button id="sample-btn" class="ghost-btn">🎲 サンプル生成</button>
+        </div>
+        <div id="horse-list" class="horse-list"></div>
+      </section>
+
+      <!-- 解析結果 -->
+      <section id="tab-results" class="tab-panel">
+        <div id="results-empty" class="info-box">
+          サイドバーの「🚀 解析実行」ボタンを押して解析を開始してください。
+        </div>
+        <div id="results-content" style="display:none;">
+          <h2>📊 解析結果レポート</h2>
+          <p id="results-meta" class="meta"></p>
+
+          <div class="metric-grid">
+            <div class="metric-card"><span class="metric-label">出走頭数</span><span class="metric-value" id="m-count">-</span></div>
+            <div class="metric-card"><span class="metric-label">激アツ馬</span><span class="metric-value" id="m-atsui">-</span></div>
+            <div class="metric-card"><span class="metric-label">最高期待値</span><span class="metric-value" id="m-top">-</span><span class="metric-sub" id="m-top-uma"></span></div>
+            <div class="metric-card"><span class="metric-label">平均期待値</span><span class="metric-value" id="m-avg">-</span></div>
+          </div>
+
+          <h3>🔥 勝ち筋候補</h3>
+          <div id="kachisuji-list"></div>
+
+          <h3>📋 全馬解析結果</h3>
+          <div class="table-wrap">
+            <table id="results-table">
+              <thead>
+                <tr>
+                  <th>馬番</th><th>馬名</th><th>オッズ</th><th>基礎点</th>
+                  <th>物理補正</th><th>状態補正</th><th>合計スコア</th>
+                  <th>勝率</th><th>期待値</th><th>判定</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="chart-grid">
+            <div class="chart-box">
+              <h4>期待値チャート</h4>
+              <canvas id="ev-chart"></canvas>
+            </div>
+            <div class="chart-box">
+              <h4>スコア内訳</h4>
+              <canvas id="score-chart"></canvas>
+            </div>
+          </div>
+
+          <h3>🔍 詳細分析</h3>
+          <div id="details-list"></div>
+        </div>
+      </section>
+
+      <!-- 買い目計算 -->
+      <section id="tab-box" class="tab-panel">
+        <h2>🎰 ボックス買い目計算機</h2>
+        <div class="controls">
+          <label class="inline-field">
+            馬券種別
+            <select id="bet-type"></select>
+          </label>
+          <label class="inline-field">
+            1点あたりの金額 (円)
+            <input type="number" id="unit-price" min="100" max="100000" step="100" value="100" />
+          </label>
+        </div>
+
+        <div class="field">
+          <span>ボックスに含める馬番</span>
+          <div id="box-checkboxes" class="checkbox-grid"></div>
+        </div>
+
+        <div class="metric-grid">
+          <div class="metric-card"><span class="metric-label">選択頭数</span><span class="metric-value" id="box-n">0頭</span></div>
+          <div class="metric-card"><span class="metric-label">買い目点数</span><span class="metric-value" id="box-tickets">0点</span></div>
+          <div class="metric-card"><span class="metric-label">合計投資額</span><span class="metric-value" id="box-cost">¥0</span></div>
+        </div>
+
+        <h4>📝 頭数別点数表</h4>
+        <div class="table-wrap">
+          <table id="ref-table">
+            <thead><tr><th>頭数</th><th>馬券種</th><th>点数</th><th>投資額</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <p>🏇 勝ち筋解析システム — かずさん理論 × 物理統計 / シミュレーション用ツール（投資は自己責任で）</p>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
