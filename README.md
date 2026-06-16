@@ -2,23 +2,51 @@
 
 **かずさん理論 × 物理統計** — パドック解析で期待値を最大化する競馬分析アプリ
 
+2つの形態で利用できます:
+
+1. **静的Webサイト版 (`site/`)** — サーバー不要。ブラウザだけで動作し、GitHub Pages / Netlify / Vercel などにそのままデプロイ可能。
+2. **Streamlitアプリ版 (`app.py`)** — Python製。ローカルで `streamlit run` して利用。
+
 ## 機能
 
 - **レース設定**: 全10競馬場対応、天候・馬場状態・距離の設定
 - **パドック解析**: ストライド、弾み、毛艶、発汗、集中度などの指標入力
 - **勝ち筋判定**: 物理補正 + コンディション補正 → 期待値算出
 - **ボックス買い目計算機**: 三連単/三連複/馬連/馬単/ワイドの点数・投資額計算
-- **ビジュアル分析**: Plotlyによるインタラクティブなグラフ表示
+- **ビジュアル分析**: インタラクティブなグラフ表示（静的版はChart.js、Streamlit版はPlotly）
 
-## セットアップ
+## 静的Webサイト版 (推奨・デプロイ向け)
+
+ビルド不要の純粋なHTML/CSS/JS。`site/` ディレクトリをそのまま静的ホスティングに置くだけ。
+
+### ローカルで確認
+
+```bash
+cd site
+python -m http.server 8080
+# ブラウザで http://localhost:8080 を開く
+```
+
+### デプロイ
+
+- **GitHub Pages**: リポジトリ設定で `site/` を公開ディレクトリに指定（または `site/` の中身をルートに配置）。
+- **Netlify**: Publish directory に `site` を指定（ビルドコマンドは不要）。
+- **Vercel**: Root Directory に `site` を指定（Framework Preset は "Other"）。
+
+構成:
+
+```
+site/
+  index.html      # マークアップ
+  styles.css      # ダークテーマのスタイル
+  js/engine.js    # 解析エンジン (JavaScript移植版)
+  js/app.js       # UIロジック・Chart.js描画
+```
+
+## Streamlitアプリ版
 
 ```bash
 pip install -r requirements.txt
-```
-
-## 起動
-
-```bash
 streamlit run app.py
 ```
 
