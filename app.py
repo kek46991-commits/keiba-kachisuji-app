@@ -453,17 +453,18 @@ def _train_model(races_df: pd.DataFrame):
     return train_from_races(races_df)
 
 
-def _get_dataset() -> pd.DataFrame | None:
+def _get_dataset(key_prefix: str) -> pd.DataFrame | None:
     """ML タブ用のデータセットを取得する (アップロード or 合成)。"""
     src = st.radio(
         "データソース",
         ["合成データ (検証用デモ)", "CSVアップロード"],
         horizontal=True,
-        key="ml_data_src",
+        key=f"{key_prefix}_data_src",
     )
     if src == "CSVアップロード":
         up = st.file_uploader(
-            "レース CSV をアップロード (data/sample_races.csv と同じ列)", type="csv"
+            "レース CSV をアップロード (data/sample_races.csv と同じ列)",
+            type="csv", key=f"{key_prefix}_uploader",
         )
         if up is None:
             st.info("CSV をアップロードするか、合成データを選択してください。")
@@ -487,7 +488,7 @@ def render_ml_prediction():
         "過去成績・距離/競馬場適性・馬場などの特徴量から各馬の勝率を学習し、"
         "レース内で合計100%に正規化した予測勝率 × 確定オッズ で期待値を算出します。"
     )
-    df = _get_dataset()
+    df = _get_dataset("ml")
     if df is None:
         return
 
@@ -555,7 +556,7 @@ def render_backtest():
         "「儲かる」とは言えません。本ツールの目的は利益保証ではなく、ロジックの有効性を"
         "実データで定量評価することです。"
     )
-    df = _get_dataset()
+    df = _get_dataset("bt")
     if df is None:
         return
 
