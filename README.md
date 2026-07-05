@@ -104,6 +104,31 @@ streamlit run app.py
 - **🎰 買い目計算**: ボックス点数・投資額
 - **📝/📊 パドック (レガシー)**: 旧経験則のデモ (検証用途には非推奨)
 
+## Web SaaS 版
+
+`site/` の静的 UI をそのまま使う Web 版を、FastAPI + Stripe サブスクで公開する構
+成を追加しました。
+
+### ローカル起動
+
+```bash
+pip install -r requirements.txt
+pip install -r web/requirements.txt
+DEMO_MODE=1 uvicorn web.server:app --port 8000
+```
+
+### Docker / PaaS
+
+```bash
+docker build -t keiba-kachisuji .
+docker run --rm -p 8000:8000 -e PORT=8000 -e DEMO_MODE=1 keiba-kachisuji
+```
+
+Render / Railway / Fly では、この Dockerfile をそのまま使い、環境変数
+`APP_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`
+を設定してください。Stripe の鍵が未設定でも landing page は表示され、checkout は
+`Stripe未設定` エラーを返します。
+
 ## デスクトップアプリ
 
 Streamlit アプリを起動するデスクトップ向けランチャーと、PyInstaller 用のパッケー

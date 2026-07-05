@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>勝ち筋解析システム | 競馬EV分析 SaaS</title>
+  <meta name="description" content="実データ × 機械学習 × バックテストで競馬の期待値を検証するサブスク型 SaaS" />
+  <style>
+    :root {
+      --bg: #0f1020;
+      --panel: #17192e;
+      --panel-2: #1f2240;
+      --text: #eef0ff;
+      --muted: #adb3d9;
+      --accent: #7c8cff;
+      --accent-2: #9c5cff;
+      --warn: #ffbf69;
+      --danger: #ff6b81;
+      --line: rgba(255,255,255,0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      background: radial-gradient(circle at top, #1b1e3b 0, var(--bg) 50%);
+      color: var(--text);
+    }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 20px 48px; }
+    .hero {
+      background: linear-gradient(135deg, rgba(124,140,255,.22), rgba(156,92,255,.18));
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 24px 70px rgba(0,0,0,.28);
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: .02em;
+    }
+    h1 { margin: 16px 0 12px; font-size: clamp(32px, 5vw, 56px); line-height: 1.1; }
+    .lead { font-size: 18px; color: var(--muted); max-width: 760px; }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 18px;
+      margin-top: 24px;
+    }
+    .card {
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 22px;
+    }
+    .price {
+      font-size: 42px;
+      font-weight: 800;
+      margin: 8px 0 4px;
+    }
+    .muted { color: var(--muted); }
+    ul { padding-left: 20px; color: var(--muted); }
+    li { margin: 8px 0; }
+    .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+    .btn {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: white;
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,.08);
+      color: var(--text);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .warning {
+      margin-top: 18px;
+      padding: 16px 18px;
+      border-left: 4px solid var(--warn);
+      background: rgba(255,191,105,.1);
+      color: #ffe8c2;
+      border-radius: 12px;
+      line-height: 1.75;
+    }
+    .danger {
+      margin-top: 12px;
+      padding: 16px 18px;
+      border-left: 4px solid var(--danger);
+      background: rgba(255,107,129,.08);
+      color: #ffd9df;
+      border-radius: 12px;
+      line-height: 1.75;
+    }
+    .section {
+      margin-top: 18px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 22px;
+    }
+    .restore {
+      display: grid;
+      gap: 10px;
+      max-width: 420px;
+    }
+    .restore input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--text);
+    }
+    .status { min-height: 1.5em; color: var(--warn); }
+    footer { margin-top: 24px; color: var(--muted); font-size: 14px; text-align: center; }
+    code { background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 6px; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <span class="badge">サブスク型 競馬EV分析 SaaS</span>
+      <h1>勝ち筋解析システム</h1>
+      <p class="lead">
+        実データ × 機械学習 × バックテストで、競馬の期待値を検証するための分析ツールです。
+        静的デモではなく、購読者向けに公開する本番Web版として提供します。
+      </p>
+
+      <div class="grid">
+        <div class="card">
+          <h2>何ができるか</h2>
+          <ul>
+            <li>予測勝率と期待値の算出</li>
+            <li>レース内での相対比較と買い目候補の確認</li>
+            <li>買い目計算と検証フローの可視化</li>
+            <li>将来的にデータ接続や自動レポートへ拡張可能</li>
+          </ul>
+          <div class="cta-row">
+            <button class="btn btn-primary" id="checkout-btn">購読する</button>
+            {% if demo_mode %}
+            <a class="btn btn-secondary" href="/app">デモで試す</a>
+            {% endif %}
+          </div>
+          <p class="muted" id="checkout-status"></p>
+        </div>
+
+        <div class="card">
+          <h2>料金</h2>
+          <div class="price">{{ pricing_label }}</div>
+          <p class="muted">Stripe サブスクリプションで月次課金。</p>
+          <p class="muted">キャンセルは Stripe の請求ポータルから可能です。</p>
+        </div>
+      </div>
+
+      <div class="warning">
+        <strong>重要:</strong>
+        本サービスは <strong>分析 / 期待値( EV ) の検証ツール</strong> であり、利益を保証するものではありません。
+        競馬には約 20〜30% の控除率があり、単勝でも約 20% のテラ銭があります。
+        市場どおりに買うと平均回収率は約 80% に留まるため、<strong>バックテストで回収率 100% 超を継続して確認できない限り「儲かる」とは言えません</strong>。
+      </div>
+      <div class="danger">
+        <strong>注意:</strong>
+        18歳未満の方や、居住地域で賭博関連サービスが制限される場合は利用できません。
+        法令・規約・地域ルールを必ず確認してください。投資・投票判断は自己責任です。
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>アクセス復元</h2>
+      <p class="muted">
+        購読後にログイン情報を失った場合のMVP機能です。<strong>メール認証は未実装</strong>で、
+        Stripe 上の有効な購読をメールで検索して cookie を再発行します。
+        本番では magic-link などの強化を予定しています。
+      </p>
+      <form class="restore" id="restore-form">
+        <input type="email" name="email" placeholder="checkout に使ったメールアドレス" required />
+        <button class="btn btn-primary" type="submit">アクセスを復元</button>
+        <div class="status" id="restore-status"></div>
+      </form>
+    </section>
+  </div>
+
+  <footer>
+    競馬の予測・検証ツールです。購入・参加は自己責任でお願いします。
+  </footer>
+
+  <script>
+    const statusEl = document.getElementById("checkout-status");
+    const restoreStatusEl = document.getElementById("restore-status");
+
+    document.getElementById("checkout-btn").addEventListener("click", async () => {
+      statusEl.textContent = "Stripe のチェックアウトを準備中...";
+      try {
+        const res = await fetch("/api/checkout", { method: "POST" });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || "checkout failed");
+        }
+        window.location.href = data.url;
+      } catch (error) {
+        statusEl.textContent = error.message;
+      }
+    });
+
+    document.getElementById("restore-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const fd = new FormData(form);
+      restoreStatusEl.textContent = "復元中...";
+      try {
+        const res = await fetch("/api/restore", { method: "POST", body: fd });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || "restore failed");
+        }
+        restoreStatusEl.textContent = data.message;
+        window.location.href = "/app";
+      } catch (error) {
+        restoreStatusEl.textContent = error.message;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -8,6 +8,8 @@ venv/
 dist/
 build/
 .streamlit/secrets.toml
+web/subscribers.db
+web/*.sqlite
 
 # データ/モデルの生成物 (スキーマ確認用の data/sample_races.csv は追跡する)
 data/cache/
