@@ -17,6 +17,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+from data.fetch import filter_grade
 from features import FEATURE_COLUMNS, build_features, split_xy
 
 try:  # LightGBM は任意依存。無ければ sklearn にフォールバック。
@@ -138,7 +139,7 @@ class WinProbabilityModel:
 def train_from_races(races_df: pd.DataFrame,
                      config: TrainConfig | None = None) -> WinProbabilityModel:
     """生レースデータから特徴量生成 → 学習までを一括で行う。"""
-    feats = build_features(races_df)
+    feats = build_features(filter_grade(races_df, "G1"))
     return WinProbabilityModel(config).fit(feats)
 
 
@@ -150,7 +151,7 @@ def predict_race(model: WinProbabilityModel, history_df: pd.DataFrame,
     (特徴量は過去のみ参照するため対象レースの結果は使われない)。
     返り値は対象レースの行に ``pred_win_prob`` 列を加えたもの。
     """
-    feats = build_features(history_df)
+    feats = build_features(filter_grade(history_df, "G1"))
     race = feats[feats["race_id"] == race_id].copy()
     if race.empty:
         raise ValueError(f"race_id が見つかりません: {race_id}")

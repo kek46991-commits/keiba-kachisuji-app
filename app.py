@@ -20,7 +20,7 @@ from engine import (
     calc_box_tickets,
     generate_sample_horses,
 )
-from data.fetch import generate_synthetic_dataset, load_races_csv
+from data.fetch import filter_grade, generate_synthetic_dataset, load_races_csv
 from model import predict_race, train_from_races
 from backtest import run_backtest
 
@@ -445,7 +445,7 @@ def render_box_calculator(results: list[AnalysisResult]):
 
 @st.cache_data(show_spinner=False)
 def _load_synthetic():
-    return generate_synthetic_dataset()
+    return filter_grade(generate_synthetic_dataset(), "G1")
 
 
 @st.cache_resource(show_spinner=True)
@@ -470,23 +470,23 @@ def _get_dataset(key_prefix: str) -> pd.DataFrame | None:
             st.info("CSV をアップロードするか、合成データを選択してください。")
             return None
         try:
-            return load_races_csv(up)
+            return filter_grade(load_races_csv(up), "G1")
         except Exception as e:  # noqa: BLE001
             st.error(f"読み込みエラー: {e}")
             return None
     st.caption(
         "⚠️ 合成データは実在レースではなくアルゴリズムで生成したダミーです。"
-        "パイプライン検証用であり、ここでの回収率は実市場の成績を意味しません。"
+        "G1 専用のパイプライン検証用であり、ここでの回収率は実市場の成績を意味しません。"
     )
     return _load_synthetic()
 
 
 def render_ml_prediction():
     """学習済みモデルによるデータ駆動予測。"""
-    st.markdown("## 🤖 データ駆動予測 (機械学習)")
+    st.markdown("## 🤖 データ駆動予測 (G1専用)")
     st.caption(
         "過去成績・距離/競馬場適性・馬場などの特徴量から各馬の勝率を学習し、"
-        "レース内で合計100%に正規化した予測勝率 × 確定オッズ で期待値を算出します。"
+        "G1 レース内で合計100%に正規化した予測勝率 × 確定オッズ で期待値を算出します。"
     )
     df = _get_dataset("ml")
     if df is None:
@@ -550,7 +550,7 @@ def render_ml_prediction():
 
 def render_backtest():
     """過去データでのバックテスト。"""
-    st.markdown("## 🧪 バックテスト (検証)")
+    st.markdown("## 🧪 バックテスト (G1専用検証)")
     st.warning(
         "競馬は控除率が約20〜30%あります。**回収率100%超 (ROIプラス)** を継続できない限り"
         "「儲かる」とは言えません。本ツールの目的は利益保証ではなく、ロジックの有効性を"
@@ -608,16 +608,16 @@ def main():
 
     st.markdown('<div class="main-header">🏇 勝ち筋解析システム</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="sub-header">実データ × 機械学習 × バックテストで期待値を検証</div>',
+        '<div class=\"sub-header\">G1専用の実データ × 機械学習 × バックテストで期待値を検証</div>',
         unsafe_allow_html=True,
     )
 
     location, env = render_sidebar()
 
-    # タブ (ML予測とバックテストが新ロジック、パドック解析はレガシーデモ)
+    # タブ (G1専用ML予測とバックテストが新ロジック、パドック解析はレガシーデモ)
     tab_ml, tab_bt, tab_box, tab1, tab2 = st.tabs([
-        "🤖 データ駆動予測",
-        "🧪 バックテスト",
+        "🤖 データ駆動予測 (G1専用)",
+        "🧪 バックテスト (G1専用)",
         "🎰 買い目計算",
         "📝 パドック入力(レガシー)",
         "📊 パドック解析結果(レガシー)",

@@ -20,6 +20,9 @@ def races():
 def test_synthetic_schema(races):
     assert list(races.columns) == RACE_COLUMNS
     assert races["is_synthetic"].eq(1).all()
+    assert races["grade"].eq("G1").all()
+    assert races["race_id"].nunique() >= 200
+    assert races["field_size"].between(16, 18).all()
     # 各レースに 1 着が 1 頭だけ存在する。
     winners = races[races["finish_pos"] == 1].groupby("race_id").size()
     assert (winners == 1).all()
@@ -78,7 +81,8 @@ def test_time_split_ordering(races):
 
 def test_backtest_runs(races):
     report = run_backtest(races, train_frac=0.7, ev_threshold=1.1, box_size=5)
-    assert report.valid_races > 0
+    assert report.train_races >= 100
+    assert report.valid_races >= 50
     df = report.to_frame()
     assert {"回収率%", "ROI%", "的中率"}.issubset(df.columns)
     # 回収率と ROI は整合する (ROI% = 回収率% - 100)。

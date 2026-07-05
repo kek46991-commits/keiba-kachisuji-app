@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 
 from engine import calc_box_tickets
+from data.fetch import filter_grade
 from features import build_features
 from model import TrainConfig, WinProbabilityModel
 
@@ -193,6 +194,7 @@ def run_backtest(
     config: TrainConfig | None = None,
 ) -> BacktestReport:
     """学習 → 検証 → 集計までを実行してレポートを返す。"""
+    races_df = filter_grade(races_df, "G1")
     train_raw, valid_raw, split_date = time_split(races_df, train_frac)
 
     # 特徴量は全期間の履歴を使って構築 (各行は過去のみ参照するためリークしない)。

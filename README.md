@@ -70,27 +70,30 @@ python model.py --csv data/sample_races.csv --out data/cache/model.pkl
 python backtest.py --csv data/sample_races.csv --train-frac 0.7 --ev-threshold 1.1
 ```
 
-各引数を省略すると合成データで動作します。
+各引数を省略すると G1 専用の合成データで動作します。
+`data.fetch` の生成 CLI は `--seasons` と `--races-per-season` で G1 の量を調整で
+きます。
 
 ### モジュール構成
 
 | モジュール | 役割 |
 |------------|------|
-| `data/fetch.py` | 過去レースの出走表・結果・確定オッズを CSV/SQLite で取得・保存。実データが無い環境向けに合成データ生成器を同梱 (`is_synthetic=1` で明示) |
+| `data/fetch.py` | 過去レースの出走表・結果・確定オッズを CSV/SQLite で取得・保存。`grade` 列で G1/G2/G3/OP を表し、既定の合成データは G1 専用。`filter_grade()` で G1 へ絞り込める |
 | `features.py` | 各出走時点で **過去のみ参照** して特徴量を生成 (リーク防止)。通算/直近成績、距離・競馬場・馬場適性、休養、斤量など。確定オッズ・人気は市場情報リーク防止のため特徴量に含めない |
-| `model.py` | 1着確率を学習する二値分類器。推論時は **レース単位で softmax 正規化** し、出走馬の勝率合計が 1 になる確率を出力 |
-| `backtest.py` | 時系列分割で学習/検証し、`calc_box_tickets` で投資額を算出しつつ的中率・回収率を集計 |
+| `model.py` | 1着確率を学習する二値分類器。推論時は **レース単位で softmax 正規化** し、G1 だけを学習・推論対象にする |
+| `backtest.py` | 時系列分割で学習/検証し、G1 だけを対象に `calc_box_tickets` で投資額を算出しつつ的中率・回収率を集計 |
 | `engine.py` | 予測勝率から期待値・判定を組み立てる (`analyze_entries`)。旧パドック経験則 (`analyze_horse`) はレガシー |
 
 ### データスキーマ (`data/sample_races.csv` と同じ列を用意すれば実データを差し替え可能)
 
-`race_id, date, course, track_type, distance, weather, track_moisture, field_size,
+`race_id, date, course, track_type, grade, distance, weather, track_moisture, field_size,
 horse_id, horse_name, umaban, waku, sex, age, jockey, weight_carried, horse_weight,
 horse_weight_diff, odds, popularity, finish_pos, is_synthetic`
 
 > **実データソースについて**: JRA / netkeiba 等のスクレイピングは利用規約・法的にグレーで
 > 安定取得も難しいため、本リポジトリでは同梱しません。上記スキーマの CSV を用意して
 > `data/fetch.py` の `load_races_csv` に渡せば、そのまま学習・バックテストできます。
+> `grade` 列が無い古い CSV / SQLite は自動的に `OP` として読み込みますが、学習・バックテストは `G1` のみを使用します。
 
 ## Streamlitアプリ版
 
@@ -99,8 +102,8 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-- **🤖 データ駆動予測**: CSV/合成データを学習し、選択レースの予測勝率・期待値・買い目候補を表示
-- **🧪 バックテスト**: 学習割合・EV閾値・ボックス頭数を指定して回収率を検証
+- **🤖 データ駆動予測 (G1専用)**: CSV/合成データを G1 に絞って学習し、選択レースの予測勝率・期待値・買い目候補を表示
+- **🧪 バックテスト (G1専用)**: 学習割合・EV閾値・ボックス頭数を指定して G1 の回収率を検証
 - **🎰 買い目計算**: ボックス点数・投資額
 - **📝/📊 パドック (レガシー)**: 旧経験則のデモ (検証用途には非推奨)
 
