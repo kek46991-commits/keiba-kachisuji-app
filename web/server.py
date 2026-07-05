@@ -19,7 +19,19 @@ WEB_DIR = Path(__file__).resolve().parent
 ROOT_DIR = WEB_DIR.parent
 SITE_DIR = ROOT_DIR / "site"
 TEMPLATES_DIR = WEB_DIR / "templates"
-DB_PATH = WEB_DIR / "subscribers.db"
+DEFAULT_SQLITE_DB_PATH = WEB_DIR / "subscribers.db"
+
+
+def _sqlite_db_path() -> Path:
+    configured = os.getenv("SUBSCRIBERS_DB_PATH")
+    if configured:
+        return Path(configured)
+    if os.getenv("VERCEL") or os.getenv("NETLIFY"):
+        return Path("/tmp/subscribers.db")
+    return DEFAULT_SQLITE_DB_PATH
+
+
+SUBSCRIBERS_DB_PATH = _sqlite_db_path()
 
 COOKIE_NAME = "kachisuji_session"
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
@@ -48,25 +60,222 @@ def _value(obj: Any, key: str, default: Any = None) -> Any:
     return getattr(obj, key, default)
 
 
-def _db() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS subscribers (
-            stripe_customer_id TEXT PRIMARY KEY,
-            email TEXT NOT NULL UNIQUE,
-            stripe_subscription_id TEXT,
-            status TEXT NOT NULL,
-            current_period_end INTEGER,
-            updated_at TEXT NOT NULL
-        )
-        """
-    )
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_subscribers_email ON subscribers(email)"
-    )
-    return conn
+class SubscriberStore:
+    def ensure_schema(self) -> None:
+        raise NotImplementedError
+
+    def upsert(
+        self,
+        *,
+        stripe_customer_id: str,
+        email: str,
+        stripe_subscription_id: str | None,
+        status: str,
+        current_period_end: int | None,
+    ) -> None:
+        raise NotImplementedError
+
+    def get(
+        self,
+        *,
+        customer_id: str | None = None,
+        email: str | None = None,
+    ) -> sqlite3.Row | dict[str, Any] | None:
+        raise NotImplementedError
+
+
+class SQLiteSubscriberStore(SubscriberStore):
+    def __init__(self, path: Path):
+        self.path = path
+
+    def _connect(self) -> sqlite3.Connection:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(self.path)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    def ensure_schema(self) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS subscribers (
+                    stripe_customer_id TEXT PRIMARY KEY,
+                    email TEXT NOT NULL UNIQUE,
+                    stripe_subscription_id TEXT,
+                    status TEXT NOT NULL,
+                    current_period_end INTEGER,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_subscribers_email ON subscribers(email)"
+            )
+
+    def upsert(
+        self,
+        *,
+        stripe_customer_id: str,
+        email: str,
+        stripe_subscription_id: str | None,
+        status: str,
+        current_period_end: int | None,
+    ) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO subscribers (
+                    stripe_customer_id,
+                    email,
+                    stripe_subscription_id,
+                    status,
+                    current_period_end,
+                    updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(stripe_customer_id) DO UPDATE SET
+                    email = excluded.email,
+                    stripe_subscription_id = excluded.stripe_subscription_id,
+                    status = excluded.status,
+                    current_period_end = excluded.current_period_end,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    stripe_customer_id,
+                    email,
+                    stripe_subscription_id,
+                    status,
+                    current_period_end,
+                    _now_utc().isoformat(),
+                ),
+            )
+
+    def get(
+        self,
+        *,
+        customer_id: str | None = None,
+        email: str | None = None,
+    ) -> sqlite3.Row | None:
+        with self._connect() as conn:
+            if customer_id:
+                row = conn.execute(
+                    "SELECT * FROM subscribers WHERE stripe_customer_id = ?",
+                    (customer_id,),
+                ).fetchone()
+                if row:
+                    return row
+            if email:
+                return conn.execute(
+                    "SELECT * FROM subscribers WHERE email = ?",
+                    (email,),
+                ).fetchone()
+        return None
+
+
+class PostgresSubscriberStore(SubscriberStore):
+    def __init__(self, dsn: str):
+        self.dsn = dsn
+        self._psycopg = None
+
+    def _connect(self):
+        if self._psycopg is None:
+            import psycopg  # type: ignore[import-not-found]
+
+            self._psycopg = psycopg
+        return self._psycopg.connect(self.dsn)
+
+    def ensure_schema(self) -> None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS subscribers (
+                        stripe_customer_id TEXT PRIMARY KEY,
+                        email TEXT NOT NULL UNIQUE,
+                        stripe_subscription_id TEXT,
+                        status TEXT NOT NULL,
+                        current_period_end BIGINT,
+                        updated_at TIMESTAMPTZ NOT NULL
+                    )
+                    """
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_subscribers_email ON subscribers(email)"
+                )
+
+    def upsert(
+        self,
+        *,
+        stripe_customer_id: str,
+        email: str,
+        stripe_subscription_id: str | None,
+        status: str,
+        current_period_end: int | None,
+    ) -> None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO subscribers (
+                        stripe_customer_id,
+                        email,
+                        stripe_subscription_id,
+                        status,
+                        current_period_end,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (stripe_customer_id) DO UPDATE SET
+                        email = EXCLUDED.email,
+                        stripe_subscription_id = EXCLUDED.stripe_subscription_id,
+                        status = EXCLUDED.status,
+                        current_period_end = EXCLUDED.current_period_end,
+                        updated_at = EXCLUDED.updated_at
+                    """,
+                    (
+                        stripe_customer_id,
+                        email,
+                        stripe_subscription_id,
+                        status,
+                        current_period_end,
+                        _now_utc(),
+                    ),
+                )
+            conn.commit()
+
+    def get(
+        self,
+        *,
+        customer_id: str | None = None,
+        email: str | None = None,
+    ) -> dict[str, Any] | None:
+        query = "SELECT * FROM subscribers WHERE stripe_customer_id = %s"
+        params: tuple[Any, ...] = ()
+        if customer_id:
+            params = (customer_id,)
+        elif email:
+            query = "SELECT * FROM subscribers WHERE email = %s"
+            params = (email,)
+        else:
+            return None
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, params)
+                row = cur.fetchone()
+                if row is None:
+                    return None
+                columns = [column.name for column in cur.description]
+        return dict(zip(columns, row, strict=False))
+
+
+def _subscriber_store() -> SubscriberStore:
+    if os.getenv("DATABASE_URL"):
+        return PostgresSubscriberStore(os.environ["DATABASE_URL"])
+    return SQLiteSubscriberStore(SUBSCRIBERS_DB_PATH)
+
+
+SUBSCRIBER_STORE = _subscriber_store()
+SUBSCRIBER_STORE.ensure_schema()
 
 
 def _upsert_subscriber(
@@ -77,51 +286,17 @@ def _upsert_subscriber(
     status: str,
     current_period_end: int | None,
 ) -> None:
-    with _db() as conn:
-        conn.execute(
-            """
-            INSERT INTO subscribers (
-                stripe_customer_id,
-                email,
-                stripe_subscription_id,
-                status,
-                current_period_end,
-                updated_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(stripe_customer_id) DO UPDATE SET
-                email = excluded.email,
-                stripe_subscription_id = excluded.stripe_subscription_id,
-                status = excluded.status,
-                current_period_end = excluded.current_period_end,
-                updated_at = excluded.updated_at
-            """,
-            (
-                stripe_customer_id,
-                email,
-                stripe_subscription_id,
-                status,
-                current_period_end,
-                _now_utc().isoformat(),
-            ),
-        )
+    SUBSCRIBER_STORE.upsert(
+        stripe_customer_id=stripe_customer_id,
+        email=email,
+        stripe_subscription_id=stripe_subscription_id,
+        status=status,
+        current_period_end=current_period_end,
+    )
 
 
-def _get_subscriber(*, customer_id: str | None = None, email: str | None = None) -> sqlite3.Row | None:
-    with _db() as conn:
-        if customer_id:
-            row = conn.execute(
-                "SELECT * FROM subscribers WHERE stripe_customer_id = ?",
-                (customer_id,),
-            ).fetchone()
-            if row:
-                return row
-        if email:
-            return conn.execute(
-                "SELECT * FROM subscribers WHERE email = ?",
-                (email,),
-            ).fetchone()
-    return None
+def _get_subscriber(*, customer_id: str | None = None, email: str | None = None):
+    return SUBSCRIBER_STORE.get(customer_id=customer_id, email=email)
 
 
 def _serializer() -> URLSafeTimedSerializer:

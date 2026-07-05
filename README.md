@@ -129,6 +129,42 @@ Render / Railway / Fly では、この Dockerfile をそのまま使い、環境
 を設定してください。Stripe の鍵が未設定でも landing page は表示され、checkout は
 `Stripe未設定` エラーを返します。
 
+## デプロイ
+
+この Web SaaS は、**常時起動の stateful ホスト** と **serverless** で要件が異なり
+ます。
+
+### 推奨: Render / Railway / Fly
+
+- Dockerfile からそのまま起動できます
+- SQLite で `web/subscribers.db` を使えるので MVP と相性が良いです
+- Render では persistent disk を `SUBSCRIBERS_DB_PATH` にマウントしてください
+- GitHub リポジトリをプロバイダ側で接続すると、branch への push で auto-deploy され
+ます
+
+### Vercel / Netlify
+
+- Python は serverless function として動くため、ファイルシステムは **永続保存前提で
+はありません**
+- そのため SQLite の subscriber DB は保持されず、**`DATABASE_URL` で managed Post
+gres を必須にしてください**
+- `DATABASE_URL` なしで動かすと、デプロイはできますが webhook で subscriber を永続
+保存できません
+- Vercel は `vercel.json` をそのまま使い、`api/index.py` がエントリになります
+- Netlify は `netlify.toml` と `netlify/functions/app.py` を使いますが、こちらは Verc
+el より副次的な構成です
+
+### Stripe Webhook
+
+Stripe ダッシュボードに以下の URL を登録してください。
+
+```text
+https://YOUR-DOMAIN/api/webhook
+```
+
+チェックアウト完了とサブスクリプション更新はこの webhook で subscriber DB に反映し
+ます。
+
 ## デスクトップアプリ
 
 Streamlit アプリを起動するデスクトップ向けランチャーと、PyInstaller 用のパッケー

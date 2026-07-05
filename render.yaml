@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: keiba-kachisuji-web
+    env: docker
+    plan: starter
+    autoDeploy: true
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PRICE_ID
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: APP_SECRET_KEY
+        sync: false
+      - key: APP_PRICE_LABEL
+        value: "月額 1,980円"
+      - key: COOKIE_SECURE
+        value: "1"
+      - key: SUBSCRIBERS_DB_PATH
+        value: /var/data/subscribers.db
+      - key: DATABASE_URL
+        value: ""
+        sync: false
+    disk:
+      name: subscribers-data
+      mountPath: /var/data
+      sizeGB: 1
