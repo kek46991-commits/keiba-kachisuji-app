@@ -125,6 +125,10 @@
     }
     .status { min-height: 1.5em; color: var(--warn); }
     footer { margin-top: 24px; color: var(--muted); font-size: 14px; text-align: center; }
+    footer a, .small-links a { color: #d9ddff; }
+    .small-links { margin: 10px 0 0; font-size: 13px; }
+    .consent-note { display: inline-flex; gap: 8px; align-items: center; margin-top: 10px; color: #d9ddff; font-size: 13px; }
+    .footer-links { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
     code { background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 6px; }
     @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
   </style>
@@ -154,6 +158,8 @@
             <a class="btn btn-secondary" href="/app">デモで試す</a>
             {% endif %}
           </div>
+          <p class="muted small-links"><a href="/terms">利用規約</a> · <a href="/tokushoho">特定商取引法に基づく表記</a></p>
+          <label class="consent-note"><input type="checkbox" checked disabled /> 購読により利用規約に同意したものとみなします</label>
           <p class="muted" id="checkout-status"></p>
         </div>
 
@@ -194,7 +200,13 @@
   </div>
 
   <footer>
-    競馬の予測・検証ツールです。購入・参加は自己責任でお願いします。
+    <div>競馬の予測・検証ツールです。購入・参加は自己責任でお願いします。</div>
+    <div class="footer-links">
+      <a href="/terms">利用規約</a>
+      <a href="/terms/en">Terms (EN)</a>
+      <a href="/tokushoho">特定商取引法に基づく表記</a>
+      <a href="/privacy">プライバシーポリシー</a>
+    </div>
   </footer>
 
   <script>

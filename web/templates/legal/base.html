@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="{{ lang|default('ja') }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ title }} | 勝ち筋解析システム</title>
+  <style>
+    :root {
+      --bg: #0f1020;
+      --panel: #17192e;
+      --panel-2: #1f2240;
+      --text: #eef0ff;
+      --muted: #adb3d9;
+      --accent: #7c8cff;
+      --line: rgba(255,255,255,0.08);
+      --warn: #ffbf69;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      background: radial-gradient(circle at top, #1b1e3b 0, var(--bg) 50%);
+      color: var(--text);
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 32px 20px 56px; }
+    .card {
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 24px 70px rgba(0,0,0,.20);
+    }
+    .banner {
+      background: rgba(255,191,105,.12);
+      border: 1px solid rgba(255,191,105,.4);
+      color: #ffe8c2;
+      border-radius: 14px;
+      padding: 14px 16px;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+    h1 { margin-top: 0; }
+    h2 { margin-top: 28px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+    p, li { line-height: 1.9; color: var(--text); }
+    ul { padding-left: 1.3em; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 4px;
+      overflow: hidden;
+      border-radius: 14px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 12px 14px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: rgba(255,255,255,.05);
+      width: 28%;
+    }
+    .muted { color: var(--muted); }
+    .nav {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+      font-size: 14px;
+    }
+    a { color: #d8ddff; }
+    code { background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 6px; }
+    .jurisdiction { background: rgba(124,140,255,.12); border-left: 4px solid var(--accent); padding: 12px 14px; border-radius: 12px; }
+    .note-box { background: rgba(255,191,105,.08); border-left: 4px solid var(--warn); padding: 12px 14px; border-radius: 12px; }
+    @media (max-width: 740px) {
+      th, td { display: block; width: 100%; }
+      th { border-bottom: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="banner">
+        <strong>Draft / 法務レビュー必須:</strong>
+        これは公開前のたたき台です。日本法・消費者契約法・景品表示法・特定商取引法等との整合性を、
+        <strong>日本の弁護士</strong> に必ず確認してください。最終的な法的助言ではありません。
+      </div>
+      {% block content %}{% endblock %}
+      <div class="nav">
+        <a href="/">← トップへ戻る</a>
+        <a href="/terms">利用規約</a>
+        <a href="/terms/en">Terms (EN)</a>
+        <a href="/tokushoho">特商法表記</a>
+        <a href="/privacy">プライバシーポリシー</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

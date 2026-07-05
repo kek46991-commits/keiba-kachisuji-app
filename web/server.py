@@ -369,6 +369,40 @@ def _render_paid_app() -> str:
     return html
 
 
+def _legal_response(
+    request: Request,
+    template_name: str,
+    title: str,
+    *,
+    lang: str = "ja",
+) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        template_name,
+        {"title": title, "lang": lang},
+    )
+
+
+@app.get("/terms", response_class=HTMLResponse)
+def terms_ja(request: Request) -> HTMLResponse:
+    return _legal_response(request, "legal/terms_ja.html", "利用規約")
+
+
+@app.get("/terms/en", response_class=HTMLResponse)
+def terms_en(request: Request) -> HTMLResponse:
+    return _legal_response(request, "legal/terms_en.html", "Terms of Service", lang="en")
+
+
+@app.get("/tokushoho", response_class=HTMLResponse)
+def tokushoho(request: Request) -> HTMLResponse:
+    return _legal_response(request, "legal/tokushoho.html", "特定商取引法に基づく表記")
+
+
+@app.get("/privacy", response_class=HTMLResponse)
+def privacy(request: Request) -> HTMLResponse:
+    return _legal_response(request, "legal/privacy_ja.html", "プライバシーポリシー")
+
+
 def _stripe_ready() -> bool:
     return bool(STRIPE_SECRET_KEY and STRIPE_PRICE_ID)
 
