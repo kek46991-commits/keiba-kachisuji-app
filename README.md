@@ -104,6 +104,36 @@ streamlit run app.py
 - **🎰 買い目計算**: ボックス点数・投資額
 - **📝/📊 パドック (レガシー)**: 旧経験則のデモ (検証用途には非推奨)
 
+## デスクトップアプリ
+
+Streamlit アプリを起動するデスクトップ向けランチャーと、PyInstaller 用のパッケー
+ジ定義を同梱しています。
+
+### ローカルでビルド
+
+```bash
+pip install pyinstaller
+pyinstaller keiba-app.spec
+```
+
+### CI での配布
+
+GitHub Actions が Windows / macOS 向けのバイナリをビルドし、Actions の artifact ま
+たは
+タグ付きリリース (`v*`) からダウンロードできるようにします。
+
+### 直接起動
+
+```bash
+python desktop.py
+```
+
+必要ならポートを固定して起動できます。
+
+```bash
+python desktop.py --port 8501
+```
+
 ## 勝率・期待値の考え方
 
 - **予測勝率**: モデルが出力する確率を **レース内で softmax 正規化** するため、出走馬の合計は 1。
