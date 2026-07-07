@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ title }} | 勝ち筋解析システム</title>
+  <meta name="description" content="{{ description }}" />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="{{ canonical_url }}" />
+  <link rel="icon" href="{{ favicon_url }}" />
   <style>
     :root {
       --bg: #0f1020;
@@ -77,6 +81,9 @@
       th { border-bottom: 0; }
     }
   </style>
+  {% if json_ld %}
+  <script type="application/ld+json">{{ json_ld | tojson }}</script>
+  {% endif %}
 </head>
 <body>
   <div class="wrap">

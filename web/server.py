@@ -11,7 +11,8 @@ from typing import Any
 
 import stripe
 from fastapi import FastAPI, Form, Header, HTTPException, Request, Response
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
@@ -19,6 +20,7 @@ WEB_DIR = Path(__file__).resolve().parent
 ROOT_DIR = WEB_DIR.parent
 SITE_DIR = ROOT_DIR / "site"
 TEMPLATES_DIR = WEB_DIR / "templates"
+STATIC_DIR = WEB_DIR / "static"
 DEFAULT_SQLITE_DB_PATH = WEB_DIR / "subscribers.db"
 
 
@@ -41,11 +43,82 @@ STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 DEMO_MODE = os.getenv("DEMO_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 serializer = URLSafeTimedSerializer(APP_SECRET_KEY or "demo-secret", salt="kachisuji-session")
 
 app = FastAPI(title="勝ち筋解析システム Web", version="0.1.0")
+
+
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="public-static")
+
+
+def _public_url(path: str) -> str:
+    return f"{PUBLIC_BASE_URL}{path}"
+
+
+def _seo_context(
+    *,
+    title: str,
+    description: str,
+    path: str,
+    noindex: bool = False,
+    json_ld: dict[str, Any] | list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    canonical_url = _public_url(path)
+    og_image_url = _public_url("/static/og.png")
+    favicon_url = _public_url("/static/favicon.png")
+    return {
+        "title": title,
+        "description": description,
+        "base_url": PUBLIC_BASE_URL,
+        "canonical_url": canonical_url,
+        "canonical_path": path,
+        "page_url": canonical_url,
+        "og_image_url": og_image_url,
+        "favicon_url": favicon_url,
+        "og_site_name": "勝ち筋解析システム",
+        "locale": "ja_JP",
+        "twitter_card": "summary_large_image",
+        "robots_content": "noindex,nofollow" if noindex else "index,follow",
+        "json_ld": json_ld,
+    }
+
+
+def _seo_for_landing() -> dict[str, Any]:
+    price_label = os.getenv("APP_PRICE_LABEL", "月額 1,980円")
+    description = "中央競馬G1の期待値(EV)をML予測とバックテストで検証するサブスク型SaaS。"
+    json_ld = [
+        {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "勝ち筋解析システム",
+            "url": PUBLIC_BASE_URL,
+            "logo": _public_url("/static/favicon.png"),
+        },
+        {
+            "@context": "https://schema.org",
+            "@type": "Service",
+            "name": "勝ち筋解析システム",
+            "serviceType": "競馬G1の期待値(EV)分析",
+            "description": description,
+            "provider": {"@type": "Organization", "name": "勝ち筋解析システム", "url": PUBLIC_BASE_URL},
+            "offers": {
+                "@type": "Offer",
+                "price": price_label,
+                "priceCurrency": "JPY",
+                "availability": "https://schema.org/InStock",
+                "url": PUBLIC_BASE_URL,
+            },
+        },
+    ]
+    return _seo_context(
+        title="勝ち筋解析システム | 競馬G1の期待値(EV)をML+バックテストで検証するSaaS",
+        description=description,
+        path="/",
+        json_ld=json_ld,
+    ) | {"pricing_label": price_label}
 
 
 def _now_utc() -> datetime:
@@ -366,6 +439,9 @@ def _render_paid_app() -> str:
     html = (SITE_DIR / "index.html").read_text(encoding="utf-8")
     html = html.replace('href="styles.css"', 'href="/app/static/styles.css"')
     html = html.replace('src="js/app.js"', 'src="/app/static/js/app.js"')
+    noindex = '<meta name="robots" content="noindex,nofollow" />'
+    if '<meta name="robots" content="noindex,nofollow"' not in html:
+        html = html.replace('<meta name="viewport" content="width=device-width, initial-scale=1.0" />', '<meta name="viewport" content="width=device-width, initial-scale=1.0" />\n  ' + noindex, 1)
     return html
 
 
@@ -374,33 +450,83 @@ def _legal_response(
     template_name: str,
     title: str,
     *,
+    description: str,
+    path: str,
     lang: str = "ja",
 ) -> HTMLResponse:
-    return templates.TemplateResponse(
-        request,
-        template_name,
-        {"title": title, "lang": lang},
-    )
+    context = _seo_context(title=title, description=description, path=path)
+    context["lang"] = lang
+    return templates.TemplateResponse(request, template_name, context)
 
 
 @app.get("/terms", response_class=HTMLResponse)
 def terms_ja(request: Request) -> HTMLResponse:
-    return _legal_response(request, "legal/terms_ja.html", "利用規約")
+    return _legal_response(
+        request,
+        "legal/terms_ja.html",
+        "利用規約",
+        description="中央競馬G1の予測・期待値(EV)分析ツールに関する利用条件。免責、解約、返金、禁止事項を定めます。",
+        path="/terms",
+    )
 
 
 @app.get("/terms/en", response_class=HTMLResponse)
 def terms_en(request: Request) -> HTMLResponse:
-    return _legal_response(request, "legal/terms_en.html", "Terms of Service", lang="en")
+    return _legal_response(
+        request,
+        "legal/terms_en.html",
+        "Terms of Service",
+        description="Terms for the G1 prediction and EV analytics subscription service. Japanese version prevails.",
+        path="/terms/en",
+        lang="en",
+    )
 
 
 @app.get("/tokushoho", response_class=HTMLResponse)
 def tokushoho(request: Request) -> HTMLResponse:
-    return _legal_response(request, "legal/tokushoho.html", "特定商取引法に基づく表記")
+    return _legal_response(
+        request,
+        "legal/tokushoho.html",
+        "特定商取引法に基づく表記",
+        description="Japanese Specified Commercial Transactions Act disclosure for the subscription horse-racing analytics service.",
+        path="/tokushoho",
+    )
 
 
 @app.get("/privacy", response_class=HTMLResponse)
 def privacy(request: Request) -> HTMLResponse:
-    return _legal_response(request, "legal/privacy_ja.html", "プライバシーポリシー")
+    return _legal_response(
+        request,
+        "legal/privacy_ja.html",
+        "プライバシーポリシー",
+        description="取得情報、利用目的、第三者提供、Cookie、開示請求先を定める簡易プライバシーポリシー。",
+        path="/privacy",
+    )
+
+
+@app.get("/robots.txt")
+def robots_txt() -> PlainTextResponse:
+    body = "\n".join([
+        "User-agent: *",
+        "Allow: /",
+        "Disallow: /app",
+        "Disallow: /api/",
+        f"Sitemap: {_public_url('/sitemap.xml')}",
+    ]) + "\n"
+    return PlainTextResponse(body, media_type="text/plain; charset=utf-8")
+
+
+@app.get("/sitemap.xml")
+def sitemap_xml() -> Response:
+    urls = ["/", "/terms", "/terms/en", "/tokushoho", "/privacy"]
+    items = "".join(f"<url><loc>{_public_url(path)}</loc></url>" for path in urls)
+    body = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        f"{items}"
+        '</urlset>'
+    )
+    return Response(content=body, media_type="application/xml; charset=utf-8")
 
 
 def _stripe_ready() -> bool:
@@ -446,15 +572,9 @@ def _sync_subscription(subscription: Any, *, email: str | None = None) -> None:
 
 @app.get("/", response_class=HTMLResponse)
 def landing(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(
-        request,
-        "landing.html",
-        {
-            "pricing_label": os.getenv("APP_PRICE_LABEL", "月額 1,980円"),
-            "demo_mode": DEMO_MODE,
-            "stripe_ready": _stripe_ready(),
-        },
-    )
+    context = _seo_for_landing()
+    context.update({"demo_mode": DEMO_MODE, "stripe_ready": _stripe_ready()})
+    return templates.TemplateResponse(request, "landing.html", context)
 
 
 @app.head("/")

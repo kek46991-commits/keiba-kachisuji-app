@@ -3,8 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>勝ち筋解析システム | 競馬EV分析 SaaS</title>
-  <meta name="description" content="実データ × 機械学習 × バックテストで競馬の期待値を検証するサブスク型 SaaS" />
+  <title>{{ title }}</title>
+  <meta name="description" content="{{ description }}" />
+  <meta name="robots" content="{{ robots_content }}" />
+  <link rel="canonical" href="{{ canonical_url }}" />
+  <link rel="icon" href="{{ favicon_url }}" />
+  <meta property="og:title" content="{{ title }}" />
+  <meta property="og:description" content="{{ description }}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="{{ page_url }}" />
+  <meta property="og:image" content="{{ og_image_url }}" />
+  <meta property="og:site_name" content="{{ og_site_name }}" />
+  <meta property="og:locale" content="{{ locale }}" />
+  <meta name="twitter:card" content="{{ twitter_card }}" />
+  <meta name="twitter:title" content="{{ title }}" />
+  <meta name="twitter:description" content="{{ description }}" />
+  <meta name="twitter:image" content="{{ og_image_url }}" />
   <style>
     :root {
       --bg: #0f1020;
@@ -132,6 +146,8 @@
     code { background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 6px; }
     @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
   </style>
+  <script type="application/ld+json">{{ json_ld | tojson }}</script>
+  <script type="application/ld+json">{{ json_ld | tojson }}</script>
 </head>
 <body>
   <div class="wrap">
