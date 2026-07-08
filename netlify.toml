@@ -1,0 +1,13 @@
+[build]
+  command = "echo 'Netlify deploy uses bundled function only'"
+  publish = "site"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["site/**", "web/templates/**"]
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/app"
+  status = 200

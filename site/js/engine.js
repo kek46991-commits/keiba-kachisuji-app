@@ -19,6 +19,19 @@ export const DISTANCES = [1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2500, 
 
 export const WEATHER_MOISTURE = { "晴": 0.04, "曇": 0.06, "小雨": 0.10, "雨": 0.15, "大雨": 0.22 };
 
+// 単勝の控除率 (JRA 標準)。EV=1.0 が損益分岐点。
+export const WIN_TAKEOUT = 0.20;
+export const EV_BET_THRESHOLD = 1.1;
+
+// 期待値(回収率)を控除率を踏まえて判定する。engine.py の rate_expected_value と一致。
+export function rateExpectedValue(ev) {
+  if (ev >= 1.3) return "🔥 妙味大・強い買い";
+  if (ev >= EV_BET_THRESHOLD) return "⭐ 期待値あり・買い";
+  if (ev >= 1.0) return "👀 損益分岐付近・小口";
+  if (ev >= 1.0 - WIN_TAKEOUT) return "△ 控除率相当・見送り寄り";
+  return "✗ 期待値不足・見送り";
+}
+
 const HORSE_NAMES = [
   "サクラバクシンオー", "ディープインパクト", "オルフェーヴル",
   "キタサンブラック", "イクイノックス", "ドウデュース",
@@ -107,15 +120,9 @@ export function analyzeHorse(horse, env, location) {
   let total_score = base_score + physics_bonus + condition_bonus;
   total_score = clamp(total_score, 0.0, 150.0);
 
+  // 暫定の勝率 (レース内 softmax 正規化前)。analyzeRace で正規化する。
   const win_prob = total_score / 150.0;
   const expected_value = win_prob * horse.odds;
-
-  let rating;
-  if (expected_value >= 3.0) rating = "🔥 激アツ・勝ち筋確定";
-  else if (expected_value >= 2.0) rating = "⭐ 高期待値・要注目";
-  else if (expected_value >= 1.5) rating = "👀 やや有望";
-  else if (expected_value >= 1.0) rating = "△ 普通";
-  else rating = "✗ 見送り推奨";
 
   return {
     umaban: horse.umaban,
@@ -127,9 +134,35 @@ export function analyzeHorse(horse, env, location) {
     total_score: round(total_score),
     win_prob: round(win_prob, 4),
     expected_value: round(expected_value),
-    rating,
+    rating: rateExpectedValue(expected_value),
     details,
   };
+}
+
+// レース全体を解析し、勝率を softmax でレース内合計1に正規化してから
+// 期待値・判定を再計算する。Python パイプラインの正規化方針に合わせた実装。
+export function analyzeRace(horses, env, location) {
+  const raw = horses.map((h) => analyzeHorse(h, env, location));
+  // total_score を logit 代わりに使い softmax。スケールで尖り過ぎないよう調整。
+  const scores = raw.map((r) => r.total_score / 15.0);
+  const m = Math.max(...scores);
+  const exps = scores.map((s) => Math.exp(s - m));
+  const sum = exps.reduce((a, b) => a + b, 0);
+  return raw.map((r, i) => {
+    const win_prob = exps[i] / sum;
+    const expected_value = win_prob * r.odds;
+    return {
+      ...r,
+      win_prob: round(win_prob, 4),
+      expected_value: round(expected_value),
+      rating: rateExpectedValue(expected_value),
+      details: [
+        ...r.details,
+        `予測勝率(レース内正規化): ${(win_prob * 100).toFixed(1)}%`,
+        `期待値(回収率): ${expected_value.toFixed(2)} (損益分岐 1.0 / 控除率 ${(WIN_TAKEOUT * 100).toFixed(0)}%)`,
+      ],
+    };
+  });
 }
 
 // ボックス買い目の点数を計算する。

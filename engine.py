@@ -1,9 +1,25 @@
 # -*- coding: utf-8 -*-
-"""勝ち筋解析エンジン - かずさん理論 + 物理統計"""
+"""勝ち筋解析エンジン。
 
+予測勝率は ``model.WinProbabilityModel`` が出力する **レース内で正規化された
+確率** (出走馬の合計が 1) を正準とする。期待値 (EV) は
+
+    EV = 予測勝率 × 単勝オッズ
+
+で、これは「単勝 100 円に対する期待払戻倍率 = 回収率」を表す。馬券は控除率
+(単勝で約 20%) があるため、市場どおりに買うと EV は平均的に約 0.8 にしかならず、
+EV > 1.0 すなわち回収率 100% 超を継続できて初めて利益が期待できる。判定閾値も
+この控除率を踏まえて設定している (``rate_expected_value`` を参照)。
+
+旧来の ``analyze_horse`` (パドック観察に任意定数を足す経験則) は統計的根拠が無く、
+``site`` のデモUI 用に残してあるだけの **レガシー実装** である。実運用・検証は
+``data`` → ``features`` → ``model`` → ``backtest`` のパイプラインを用いること。
+"""
+
+import math
 import random
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Sequence
 
 
 COURSE_MAP = {
@@ -22,6 +38,11 @@ COURSE_MAP = {
 WEATHER_OPTIONS = ["晴", "曇", "小雨", "雨", "大雨"]
 TRACK_TYPES = ["芝", "ダート"]
 DISTANCES = [1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2500, 3000, 3200, 3600]
+
+# 単勝の控除率 (JRA 標準)。市場どおりに買うと回収率は平均 (1 - WIN_TAKEOUT)。
+WIN_TAKEOUT = 0.20
+# 期待値 (回収率) の判定閾値。EV=1.0 が損益分岐点。
+EV_BET_THRESHOLD = 1.1  # これ以上を妙味ありと見なす保守的な基準
 
 
 @dataclass
@@ -67,12 +88,78 @@ class AnalysisResult:
     details: list[str] = field(default_factory=list)
 
 
+def rate_expected_value(ev: float) -> str:
+    """期待値 (回収率) を控除率を踏まえて判定する。
+
+    EV=1.0 が損益分岐点。控除率 (約20%) のため市場平均は約0.8 で、
+    EV>1.0 を継続できないと利益は出ない。
+    """
+    if ev >= 1.3:
+        return "🔥 妙味大・強い買い"
+    if ev >= EV_BET_THRESHOLD:
+        return "⭐ 期待値あり・買い"
+    if ev >= 1.0:
+        return "👀 損益分岐付近・小口"
+    if ev >= (1.0 - WIN_TAKEOUT):
+        return "△ 控除率相当・見送り寄り"
+    return "✗ 期待値不足・見送り"
+
+
+def softmax(values: Sequence[float]) -> list[float]:
+    """レース内のスコアを合計1の確率に正規化する。"""
+    if not values:
+        return []
+    m = max(values)
+    exps = [math.exp(v - m) for v in values]
+    s = sum(exps)
+    return [e / s for e in exps]
+
+
+def analyze_entries(
+    win_probs: Sequence[float],
+    odds: Sequence[float],
+    umaban: Sequence[int],
+    names: Optional[Sequence[str]] = None,
+) -> list[AnalysisResult]:
+    """学習済みモデルの予測勝率から各馬の期待値・判定を組み立てる。
+
+    ``win_probs`` は ``model.WinProbabilityModel.predict_win_prob`` の出力
+    (レース内で合計1に正規化済み) を想定する。EV = 勝率 × オッズ。
+    """
+    names = names or [f"馬{u}" for u in umaban]
+    results: list[AnalysisResult] = []
+    for p, o, u, nm in zip(win_probs, odds, umaban, names):
+        ev = p * o
+        results.append(AnalysisResult(
+            umaban=int(u),
+            name=nm,
+            odds=float(o),
+            base_score=0.0,
+            physics_bonus=0.0,
+            condition_bonus=0.0,
+            total_score=round(p * 100, 2),
+            win_prob=round(float(p), 4),
+            expected_value=round(float(ev), 2),
+            rating=rate_expected_value(ev),
+            details=[
+                f"予測勝率(正規化): {p*100:.1f}%",
+                f"単勝オッズ: {o}",
+                f"期待値(回収率): {ev:.2f} (損益分岐 1.0 / 控除率 {WIN_TAKEOUT:.0%})",
+            ],
+        ))
+    return results
+
+
 def analyze_horse(
     horse: HorseEntry,
     env: EnvironmentData,
     location: str,
 ) -> AnalysisResult:
-    """1頭の馬を解析して期待値を算出する。"""
+    """[レガシー] パドック経験則で 1 頭を解析する。
+
+    統計的根拠の無い旧ロジック。``site`` のデモ UI 互換のために残している。
+    実運用・検証には ``analyze_entries`` (モデル予測) を用いること。
+    """
     course = COURSE_MAP[location]
     r_val = course["corner_r"]
     ai = horse.paddock
@@ -149,17 +236,7 @@ def analyze_horse(
     win_prob = total_score / 150.0
     expected_value = win_prob * horse.odds
 
-    # レーティング
-    if expected_value >= 3.0:
-        rating = "🔥 激アツ・勝ち筋確定"
-    elif expected_value >= 2.0:
-        rating = "⭐ 高期待値・要注目"
-    elif expected_value >= 1.5:
-        rating = "👀 やや有望"
-    elif expected_value >= 1.0:
-        rating = "△ 普通"
-    else:
-        rating = "✗ 見送り推奨"
+    rating = rate_expected_value(expected_value)
 
     return AnalysisResult(
         umaban=horse.umaban,

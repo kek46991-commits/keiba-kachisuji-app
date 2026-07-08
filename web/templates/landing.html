@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ title }}</title>
+  <meta name="description" content="{{ description }}" />
+  <meta name="robots" content="{{ robots_content }}" />
+  <link rel="canonical" href="{{ canonical_url }}" />
+  <link rel="icon" href="{{ favicon_url }}" />
+  <meta property="og:title" content="{{ title }}" />
+  <meta property="og:description" content="{{ description }}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="{{ page_url }}" />
+  <meta property="og:image" content="{{ og_image_url }}" />
+  <meta property="og:site_name" content="{{ og_site_name }}" />
+  <meta property="og:locale" content="{{ locale }}" />
+  <meta name="twitter:card" content="{{ twitter_card }}" />
+  <meta name="twitter:title" content="{{ title }}" />
+  <meta name="twitter:description" content="{{ description }}" />
+  <meta name="twitter:image" content="{{ og_image_url }}" />
+  <style>
+    :root {
+      --bg: #0f1020;
+      --panel: #17192e;
+      --panel-2: #1f2240;
+      --text: #eef0ff;
+      --muted: #adb3d9;
+      --accent: #7c8cff;
+      --accent-2: #9c5cff;
+      --warn: #ffbf69;
+      --danger: #ff6b81;
+      --line: rgba(255,255,255,0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      background: radial-gradient(circle at top, #1b1e3b 0, var(--bg) 50%);
+      color: var(--text);
+    }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 20px 48px; }
+    .hero {
+      background: linear-gradient(135deg, rgba(124,140,255,.22), rgba(156,92,255,.18));
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 24px 70px rgba(0,0,0,.28);
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: .02em;
+    }
+    h1 { margin: 16px 0 12px; font-size: clamp(32px, 5vw, 56px); line-height: 1.1; }
+    .lead { font-size: 18px; color: var(--muted); max-width: 760px; }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 18px;
+      margin-top: 24px;
+    }
+    .card {
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 22px;
+    }
+    .price {
+      font-size: 42px;
+      font-weight: 800;
+      margin: 8px 0 4px;
+    }
+    .muted { color: var(--muted); }
+    ul { padding-left: 20px; color: var(--muted); }
+    li { margin: 8px 0; }
+    .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+    .btn {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: white;
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,.08);
+      color: var(--text);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .warning {
+      margin-top: 18px;
+      padding: 16px 18px;
+      border-left: 4px solid var(--warn);
+      background: rgba(255,191,105,.1);
+      color: #ffe8c2;
+      border-radius: 12px;
+      line-height: 1.75;
+    }
+    .danger {
+      margin-top: 12px;
+      padding: 16px 18px;
+      border-left: 4px solid var(--danger);
+      background: rgba(255,107,129,.08);
+      color: #ffd9df;
+      border-radius: 12px;
+      line-height: 1.75;
+    }
+    .section {
+      margin-top: 18px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 22px;
+    }
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 18px;
+    }
+    .mini-card {
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+    }
+    .mini-card h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .feature-list li {
+      margin: 0 0 10px;
+      padding-left: 1.2em;
+      position: relative;
+      color: var(--text);
+    }
+    .feature-list li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+    }
+    .notice-box {
+      border-left: 4px solid var(--warn);
+      background: rgba(255,191,105,.12);
+      color: #ffe8c2;
+      border-radius: 14px;
+      padding: 16px 18px;
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+    .placeholder-box {
+      border: 1px dashed rgba(255,255,255,.25);
+      background: rgba(255,255,255,.03);
+      color: #d9ddff;
+      border-radius: 14px;
+      padding: 16px 18px;
+      line-height: 1.8;
+    }
+    .restore {
+      display: grid;
+      gap: 10px;
+      max-width: 420px;
+    }
+    .restore input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--text);
+    }
+    .status { min-height: 1.5em; color: var(--warn); }
+    footer { margin-top: 24px; color: var(--muted); font-size: 14px; text-align: center; }
+    footer a, .small-links a { color: #d9ddff; }
+    .small-links { margin: 10px 0 0; font-size: 13px; }
+    .consent-note { display: inline-flex; gap: 8px; align-items: center; margin-top: 10px; color: #d9ddff; font-size: 13px; }
+    .footer-links { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+    code { background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 6px; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+  <script type="application/ld+json">{{ json_ld | tojson }}</script>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <span class="badge">サブスク型 競馬EV分析 SaaS</span>
+      <h1>勝ち筋解析システム</h1>
+      <p class="lead">
+        G1 専用の実データ × 機械学習 × バックテストで、競馬の期待値を検証するための分析ツールです。
+        静的デモではなく、購読者向けに公開する G1 専用の本番Web版として提供します。
+      </p>
+
+      <section class="section">
+        <h2>他社との違い・強み</h2>
+        <div class="section-grid">
+          <div class="mini-card">
+            <h3>実データ × 機械学習</h3>
+            <p class="muted">
+              経験則ではなく実データを使い、各馬の勝率を推定します。レース内で合計100%になるよう正規化し、相対比較に使える形で表示します。
+            </p>
+          </div>
+          <div class="mini-card">
+            <h3>バックテストで定量評価</h3>
+            <p class="muted">
+              時系列分割で学習/検証を分け、リークを避けながら回収率(ROI)を定量評価できます。
+            </p>
+          </div>
+          <div class="mini-card">
+            <h3>控除率を踏まえた EV 判定</h3>
+            <p class="muted">
+              約20%の控除率を前提に、当たる馬ではなく「買い/見送り」の妙味をEVで判定します。
+            </p>
+          </div>
+          <div class="mini-card">
+            <h3>G1特化・透明性重視</h3>
+            <p class="muted">
+              G1 専用の設計で、仕組み・前提・限界を公開し、「儲かる」と断言しない誠実な設計です。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid">
+        <div class="card">
+          <h2>何ができるか</h2>
+          <ul>
+            <li>予測勝率と期待値の算出</li>
+            <li>レース内での相対比較と買い目候補の確認</li>
+            <li>買い目計算と検証フローの可視化</li>
+            <li>将来的にデータ接続や自動レポートへ拡張可能</li>
+          </ul>
+          <div class="cta-row">
+            <button class="btn btn-primary" id="checkout-btn">購読する</button>
+            {% if demo_mode %}
+            <a class="btn btn-secondary" href="/app">デモで試す</a>
+            {% endif %}
+          </div>
+          <p class="muted small-links"><a href="/terms">利用規約</a> · <a href="/tokushoho">特定商取引法に基づく表記</a></p>
+          <label class="consent-note"><input type="checkbox" checked disabled /> 購読により利用規約に同意したものとみなします</label>
+          <p class="muted" id="checkout-status"></p>
+        </div>
+
+        <div class="card">
+          <h2>料金</h2>
+          <div class="price">{{ pricing_label }}</div>
+          <p class="muted">Stripe サブスクリプションで月次課金。</p>
+          <p class="muted">キャンセルは Stripe の請求ポータルから可能です。</p>
+        </div>
+      </div>
+
+      <div class="warning">
+        <strong>重要:</strong>
+        本サービスは <strong>分析 / 期待値( EV ) の検証ツール</strong> であり、利益を保証するものではありません。
+        競馬には約 20〜30% の控除率があり、単勝でも約 20% のテラ銭があります。
+        市場どおりに買うと平均回収率は約 80% に留まるため、<strong>バックテストで回収率 100% 超を継続して確認できない限り「儲かる」とは言えません</strong>。
+      </div>
+      <div class="danger">
+        <strong>注意:</strong>
+        18歳未満の方や、居住地域で賭博関連サービスが制限される場合は利用できません。
+        法令・規約・地域ルールを必ず確認してください。投資・投票判断は自己責任です。
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>検証結果(バックテスト)</h2>
+      <div class="notice-box">
+        <strong>重要:</strong>
+        これは<strong>合成(ダミー)データによるバックテストの検証結果</strong>であり、<strong>実際の的中実績・将来の成績を示すものではありません</strong>。
+        控除率は約20%あるため、回収率が100%を超えない限り利益は出ません。
+      </div>
+      <div class="section-grid">
+        <div class="mini-card">
+          <h3>検証方法</h3>
+          <ul class="feature-list">
+            <li>G1 専用の合成データを使用</li>
+            <li>学習/検証は時系列分割で実施</li>
+            <li>特徴量は過去データのみを参照し、リークを防止</li>
+            <li>買い目判断は EV とバックテスト結果で評価</li>
+          </ul>
+        </div>
+        <div class="mini-card">
+          <h3>表示方針</h3>
+          <p class="muted">
+            もし数値を表示する場合は、必ず「<strong>合成データでの検証値</strong>」と明示します。現在は実運用開始前のため、実際の的中実績や売上は掲載していません。
+          </p>
+          <div class="placeholder-box">
+            実運用開始後の的中実績はこちらで透明に公開予定（現在準備中）
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>アクセス復元</h2>
+      <p class="muted">
+        アクセス復元機能は、メールアドレスの所有者確認 (magic-link など) が実装されるまで
+        一時的に無効化しています。購読直後は checkout 完了後のリンクからそのままアクセスできます。
+        ログイン情報を失った場合はお問い合わせください。
+      </p>
+    </section>
+  </div>
+
+  <footer>
+    <div>競馬の予測・検証ツールです。購入・参加は自己責任でお願いします。</div>
+    <div class="footer-links">
+      <a href="/terms">利用規約</a>
+      <a href="/terms/en">Terms (EN)</a>
+      <a href="/tokushoho">特定商取引法に基づく表記</a>
+      <a href="/privacy">プライバシーポリシー</a>
+    </div>
+  </footer>
+
+  <script>
+    const statusEl = document.getElementById("checkout-status");
+
+    document.getElementById("checkout-btn").addEventListener("click", async () => {
+      statusEl.textContent = "Stripe のチェックアウトを準備中...";
+      try {
+        const res = await fetch("/api/checkout", { method: "POST" });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || "checkout failed");
+        }
+        window.location.href = data.url;
+      } catch (error) {
+        statusEl.textContent = error.message;
+      }
+    });
+  </script>
+</body>
+</html>

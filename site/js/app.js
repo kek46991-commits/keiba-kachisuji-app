@@ -1,6 +1,7 @@
 import {
   COURSE_MAP, WEATHER_OPTIONS, TRACK_TYPES, DISTANCES, WEATHER_MOISTURE,
-  analyzeHorse, calcBoxTickets, generateSampleHorses, emptyHorse, babaLabel,
+  EV_BET_THRESHOLD,
+  analyzeRace, calcBoxTickets, generateSampleHorses, emptyHorse, babaLabel,
 } from "./engine.js";
 
 const BET_TYPES = ["三連単", "三連複", "馬連", "馬単", "ワイド"];
@@ -222,7 +223,7 @@ function makeTextField(label, value, onInput) {
 function runAnalysis() {
   const env = getEnv();
   const location = $("location").value;
-  state.results = state.horses.map((h) => analyzeHorse(h, env, location));
+  state.results = analyzeRace(state.horses, env, location);
   renderResults(env, location);
 
   // switch to results tab
@@ -233,8 +234,7 @@ function runAnalysis() {
 }
 
 function ratingClass(ev) {
-  if (ev >= 3.0) return "banner-hot";
-  if (ev >= 2.0) return "banner-cool";
+  if (ev >= 1.3) return "banner-hot";
   return "banner-cool";
 }
 
@@ -243,7 +243,7 @@ function renderResults(env, location) {
   $("results-content").style.display = "block";
 
   const sorted = [...state.results].sort((a, b) => b.expected_value - a.expected_value);
-  const atsui = sorted.filter((r) => r.expected_value >= 2.0);
+  const atsui = sorted.filter((r) => r.expected_value >= EV_BET_THRESHOLD);
   const top = sorted[0];
   const avg = state.results.reduce((s, r) => s + r.expected_value, 0) / state.results.length;
 
@@ -262,12 +262,12 @@ function renderResults(env, location) {
   const kl = $("kachisuji-list");
   kl.innerHTML = "";
   if (atsui.length === 0) {
-    kl.innerHTML = '<p class="meta">期待値2.0以上の勝ち筋候補はありません。</p>';
+    kl.innerHTML = `<p class="meta">期待値 ${EV_BET_THRESHOLD} 以上の妙味ある買い目はありません (控除率を考慮すると見送り)。</p>`;
   } else {
     for (const r of atsui) {
       const div = document.createElement("div");
-      div.className = "kachisuji-banner " + (r.expected_value >= 3.0 ? "banner-hot" : "banner-cool");
-      const icon = r.expected_value >= 3.0 ? "🔥" : "⭐";
+      div.className = "kachisuji-banner " + (r.expected_value >= 1.3 ? "banner-hot" : "banner-cool");
+      const icon = r.expected_value >= 1.3 ? "🔥" : "⭐";
       div.textContent = `${icon} 馬番${r.umaban} ${r.name} — 期待値 ${r.expected_value.toFixed(2)} (${r.rating})`;
       kl.appendChild(div);
     }
@@ -300,8 +300,8 @@ function renderCharts(sorted) {
   const labels = sorted.map((r) => `${r.umaban}.${r.name}`);
   const evData = sorted.map((r) => r.expected_value);
   const colors = sorted.map((r) =>
-    r.expected_value >= 3.0 ? "#f5576c" :
-    r.expected_value >= 2.0 ? "#4facfe" :
+    r.expected_value >= 1.3 ? "#f5576c" :
+    r.expected_value >= EV_BET_THRESHOLD ? "#4facfe" :
     r.expected_value >= 1.0 ? "#667eea" : "#888"
   );
 
@@ -361,7 +361,7 @@ function renderDetails(sorted) {
     }
     body.appendChild(ul);
     const p = document.createElement("p");
-    p.innerHTML = `<b>合計スコア: ${r.total_score} / 150 → 推定勝率: ${(r.win_prob*100).toFixed(1)}% × オッズ${r.odds} = 期待値 ${r.expected_value.toFixed(2)}</b>`;
+    p.innerHTML = `<b>予測勝率(レース内正規化): ${(r.win_prob*100).toFixed(1)}% × オッズ${r.odds} = 期待値 ${r.expected_value.toFixed(2)} (損益分岐 1.0)</b>`;
     body.appendChild(p);
     card.appendChild(summary);
     card.appendChild(body);
@@ -388,8 +388,8 @@ function renderBoxCheckboxes() {
     cb.type = "checkbox";
     cb.value = r.umaban;
     cb.dataset.uma = r.umaban;
-    // default: EV >= 1.5 (top 5)
-    if (r.expected_value !== null && r.expected_value >= 1.5) cb.checked = true;
+    // default: 期待値プラス (EV >= 損益分岐 1.0、上位5頭まで)
+    if (r.expected_value !== null && r.expected_value >= 1.0) cb.checked = true;
     cb.addEventListener("change", updateBox);
     label.appendChild(cb);
     const evText = r.expected_value !== null ? ` (EV:${r.expected_value.toFixed(2)})` : "";

@@ -4,22 +4,25 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
 from datetime import datetime
 
 from engine import (
     COURSE_MAP,
     DISTANCES,
+    EV_BET_THRESHOLD,
     TRACK_TYPES,
     WEATHER_OPTIONS,
     AnalysisResult,
     EnvironmentData,
     HorseEntry,
-    PaddockData,
+    analyze_entries,
     analyze_horse,
     calc_box_tickets,
     generate_sample_horses,
 )
+from data.fetch import filter_grade, generate_synthetic_dataset, load_races_csv
+from model import predict_race, train_from_races
+from backtest import run_backtest
 
 # ページ設定
 st.set_page_config(
@@ -440,26 +443,205 @@ def render_box_calculator(results: list[AnalysisResult]):
             )
 
 
+@st.cache_data(show_spinner=False)
+def _load_synthetic():
+    return filter_grade(generate_synthetic_dataset(), "G1")
+
+
+@st.cache_resource(show_spinner=True)
+def _train_model(races_df: pd.DataFrame):
+    return train_from_races(races_df)
+
+
+def _get_dataset(key_prefix: str) -> pd.DataFrame | None:
+    """ML タブ用のデータセットを取得する (アップロード or 合成)。"""
+    src = st.radio(
+        "データソース",
+        ["合成データ (検証用デモ)", "CSVアップロード"],
+        horizontal=True,
+        key=f"{key_prefix}_data_src",
+    )
+    if src == "CSVアップロード":
+        up = st.file_uploader(
+            "レース CSV をアップロード (data/sample_races.csv と同じ列)",
+            type="csv", key=f"{key_prefix}_uploader",
+        )
+        if up is None:
+            st.info("CSV をアップロードするか、合成データを選択してください。")
+            return None
+        try:
+            return filter_grade(load_races_csv(up), "G1")
+        except Exception as e:  # noqa: BLE001
+            st.error(f"読み込みエラー: {e}")
+            return None
+    st.caption(
+        "⚠️ 合成データは実在レースではなくアルゴリズムで生成したダミーです。"
+        "G1 専用のパイプライン検証用であり、ここでの回収率は実市場の成績を意味しません。"
+    )
+    return _load_synthetic()
+
+
+def render_ml_prediction():
+    """学習済みモデルによるデータ駆動予測。"""
+    st.markdown("## 🤖 データ駆動予測 (G1専用)")
+    st.caption(
+        "過去成績・距離/競馬場適性・馬場などの特徴量から各馬の勝率を学習し、"
+        "G1 レース内で合計100%に正規化した予測勝率 × 確定オッズ で期待値を算出します。"
+    )
+    df = _get_dataset("ml")
+    if df is None:
+        return
+
+    with st.spinner("モデル学習中..."):
+        model = _train_model(df)
+    st.success(f"モデル学習完了 (backend={model.backend}, 学習行数={len(df)})")
+
+    race_ids = sorted(df["race_id"].unique())
+    race_id = st.selectbox("予測するレース", race_ids, index=len(race_ids) - 1)
+
+    race_pred = predict_race(model, df, race_id)
+    results = analyze_entries(
+        win_probs=race_pred["pred_win_prob"].tolist(),
+        odds=race_pred["odds"].tolist(),
+        umaban=race_pred["umaban"].tolist(),
+        names=race_pred["horse_name"].tolist(),
+    )
+    sorted_results = sorted(results, key=lambda r: r.expected_value, reverse=True)
+
+    value_bets = [r for r in sorted_results if r.expected_value >= EV_BET_THRESHOLD]
+    c1, c2, c3 = st.columns(3)
+    c1.metric("出走頭数", f"{len(results)}頭")
+    c2.metric(f"期待値≥{EV_BET_THRESHOLD} の妙味馬", f"{len(value_bets)}頭")
+    c3.metric("予測勝率合計", f"{sum(r.win_prob for r in results)*100:.0f}%")
+
+    if value_bets:
+        st.markdown("### 💡 期待値プラスの買い目候補")
+        for r in value_bets:
+            st.markdown(
+                f'<div class="atsui">馬番{r.umaban} {r.name} — '
+                f'勝率{r.win_prob*100:.1f}% × オッズ{r.odds} = '
+                f'期待値 {r.expected_value:.2f} ({r.rating})</div>',
+                unsafe_allow_html=True,
+            )
+    else:
+        st.info("期待値が閾値を超える買い目はありません (控除率を考慮すると見送り)。")
+
+    df_out = pd.DataFrame([
+        {
+            "馬番": r.umaban,
+            "馬名": r.name,
+            "予測勝率": f"{r.win_prob*100:.1f}%",
+            "オッズ": r.odds,
+            "期待値": r.expected_value,
+            "判定": r.rating,
+        }
+        for r in sorted_results
+    ])
+    st.dataframe(df_out, use_container_width=True, hide_index=True,
+                 column_config={"期待値": st.column_config.NumberColumn(format="%.2f")})
+
+    st.markdown("#### 特徴量重要度 (モデルが重視する要素)")
+    imp = model.feature_importance().head(12)
+    fig = go.Figure(go.Bar(x=imp.values[::-1], y=imp.index[::-1], orientation="h",
+                           marker_color="#667eea"))
+    fig.update_layout(height=380, margin=dict(t=20, b=20))
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def render_backtest():
+    """過去データでのバックテスト。"""
+    st.markdown("## 🧪 バックテスト (G1専用検証)")
+    st.warning(
+        "競馬は控除率が約20〜30%あります。**回収率100%超 (ROIプラス)** を継続できない限り"
+        "「儲かる」とは言えません。本ツールの目的は利益保証ではなく、ロジックの有効性を"
+        "実データで定量評価することです。"
+    )
+    df = _get_dataset("bt")
+    if df is None:
+        return
+
+    c1, c2, c3 = st.columns(3)
+    train_frac = c1.slider("学習データ割合", 0.5, 0.9, 0.7, 0.05)
+    ev_threshold = c2.slider("単勝 value 閾値 (EV)", 1.0, 1.5, float(EV_BET_THRESHOLD), 0.05)
+    box_size = c3.slider("ボックス選択頭数", 3, 8, 5)
+
+    if st.button("🧪 バックテスト実行", type="primary"):
+        with st.spinner("学習・検証中..."):
+            report = run_backtest(
+                df, train_frac=train_frac,
+                ev_threshold=ev_threshold, box_size=box_size,
+            )
+        st.session_state.bt_report = report
+
+    report = st.session_state.get("bt_report")
+    if report is None:
+        return
+
+    st.caption(
+        f"学習レース数={report.train_races} / 検証レース数={report.valid_races} "
+        f"(分割日={report.split_date})"
+    )
+    st.markdown("### 単勝系戦略の回収率")
+    bt_df = report.to_frame()
+    st.dataframe(bt_df, use_container_width=True, hide_index=True)
+
+    fig = go.Figure(go.Bar(
+        x=bt_df["戦略"], y=bt_df["回収率%"],
+        marker_color=["#f5576c" if v >= 100 else "#888" for v in bt_df["回収率%"]],
+        text=[f"{v:.0f}%" for v in bt_df["回収率%"]], textposition="outside",
+    ))
+    fig.add_hline(y=100, line_dash="dash", line_color="red",
+                  annotation_text="損益分岐 (回収率100%)")
+    fig.update_layout(yaxis_title="回収率%", height=380, margin=dict(t=30, b=80))
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("### ボックス系 (予測上位ボックス)")
+    st.dataframe(report.box_frame(), use_container_width=True, hide_index=True)
+    st.caption(
+        "ボックスの払戻 (回収率) には三連複/馬連の配当データ列 "
+        "(trio_payout / quinella_payout) が必要です。無い場合は的中率と投資額のみ表示します。"
+    )
+
+
 def main():
     init_session_state()
 
     st.markdown('<div class="main-header">🏇 勝ち筋解析システム</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="sub-header">かずさん理論 × 物理統計 — パドック解析で期待値を最大化</div>',
+        '<div class=\"sub-header\">G1専用の実データ × 機械学習 × バックテストで期待値を検証</div>',
         unsafe_allow_html=True,
     )
 
     location, env = render_sidebar()
 
-    # タブ
-    tab1, tab2, tab3 = st.tabs(["📝 馬データ入力", "📊 解析結果", "🎰 買い目計算"])
+    # タブ (G1専用ML予測とバックテストが新ロジック、パドック解析はレガシーデモ)
+    tab_ml, tab_bt, tab_box, tab1, tab2 = st.tabs([
+        "🤖 データ駆動予測 (G1専用)",
+        "🧪 バックテスト (G1専用)",
+        "🎰 買い目計算",
+        "📝 パドック入力(レガシー)",
+        "📊 パドック解析結果(レガシー)",
+    ])
+
+    with tab_ml:
+        render_ml_prediction()
+
+    with tab_bt:
+        render_backtest()
+
+    with tab_box:
+        render_box_calculator(st.session_state.results)
 
     with tab1:
+        st.info(
+            "以下は統計的根拠の無い旧パドック経験則のデモです。実運用・検証には"
+            "「データ駆動予測」「バックテスト」タブを使用してください。"
+        )
         render_horse_input()
 
-    # 解析実行ボタン
+    # レガシー解析実行ボタン
     st.sidebar.markdown("---")
-    if st.sidebar.button("🚀 解析実行", use_container_width=True, type="primary"):
+    if st.sidebar.button("🚀 パドック解析(レガシー)", use_container_width=True):
         results = []
         for horse in st.session_state.horses:
             r = analyze_horse(horse, env, location)
@@ -470,10 +652,7 @@ def main():
         if st.session_state.results:
             render_results(st.session_state.results, location, env)
         else:
-            st.info("サイドバーの「🚀 解析実行」ボタンを押して解析を開始してください。")
-
-    with tab3:
-        render_box_calculator(st.session_state.results)
+            st.info("サイドバーの「🚀 パドック解析(レガシー)」ボタンを押すと表示されます。")
 
 
 if __name__ == "__main__":
