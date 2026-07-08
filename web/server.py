@@ -678,14 +678,29 @@ def access(request: Request, session_id: str | None = None) -> Response:
     customer_id = _value(customer, "id")
     if not customer_id or not email:
         raise HTTPException(status_code=403, detail="購読情報を確認できませんでした。")
-    if not _subscription_is_active(subscription.status, subscription.current_period_end):
-        raise HTTPException(status_code=403, detail="サブスクリプションが有効ではありません。")
+    sub_status = _value(subscription, "status")
+    sub_period_end = _value(subscription, "current_period_end")
+    # Stripe新APIではcurrent_period_endがitems.data[0].current_period_endにある場合がある
+    if sub_period_end is None:
+        try:
+            items = _value(subscription, "items")
+            if items:
+                item_list = _value(items, "data") or []
+                if item_list:
+                    sub_period_end = _value(item_list[0], "current_period_end")
+        except Exception:
+            pass
+    # activeまたはtrialingなら有効とみなす（period_endが取れない場合も許容）
+    if sub_status not in ("active", "trialing"):
+        if not _subscription_is_active(sub_status, sub_period_end):
+            raise HTTPException(status_code=403, detail="サブスクリプションが有効ではありません。")
+    sub_id = _value(subscription, "id")
     _upsert_subscriber(
         stripe_customer_id=str(customer_id),
         email=str(email),
-        stripe_subscription_id=str(subscription.id),
+        stripe_subscription_id=str(sub_id) if sub_id else "",
         status="active",
-        current_period_end=int(subscription.current_period_end) if subscription.current_period_end else None,
+        current_period_end=int(sub_period_end) if sub_period_end else None,
     )
     response = RedirectResponse("/app", status_code=303)
     _set_auth_cookie(response, customer_id=str(customer_id), email=str(email))
