@@ -604,6 +604,7 @@ def create_checkout_session(request: Request) -> JSONResponse:
         success_url=f"{base_url}/access?session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{base_url}/",
         allow_promotion_codes=True,
+        payment_method_collection="if_required",
     )
     return JSONResponse({"url": session.url})
 
