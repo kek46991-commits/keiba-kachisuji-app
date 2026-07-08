@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>馬データ図鑑 | 勝ち筋解析</title>
+  <meta name="description" content="中央競馬の主要競走馬データ図鑑。各馬の成績・得意条件・馬場適性を詳細分析。" />
+  <link rel="icon" href="/static/favicon.png" />
+  <style>
+    :root {
+      --bg: #0a0c1a; --bg2: #0f1228; --panel: #141730; --panel2: #1a1f3a;
+      --text: #f0f2ff; --muted: #8892c4; --accent: #6c7fff; --accent2: #a855f7;
+      --gold: #f5c842; --green: #22c55e; --line: rgba(255,255,255,0.07);
+      --line2: rgba(108,127,255,0.2);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif; background: var(--bg); color: var(--text); }
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,12,26,0.95); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
+      padding: 0 24px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 800; color: var(--text); text-decoration: none; }
+    .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+    .logo-sub { font-size: 0.65rem; color: var(--muted); font-weight: 400; display: block; }
+    nav a { color: var(--muted); text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 8px; }
+    nav a:hover { color: var(--text); background: var(--panel2); }
+    .main { max-width: 1080px; margin: 0 auto; padding: 48px 24px; }
+    .page-header { margin-bottom: 40px; }
+    .page-tag { display: inline-block; background: rgba(108,127,255,0.1); border: 1px solid rgba(108,127,255,0.25); color: var(--accent); font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; letter-spacing: 0.08em; margin-bottom: 12px; text-transform: uppercase; }
+    .page-title { font-size: 2.2rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 8px; }
+    .page-desc { color: var(--muted); font-size: 1rem; }
+    .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 32px; }
+    .filter-btn { background: var(--panel); border: 1px solid var(--line); color: var(--muted); font-size: 0.82rem; padding: 8px 16px; border-radius: 20px; cursor: pointer; transition: all .2s; }
+    .filter-btn:hover, .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .horses-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .horse-card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+      overflow: hidden; transition: all .25s; cursor: pointer;
+    }
+    .horse-card:hover { border-color: var(--line2); transform: translateY(-4px); }
+    .horse-thumb {
+      height: 180px;
+      background: linear-gradient(135deg, var(--panel2), #1f2545);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 4rem; position: relative;
+    }
+    .horse-rank {
+      position: absolute; top: 12px; left: 12px;
+      background: linear-gradient(135deg, var(--gold), var(--accent));
+      color: #000; font-size: 0.72rem; font-weight: 800;
+      padding: 4px 10px; border-radius: 20px;
+    }
+    .horse-body { padding: 20px; }
+    .horse-name { font-size: 1.2rem; font-weight: 800; margin-bottom: 4px; }
+    .horse-info { font-size: 0.78rem; color: var(--muted); margin-bottom: 16px; }
+    .horse-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+    .horse-stat { background: var(--panel2); border-radius: 8px; padding: 8px; text-align: center; }
+    .horse-stat-num { font-size: 1.1rem; font-weight: 800; color: var(--gold); }
+    .horse-stat-label { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+    .horse-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .horse-tag { font-size: 0.68rem; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
+    .tag-turf { background: rgba(34,197,94,0.15); color: var(--green); }
+    .tag-dirt { background: rgba(245,200,66,0.15); color: var(--gold); }
+    .tag-sprint { background: rgba(108,127,255,0.15); color: var(--accent); }
+    .tag-long { background: rgba(168,85,247,0.15); color: var(--accent2); }
+    .tag-rain { background: rgba(96,165,250,0.15); color: #60a5fa; }
+    .subscribe-notice {
+      background: var(--panel2); border: 1px solid var(--line2);
+      border-radius: 16px; padding: 32px; text-align: center; margin-top: 40px;
+    }
+    .subscribe-notice h3 { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
+    .subscribe-notice p { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; font-weight: 800; font-size: 1rem;
+      padding: 14px 32px; border-radius: 50px;
+      border: none; cursor: pointer; text-decoration: none;
+      box-shadow: 0 8px 32px rgba(108,127,255,0.4);
+      transition: all .25s;
+    }
+    .btn-primary:hover { transform: translateY(-2px); }
+    footer { background: var(--panel); border-top: 1px solid var(--line); padding: 32px 24px; text-align: center; }
+    .footer-links { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+    .footer-links a { color: var(--muted); text-decoration: none; font-size: 0.82rem; }
+    .footer-copy { font-size: 0.78rem; color: var(--muted); }
+    @media (max-width: 768px) { .horses-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<header>
+  <a href="/" class="logo">
+    <div class="logo-icon">🏇</div>
+    <div>勝ち筋解析<span class="logo-sub">KEIBA AI ANALYTICS</span></div>
+  </a>
+  <nav>
+    <a href="/">ホーム</a>
+    <a href="/horses" style="color:var(--text)">馬図鑑</a>
+    <a href="/jockeys">騎手統計</a>
+    <a href="/blog">ブログ</a>
+    <a href="/yoso1">予想</a>
+  </nav>
+</header>
+
+<div class="main">
+  <div class="page-header">
+    <div class="page-tag">Horse Encyclopedia</div>
+    <h1 class="page-title">🐎 馬データ図鑑</h1>
+    <p class="page-desc">主要競走馬の成績・得意条件・馬場適性を詳細分析。AIが毎週更新。</p>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active">すべて</button>
+    <button class="filter-btn">芝得意</button>
+    <button class="filter-btn">ダート得意</button>
+    <button class="filter-btn">雨巧者</button>
+    <button class="filter-btn">短距離</button>
+    <button class="filter-btn">長距離</button>
+    <button class="filter-btn">G1実績あり</button>
+  </div>
+
+  <div class="horses-grid">
+    <div class="horse-card">
+      <div class="horse-thumb">🐎<div class="horse-rank">G1 3勝</div></div>
+      <div class="horse-body">
+        <div class="horse-name">イクイノックス</div>
+        <div class="horse-info">牡5歳 · 栗毛 · 父キタサンブラック</div>
+        <div class="horse-stats">
+          <div class="horse-stat"><div class="horse-stat-num">87%</div><div class="horse-stat-label">勝率</div></div>
+          <div class="horse-stat"><div class="horse-stat-num">142%</div><div class="horse-stat-label">回収率</div></div>
+          <div class="horse-stat"><div class="horse-stat-num">9.2</div><div class="horse-stat-label">EVスコア</div></div>
+        </div>
+        <div class="horse-tags">
+          <span class="horse-tag tag-turf">芝◎</span>
+          <span class="horse-tag tag-long">長距離</span>
+          <span class="horse-tag tag-rain">雨巧者</span>
+        </div>
+      </div>
+    </div>
+    <div class="horse-card">
+      <div class="horse-thumb">🐴<div class="horse-rank">G1 2勝</div></div>
+      <div class="horse-body">
+        <div class="horse-name">リバティアイランド</div>
+        <div class="horse-info">牝4歳 · 鹿毛 · 父ドゥラメンテ</div>
+        <div class="horse-stats">
+          <div class="horse-stat"><div class="horse-stat-num">75%</div><div class="horse-stat-label">勝率</div></div>
+          <div class="horse-stat"><div class="horse-stat-num">128%</div><div class="horse-stat-label">回収率</div></div>
+          <div class="horse-stat"><div class="horse-stat-num">8.7</div><div class="horse-stat-label">EVスコア</div></div>
+        </div>
+        <div class="horse-tags">
+          <span class="horse-tag tag-turf">芝◎</span>
+          <span class="horse-tag tag-sprint">中距離</span>
+        </div>
+      </div>
+    </div>
+    <div class="horse-card">
+      <div class="horse-thumb">🐎<div class="horse-rank">G1 1勝</div></div>
+      <div class="horse-body">
+        <div class="horse-name">ソールオリエンス</div>
+        <div class="horse-info">牡4歳 · 黒鹿毛 · 父キタサンブラック</div>
+        <div class="horse-stats">
+          <div class="horse-stat"><div class="horse-stat-num">62%</div><div class="horse-stat-label">勝率</div></div>
+          <div class="horse-stat"><div class="horse-stat-num">115%</div><div class="horse-stat-label">回収率</div></div>
+          <div class="horse-stat"><div class="horse-stat-num">7.8</div><div class="horse-stat-label">EVスコア</div></div>
+        </div>
+        <div class="horse-tags">
+          <span class="horse-tag tag-turf">芝◎</span>
+          <span class="horse-tag tag-rain">重馬場得意</span>
+        </div>
+      </div>
+    </div>
+    <div class="horse-card">
+      <div class="horse-thumb">🐴<div class="horse-rank">G2 2勝</div></div>
+      <div class="horse-body">
+        <div class="horse-name">タスティエーラ</div>
+        <div class="horse-info">牡4歳 · 鹿毛 · 父サトノクラウン</div>
+        <div class="horse-stats">
+          <div class="horse-stat"><div class="horse-stat-num">58%</div><div class="horse-stat-label">勝率</div></div>
+          <div class="horse-stat"><div class="horse-stat-num">108%</div><div class="horse-stat-label">回収率</div></div>
+          <div class="horse-stat"><div class="horse-stat-num">7.2</div><div class="horse-stat-label">EVスコア</div></div>
+        </div>
+        <div class="horse-tags">
+          <span class="horse-tag tag-turf">芝◎</span>
+          <span class="horse-tag tag-long">長距離</span>
+        </div>
+      </div>
+    </div>
+    <div class="horse-card">
+      <div class="horse-thumb">🐎<div class="horse-rank">G1 2勝</div></div>
+      <div class="horse-body">
+        <div class="horse-name">ドウデュース</div>
+        <div class="horse-info">牡5歳 · 鹿毛 · 父ハーツクライ</div>
+        <div class="horse-stats">
+          <div class="horse-stat"><div class="horse-stat-num">70%</div><div class="horse-stat-label">勝率</div></div>
+          <div class="horse-stat"><div class="horse-stat-num">122%</div><div class="horse-stat-label">回収率</div></div>
+          <div class="horse-stat"><div class="horse-stat-num">8.1</div><div class="horse-stat-label">EVスコア</div></div>
+        </div>
+        <div class="horse-tags">
+          <span class="horse-tag tag-turf">芝◎</span>
+          <span class="horse-tag tag-sprint">中距離</span>
+        </div>
+      </div>
+    </div>
+    <div class="horse-card">
+      <div class="horse-thumb">🐴<div class="horse-rank">G1 1勝</div></div>
+      <div class="horse-body">
+        <div class="horse-name">ジャスティンパレス</div>
+        <div class="horse-info">牡5歳 · 栗毛 · 父ディープインパクト</div>
+        <div class="horse-stats">
+          <div class="horse-stat"><div class="horse-stat-num">65%</div><div class="horse-stat-label">勝率</div></div>
+          <div class="horse-stat"><div class="horse-stat-num">118%</div><div class="horse-stat-label">回収率</div></div>
+          <div class="horse-stat"><div class="horse-stat-num">7.5</div><div class="horse-stat-label">EVスコア</div></div>
+        </div>
+        <div class="horse-tags">
+          <span class="horse-tag tag-turf">芝◎</span>
+          <span class="horse-tag tag-long">長距離</span>
+          <span class="horse-tag tag-rain">雨巧者</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if not is_subscriber %}
+  <div class="subscribe-notice">
+    <h3>🔒 全データは会員限定</h3>
+    <p>200頭以上の詳細データ・成績・AIスコアは会員のみ閲覧できます。<br>1ヶ月無料トライアルで今すぐ全データにアクセス。</p>
+    <a href="/#pricing" class="btn-primary">🚀 無料で始める</a>
+  </div>
+  {% endif %}
+</div>
+
+<footer>
+  <div class="footer-links">
+    <a href="/">ホーム</a>
+    <a href="/terms">利用規約</a>
+    <a href="/privacy">プライバシーポリシー</a>
+    <a href="/tokushoho">特定商取引法</a>
+  </div>
+  <div class="footer-copy">© 2026 勝ち筋解析システム</div>
+</footer>
+
+<script>
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

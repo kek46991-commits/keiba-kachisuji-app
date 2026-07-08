@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>騎手統計 | 勝ち筋解析</title>
+  <meta name="description" content="中央競馬の騎手別統計データ。勝率・回収率・コース別成績を詳細分析。" />
+  <link rel="icon" href="/static/favicon.png" />
+  <style>
+    :root {
+      --bg: #0a0c1a; --bg2: #0f1228; --panel: #141730; --panel2: #1a1f3a;
+      --text: #f0f2ff; --muted: #8892c4; --accent: #6c7fff; --accent2: #a855f7;
+      --gold: #f5c842; --green: #22c55e; --red: #ef4444;
+      --line: rgba(255,255,255,0.07); --line2: rgba(108,127,255,0.2);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif; background: var(--bg); color: var(--text); }
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,12,26,0.95); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
+      padding: 0 24px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 800; color: var(--text); text-decoration: none; }
+    .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+    .logo-sub { font-size: 0.65rem; color: var(--muted); font-weight: 400; display: block; }
+    nav a { color: var(--muted); text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 8px; }
+    nav a:hover { color: var(--text); background: var(--panel2); }
+    .main { max-width: 1080px; margin: 0 auto; padding: 48px 24px; }
+    .page-tag { display: inline-block; background: rgba(108,127,255,0.1); border: 1px solid rgba(108,127,255,0.25); color: var(--accent); font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; letter-spacing: 0.08em; margin-bottom: 12px; text-transform: uppercase; }
+    .page-title { font-size: 2.2rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 8px; }
+    .page-desc { color: var(--muted); font-size: 1rem; margin-bottom: 40px; }
+    /* Stats overview */
+    .overview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 48px; }
+    .overview-card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; text-align: center; }
+    .overview-num { font-size: 2rem; font-weight: 900; background: linear-gradient(135deg, var(--gold), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .overview-label { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+    /* Table */
+    .table-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; margin-bottom: 40px; }
+    .table-header { padding: 20px 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+    .table-title { font-size: 1rem; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: var(--panel2); padding: 12px 16px; text-align: left; font-size: 0.78rem; color: var(--muted); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+    td { padding: 14px 16px; border-bottom: 1px solid var(--line); font-size: 0.88rem; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font-size: 0.78rem; font-weight: 800; }
+    .rank-1 { background: linear-gradient(135deg, #f5c842, #e8a800); color: #000; }
+    .rank-2 { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); color: #000; }
+    .rank-3 { background: linear-gradient(135deg, #cd7f32, #a0522d); color: #fff; }
+    .rank-other { background: var(--panel2); color: var(--muted); }
+    .jockey-name { font-weight: 700; }
+    .win-rate { color: var(--green); font-weight: 700; }
+    .recovery { color: var(--gold); font-weight: 700; }
+    .bar-wrap { display: flex; align-items: center; gap: 8px; }
+    .bar { height: 6px; border-radius: 3px; background: var(--panel2); flex: 1; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+    /* Weather stats per jockey */
+    .weather-section { margin-top: 48px; }
+    .section-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 24px; }
+    .weather-table-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+    .subscribe-notice { background: var(--panel2); border: 1px solid var(--line2); border-radius: 16px; padding: 32px; text-align: center; margin-top: 40px; }
+    .subscribe-notice h3 { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
+    .subscribe-notice p { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+    .btn-primary { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; font-weight: 800; font-size: 1rem; padding: 14px 32px; border-radius: 50px; border: none; cursor: pointer; text-decoration: none; box-shadow: 0 8px 32px rgba(108,127,255,0.4); transition: all .25s; }
+    .btn-primary:hover { transform: translateY(-2px); }
+    footer { background: var(--panel); border-top: 1px solid var(--line); padding: 32px 24px; text-align: center; }
+    .footer-links { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+    .footer-links a { color: var(--muted); text-decoration: none; font-size: 0.82rem; }
+    .footer-copy { font-size: 0.78rem; color: var(--muted); }
+    @media (max-width: 768px) { .overview-grid { grid-template-columns: repeat(2, 1fr); } table { font-size: 0.78rem; } th, td { padding: 10px 12px; } }
+  </style>
+</head>
+<body>
+<header>
+  <a href="/" class="logo">
+    <div class="logo-icon">🏇</div>
+    <div>勝ち筋解析<span class="logo-sub">KEIBA AI ANALYTICS</span></div>
+  </a>
+  <nav>
+    <a href="/">ホーム</a>
+    <a href="/horses">馬図鑑</a>
+    <a href="/jockeys" style="color:var(--text)">騎手統計</a>
+    <a href="/blog">ブログ</a>
+    <a href="/yoso1">予想</a>
+  </nav>
+</header>
+
+<div class="main">
+  <div class="page-tag">Jockey Statistics</div>
+  <h1 class="page-title">👤 騎手統計データ</h1>
+  <p class="page-desc">騎手別の勝率・回収率・天候別成績・コース適性を詳細分析。AIが毎週更新。</p>
+
+  <div class="overview-grid">
+    <div class="overview-card">
+      <div class="overview-num">38名</div>
+      <div class="overview-label">分析対象騎手数</div>
+    </div>
+    <div class="overview-card">
+      <div class="overview-num">川田将雅</div>
+      <div class="overview-label">2026年勝率1位</div>
+    </div>
+    <div class="overview-card">
+      <div class="overview-num">128%</div>
+      <div class="overview-label">最高回収率（雨天時）</div>
+    </div>
+    <div class="overview-card">
+      <div class="overview-num">毎週</div>
+      <div class="overview-label">データ更新頻度</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-header">
+      <div class="table-title">🏆 騎手総合ランキング（2026年）</div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>順位</th>
+          <th>騎手名</th>
+          <th>勝率</th>
+          <th>連対率</th>
+          <th>回収率</th>
+          <th>G1勝利</th>
+          <th>得意条件</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="rank-badge rank-1">1</span></td>
+          <td class="jockey-name">川田 将雅</td>
+          <td class="win-rate">32.1%</td>
+          <td>54.3%</td>
+          <td class="recovery">118%</td>
+          <td>4勝</td>
+          <td>芝・良馬場</td>
+        </tr>
+        <tr>
+          <td><span class="rank-badge rank-2">2</span></td>
+          <td class="jockey-name">C.ルメール</td>
+          <td class="win-rate">30.8%</td>
+          <td>52.1%</td>
+          <td class="recovery">115%</td>
+          <td>3勝</td>
+          <td>芝・中長距離</td>
+        </tr>
+        <tr>
+          <td><span class="rank-badge rank-3">3</span></td>
+          <td class="jockey-name">武 豊</td>
+          <td class="win-rate">28.4%</td>
+          <td>49.7%</td>
+          <td class="recovery">112%</td>
+          <td>2勝</td>
+          <td>芝・長距離</td>
+        </tr>
+        <tr>
+          <td><span class="rank-badge rank-other">4</span></td>
+          <td class="jockey-name">横山 武史</td>
+          <td class="win-rate">26.2%</td>
+          <td>47.8%</td>
+          <td class="recovery">108%</td>
+          <td>2勝</td>
+          <td>芝・中距離</td>
+        </tr>
+        <tr>
+          <td><span class="rank-badge rank-other">5</span></td>
+          <td class="jockey-name">松山 弘平</td>
+          <td class="win-rate">24.8%</td>
+          <td>45.2%</td>
+          <td class="recovery">105%</td>
+          <td>1勝</td>
+          <td>ダート・短距離</td>
+        </tr>
+        <tr>
+          <td><span class="rank-badge rank-other">6</span></td>
+          <td class="jockey-name">岩田 望来</td>
+          <td class="win-rate">23.5%</td>
+          <td>43.1%</td>
+          <td class="recovery">103%</td>
+          <td>1勝</td>
+          <td>芝・短距離</td>
+        </tr>
+        <tr>
+          <td><span class="rank-badge rank-other">7</span></td>
+          <td class="jockey-name">坂井 瑠星</td>
+          <td class="win-rate">22.1%</td>
+          <td>41.8%</td>
+          <td class="recovery">101%</td>
+          <td>0勝</td>
+          <td>芝・中距離</td>
+        </tr>
+        <tr>
+          <td><span class="rank-badge rank-other">8</span></td>
+          <td class="jockey-name">戸崎 圭太</td>
+          <td class="win-rate">21.8%</td>
+          <td>40.5%</td>
+          <td class="recovery">99%</td>
+          <td>0勝</td>
+          <td>ダート・中距離</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="weather-section">
+    <h2 class="section-title">🌦️ 天候・馬場状態別 騎手成績</h2>
+    <div class="weather-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>騎手名</th>
+            <th>☀️ 晴れ・良</th>
+            <th>🌧️ 雨・稍重</th>
+            <th>⛈️ 重・不良</th>
+            <th>🌡️ 猛暑日</th>
+            <th>雨天得意度</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="jockey-name">川田 将雅</td>
+            <td class="win-rate">33.2%</td>
+            <td class="win-rate">31.8%</td>
+            <td>28.4%</td>
+            <td>30.1%</td>
+            <td><div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:82%"></div></div>82</div></td>
+          </tr>
+          <tr>
+            <td class="jockey-name">C.ルメール</td>
+            <td class="win-rate">31.5%</td>
+            <td class="win-rate">34.2%</td>
+            <td class="win-rate">36.1%</td>
+            <td>29.8%</td>
+            <td><div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:95%"></div></div>95</div></td>
+          </tr>
+          <tr>
+            <td class="jockey-name">武 豊</td>
+            <td class="win-rate">29.1%</td>
+            <td>26.8%</td>
+            <td>24.2%</td>
+            <td class="win-rate">31.4%</td>
+            <td><div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:62%"></div></div>62</div></td>
+          </tr>
+          <tr>
+            <td class="jockey-name">横山 武史</td>
+            <td>25.8%</td>
+            <td class="win-rate">28.4%</td>
+            <td class="win-rate">30.2%</td>
+            <td>24.1%</td>
+            <td><div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:88%"></div></div>88</div></td>
+          </tr>
+          <tr>
+            <td class="jockey-name">松山 弘平</td>
+            <td class="win-rate">25.2%</td>
+            <td>23.1%</td>
+            <td>21.8%</td>
+            <td class="win-rate">26.8%</td>
+            <td><div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:55%"></div></div>55</div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if not is_subscriber %}
+  <div class="subscribe-notice">
+    <h3>🔒 全データは会員限定</h3>
+    <p>38名の全騎手データ・コース別成績・詳細分析は会員のみ閲覧できます。<br>1ヶ月無料トライアルで今すぐ全データにアクセス。</p>
+    <a href="/#pricing" class="btn-primary">🚀 無料で始める</a>
+  </div>
+  {% endif %}
+</div>
+
+<footer>
+  <div class="footer-links">
+    <a href="/">ホーム</a>
+    <a href="/terms">利用規約</a>
+    <a href="/privacy">プライバシーポリシー</a>
+    <a href="/tokushoho">特定商取引法</a>
+  </div>
+  <div class="footer-copy">© 2026 勝ち筋解析システム</div>
+</footer>
+</body>
+</html>

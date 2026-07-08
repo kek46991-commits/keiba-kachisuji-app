@@ -592,11 +592,18 @@ def create_checkout_session(request: Request) -> JSONResponse:
         )
     _stripe_client()
     base_url = str(request.base_url).rstrip("/")
+    # 1ヶ月無料トライアル設定
+    trial_days = int(os.getenv("STRIPE_TRIAL_DAYS", "30"))
+    subscription_data: dict = {}
+    if trial_days > 0:
+        subscription_data["trial_period_days"] = trial_days
     session = stripe.checkout.Session.create(
         mode="subscription",
         line_items=[{"price": STRIPE_PRICE_ID, "quantity": 1}],
+        subscription_data=subscription_data if subscription_data else None,
         success_url=f"{base_url}/access?session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{base_url}/",
+        allow_promotion_codes=True,
     )
     return JSONResponse({"url": session.url})
 
@@ -762,3 +769,164 @@ def logout() -> Response:
     response = RedirectResponse("/", status_code=303)
     _clear_auth_cookie(response)
     return response
+
+
+# ===== 馬データ図鑑 =====
+@app.get("/horses", response_class=HTMLResponse)
+def horses_page(request: Request) -> HTMLResponse:
+    session = _require_demo_or_auth(request)
+    context = _seo_context(
+        title="馬データ図鑑 | 勝ち筋解析",
+        description="中央競馬の主要競走馬データ図鑑。各馬の成績・得意条件・馬場適性を詳細分析。",
+        path="/horses",
+    )
+    context["is_subscriber"] = session is not None
+    return templates.TemplateResponse(request, "horses.html", context)
+
+
+# ===== 騎手統計 =====
+@app.get("/jockeys", response_class=HTMLResponse)
+def jockeys_page(request: Request) -> HTMLResponse:
+    session = _require_demo_or_auth(request)
+    context = _seo_context(
+        title="騎手統計 | 勝ち筋解析",
+        description="中央競馬の騎手別統計データ。勝率・回収率・天候別成績を詳細分析。",
+        path="/jockeys",
+    )
+    context["is_subscriber"] = session is not None
+    return templates.TemplateResponse(request, "jockeys.html", context)
+
+
+# ===== ブログ一覧 =====
+@app.get("/blog", response_class=HTMLResponse)
+def blog_list(request: Request) -> HTMLResponse:
+    from web.blog_generator import _get_blog_posts, BLOG_DB_PATH
+    context = _seo_context(
+        title="AIブログ | 勝ち筋解析",
+        description="競馬AIが毎日自動生成するブログ。G1分析・騎手情報・馬場レポートをお届け。",
+        path="/blog",
+    )
+    context["posts"] = _get_blog_posts(BLOG_DB_PATH)
+    return templates.TemplateResponse(request, "blog_list.html", context)
+
+
+# ===== ブログ記事詳細 =====
+@app.get("/blog/{slug}", response_class=HTMLResponse)
+def blog_post_page(request: Request, slug: str) -> HTMLResponse:
+    from web.blog_generator import _get_blog_post, BLOG_DB_PATH
+    # DBから取得を試みる
+    db_post = _get_blog_post(BLOG_DB_PATH, slug)
+    if db_post:
+        context = _seo_context(
+            title=f"{db_post['title']} | 勝ち筋解析",
+            description=db_post["excerpt"],
+            path=f"/blog/{slug}",
+        )
+        context["post"] = {
+            "title": db_post["title"],
+            "category": db_post["category"],
+            "date": db_post["published_at"][:10],
+            "excerpt": db_post["excerpt"],
+            "read_time": db_post.get("read_time", 5),
+            "content": db_post["content"],
+        }
+        return templates.TemplateResponse(request, "blog_post.html", context)
+    # フォールバック: ハードコード記事
+    posts_data = {
+        "takara-2026": {
+            "title": "【宝塚記念2026】AIが選ぶ本命馬と穴馬予想・全頭分析",
+            "category": "G1分析",
+            "date": "2026年7月8日",
+            "excerpt": "機械学習モデルが宝塚記念の全出走馬を分析。期待値・馬場適性・騎手相性を総合評価。",
+            "read_time": 8,
+            "content": """
+<p>2026年の宝塚記念は、阪神競馬場の芝2200mで行われます。今年は梅雨の影響で稍重〜重馬場が予想されており、<strong>雨巧者の馬が有利</strong>になると分析しています。</p>
+<h2>AIモデルの予測結果</h2>
+<p>機械学習モデルによる各馬の予測勝率と期待値(EV)を算出しました。</p>
+<h3>本命馬：イクイノックス</h3>
+<p>AIモデルが最も高い期待値を算出したのはイクイノックスです。<strong>予測勝率28.4%、EV+1.42</strong>と圧倒的な数値を示しています。</p>
+<h2>天候・馬場状態の影響</h2>
+<p>今年の宝塚記念は梅雨の影響で稍重〜重馬場が予想されます。過去データの分析では、<strong>重馬場での回収率は良馬場より約15%高い</strong>傾向があります。</p>
+<table class="data-table">
+  <thead><tr><th>馬場状態</th><th>平均回収率</th><th>分析レース数</th></tr></thead>
+  <tbody>
+    <tr><td>良</td><td>108%</td><td>480件</td></tr>
+    <tr><td>稍重</td><td>115%</td><td>180件</td></tr>
+    <tr><td>重</td><td>122%</td><td>85件</td></tr>
+  </tbody>
+</table>
+<blockquote>◎ イクイノックス（本命）<br>○ ドウデュース（対抗）<br>▲ ジャスティンパレス（雨天補正で浮上）</blockquote>
+""",
+        },
+        "ame-tsuyoi-uma": {
+            "title": "雨の日に強い馬ランキング TOP10【2026年最新版】",
+            "category": "天候・馬場",
+            "date": "2026年7月7日",
+            "excerpt": "重馬場・不良馬場での成績データを徹底分析。雨巧者として知られる馬たちの特徴と成績。",
+            "read_time": 6,
+            "content": """
+<p>競馬において、<strong>雨の日（重馬場・不良馬場）での成績</strong>は馬によって大きく異なります。今回は過去5年間のデータを分析し、雨天時に特に強い馬をランキング形式でご紹介します。</p>
+<h2>雨天時に強い馬の特徴</h2>
+<ul>
+  <li>パワー型の体型・走法を持つ馬</li>
+  <li>ダート経験がある馬（馬場の変化に対応しやすい）</li>
+  <li>重心が低く、泥をかぶっても動じない気性の馬</li>
+</ul>
+<h2>雨天成績ランキング TOP5</h2>
+<table class="data-table">
+  <thead><tr><th>順位</th><th>馬名</th><th>重・不良勝率</th><th>良馬場勝率</th><th>差</th></tr></thead>
+  <tbody>
+    <tr><td>1位</td><td>ジャスティンパレス</td><td class="highlight">42.1%</td><td>28.3%</td><td class="highlight">+13.8%</td></tr>
+    <tr><td>2位</td><td>ソールオリエンス</td><td class="highlight">38.5%</td><td>25.1%</td><td class="highlight">+13.4%</td></tr>
+    <tr><td>3位</td><td>イクイノックス</td><td class="highlight">35.2%</td><td>28.4%</td><td class="highlight">+6.8%</td></tr>
+  </tbody>
+</table>
+""",
+        },
+        "kawada-stats": {
+            "title": "川田将雅2026年成績まとめ・得意条件と苦手条件を徹底分析",
+            "category": "騎手分析",
+            "date": "2026年7月6日",
+            "excerpt": "2026年リーディング争いをリードする川田将雅騎手の成績を詳細分析。コース別・天候別の傾向。",
+            "read_time": 5,
+            "content": """
+<p>2026年のリーディング争いをリードする川田将雅騎手。今年の成績をデータで振り返ります。</p>
+<h2>2026年上半期成績</h2>
+<p>勝率32.1%、連対率54.3%と圧倒的な成績を残しています。特に<strong>芝・良馬場での成績</strong>が際立っています。</p>
+<h2>天候別成績</h2>
+<table class="data-table">
+  <thead><tr><th>天候</th><th>勝率</th><th>回収率</th></tr></thead>
+  <tbody>
+    <tr><td>晴れ・良</td><td class="highlight">33.2%</td><td>118%</td></tr>
+    <tr><td>雨・稍重</td><td>31.8%</td><td>112%</td></tr>
+    <tr><td>重・不良</td><td>28.4%</td><td>105%</td></tr>
+  </tbody>
+</table>
+""",
+        },
+    }
+
+    post_data = posts_data.get(slug)
+    if not post_data:
+        raise HTTPException(status_code=404, detail="記事が見つかりません")
+
+    context = _seo_context(
+        title=f"{post_data['title']} | 勝ち筋解析",
+        description=post_data["excerpt"],
+        path=f"/blog/{slug}",
+    )
+    context["post"] = post_data
+    return templates.TemplateResponse(request, "blog_post.html", context)
+
+
+# ===== 週次予想ページ =====
+@app.get("/yoso1", response_class=HTMLResponse)
+def yoso_page(request: Request) -> HTMLResponse:
+    session = _require_demo_or_auth(request)
+    context = _seo_context(
+        title="今週の予想 | 勝ち筋解析",
+        description="AIによる今週の競馬予想。G1・重賞の期待値分析・推奨馬を公開。",
+        path="/yoso1",
+    )
+    context["is_subscriber"] = session is not None
+    return templates.TemplateResponse(request, "yoso.html", context)

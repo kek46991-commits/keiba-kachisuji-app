@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIブログ | 勝ち筋解析</title>
+  <meta name="description" content="競馬AIが毎日自動生成するブログ。G1分析・騎手情報・馬場レポートをお届け。" />
+  <link rel="icon" href="/static/favicon.png" />
+  <style>
+    :root {
+      --bg: #0a0c1a; --bg2: #0f1228; --panel: #141730; --panel2: #1a1f3a;
+      --text: #f0f2ff; --muted: #8892c4; --accent: #6c7fff; --accent2: #a855f7;
+      --gold: #f5c842; --green: #22c55e;
+      --line: rgba(255,255,255,0.07); --line2: rgba(108,127,255,0.2);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif; background: var(--bg); color: var(--text); }
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,12,26,0.95); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
+      padding: 0 24px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 800; color: var(--text); text-decoration: none; }
+    .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+    .logo-sub { font-size: 0.65rem; color: var(--muted); font-weight: 400; display: block; }
+    nav a { color: var(--muted); text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 8px; }
+    nav a:hover { color: var(--text); background: var(--panel2); }
+    .main { max-width: 1080px; margin: 0 auto; padding: 48px 24px; }
+    .page-tag { display: inline-block; background: rgba(108,127,255,0.1); border: 1px solid rgba(108,127,255,0.25); color: var(--accent); font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; letter-spacing: 0.08em; margin-bottom: 12px; text-transform: uppercase; }
+    .page-title { font-size: 2.2rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 8px; }
+    .page-desc { color: var(--muted); font-size: 1rem; margin-bottom: 40px; }
+    .ai-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3);
+      color: var(--accent2); font-size: 0.78rem; font-weight: 600;
+      padding: 6px 14px; border-radius: 20px; margin-bottom: 32px;
+    }
+    .ai-badge::before { content: "●"; font-size: 0.5rem; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .cat-filter { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 32px; }
+    .cat-btn { background: var(--panel); border: 1px solid var(--line); color: var(--muted); font-size: 0.82rem; padding: 8px 16px; border-radius: 20px; cursor: pointer; transition: all .2s; }
+    .cat-btn:hover, .cat-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .blog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .blog-card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; transition: all .25s; text-decoration: none; color: inherit; display: flex; flex-direction: column; }
+    .blog-card:hover { border-color: var(--line2); transform: translateY(-4px); }
+    .blog-thumb { height: 160px; display: flex; align-items: center; justify-content: center; font-size: 3rem; position: relative; overflow: hidden; }
+    .blog-thumb.g1 { background: linear-gradient(135deg, rgba(245,200,66,0.2), var(--panel2)); }
+    .blog-thumb.weather { background: linear-gradient(135deg, rgba(96,165,250,0.2), var(--panel2)); }
+    .blog-thumb.jockey { background: linear-gradient(135deg, rgba(168,85,247,0.2), var(--panel2)); }
+    .blog-thumb.horse { background: linear-gradient(135deg, rgba(34,197,94,0.2), var(--panel2)); }
+    .blog-thumb.analysis { background: linear-gradient(135deg, rgba(108,127,255,0.2), var(--panel2)); }
+    .blog-body { padding: 20px; flex: 1; display: flex; flex-direction: column; }
+    .blog-cat { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+    .cat-g1 { color: var(--gold); }
+    .cat-weather { color: #60a5fa; }
+    .cat-jockey { color: var(--accent2); }
+    .cat-horse { color: var(--green); }
+    .cat-analysis { color: var(--accent); }
+    .blog-title { font-size: 0.95rem; font-weight: 700; line-height: 1.5; margin-bottom: 8px; }
+    .blog-excerpt { font-size: 0.82rem; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
+    .blog-meta { font-size: 0.75rem; color: var(--muted); margin-top: auto; display: flex; align-items: center; gap: 8px; }
+    .ai-label { background: rgba(168,85,247,0.15); color: var(--accent2); font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+    .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 40px; }
+    .page-btn { background: var(--panel); border: 1px solid var(--line); color: var(--muted); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: all .2s; }
+    .page-btn:hover, .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    footer { background: var(--panel); border-top: 1px solid var(--line); padding: 32px 24px; text-align: center; }
+    .footer-links { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+    .footer-links a { color: var(--muted); text-decoration: none; font-size: 0.82rem; }
+    .footer-copy { font-size: 0.78rem; color: var(--muted); }
+    @media (max-width: 768px) { .blog-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<header>
+  <a href="/" class="logo">
+    <div class="logo-icon">🏇</div>
+    <div>勝ち筋解析<span class="logo-sub">KEIBA AI ANALYTICS</span></div>
+  </a>
+  <nav>
+    <a href="/">ホーム</a>
+    <a href="/horses">馬図鑑</a>
+    <a href="/jockeys">騎手統計</a>
+    <a href="/blog" style="color:var(--text)">ブログ</a>
+    <a href="/yoso1">予想</a>
+  </nav>
+</header>
+
+<div class="main">
+  <div class="page-tag">AI Blog</div>
+  <h1 class="page-title">📝 AIブログ</h1>
+  <p class="page-desc">Gemini AIが毎日自動生成する競馬分析記事。G1・重賞・天候・騎手情報を網羅。</p>
+  <div class="ai-badge">Gemini AI 毎日自動更新中</div>
+
+  <div class="cat-filter">
+    <button class="cat-btn active">すべて</button>
+    <button class="cat-btn">G1分析</button>
+    <button class="cat-btn">天候・馬場</button>
+    <button class="cat-btn">騎手分析</button>
+    <button class="cat-btn">馬分析</button>
+    <button class="cat-btn">データ分析</button>
+  </div>
+
+  <div class="blog-grid">
+    {% for post in posts %}
+    <a href="/blog/{{ post.slug }}" class="blog-card">
+      <div class="blog-thumb {{ post.thumb_class }}">{{ post.emoji }}</div>
+      <div class="blog-body">
+        <div class="blog-cat cat-{{ post.cat_class }}">{{ post.category }}</div>
+        <div class="blog-title">{{ post.title }}</div>
+        <div class="blog-excerpt">{{ post.excerpt }}</div>
+        <div class="blog-meta">
+          <span>{{ post.date }}</span>
+          <span class="ai-label">AI生成</span>
+        </div>
+      </div>
+    </a>
+    {% else %}
+    <!-- デフォルト記事 -->
+    <a href="/blog/takara-2026" class="blog-card">
+      <div class="blog-thumb g1">🏆</div>
+      <div class="blog-body">
+        <div class="blog-cat cat-g1">G1分析</div>
+        <div class="blog-title">【宝塚記念2026】AIが選ぶ本命馬と穴馬予想・全頭分析</div>
+        <div class="blog-excerpt">機械学習モデルが宝塚記念の全出走馬を分析。期待値・馬場適性・騎手相性を総合評価。</div>
+        <div class="blog-meta"><span>2026年7月8日</span><span class="ai-label">AI生成</span></div>
+      </div>
+    </a>
+    <a href="/blog/ame-tsuyoi-uma" class="blog-card">
+      <div class="blog-thumb weather">🌧️</div>
+      <div class="blog-body">
+        <div class="blog-cat cat-weather">天候・馬場</div>
+        <div class="blog-title">雨の日に強い馬ランキング TOP10【2026年最新版】</div>
+        <div class="blog-excerpt">重馬場・不良馬場での成績データを徹底分析。雨巧者として知られる馬たちの特徴と成績。</div>
+        <div class="blog-meta"><span>2026年7月7日</span><span class="ai-label">AI生成</span></div>
+      </div>
+    </a>
+    <a href="/blog/kawada-stats" class="blog-card">
+      <div class="blog-thumb jockey">👤</div>
+      <div class="blog-body">
+        <div class="blog-cat cat-jockey">騎手分析</div>
+        <div class="blog-title">川田将雅2026年成績まとめ・得意条件と苦手条件を徹底分析</div>
+        <div class="blog-excerpt">2026年リーディング争いをリードする川田将雅騎手の成績を詳細分析。コース別・天候別の傾向。</div>
+        <div class="blog-meta"><span>2026年7月6日</span><span class="ai-label">AI生成</span></div>
+      </div>
+    </a>
+    <a href="/blog/atsui-hi-keiba" class="blog-card">
+      <div class="blog-thumb weather">🌡️</div>
+      <div class="blog-body">
+        <div class="blog-cat cat-weather">天候・馬場</div>
+        <div class="blog-title">猛暑日（30℃以上）の競馬成績データ分析【夏競馬攻略】</div>
+        <div class="blog-excerpt">夏の高温下での競馬成績を統計分析。暑さに強い馬・騎手の傾向と夏競馬攻略のポイント。</div>
+        <div class="blog-meta"><span>2026年7月5日</span><span class="ai-label">AI生成</span></div>
+      </div>
+    </a>
+    <a href="/blog/ikuinox-analysis" class="blog-card">
+      <div class="blog-thumb horse">🐎</div>
+      <div class="blog-body">
+        <div class="blog-cat cat-horse">馬分析</div>
+        <div class="blog-title">イクイノックス全成績分析・なぜ最強馬と呼ばれるのか</div>
+        <div class="blog-excerpt">イクイノックスの全レース成績をデータで振り返る。得意距離・馬場・コースの傾向を詳細分析。</div>
+        <div class="blog-meta"><span>2026年7月4日</span><span class="ai-label">AI生成</span></div>
+      </div>
+    </a>
+    <a href="/blog/backtest-report" class="blog-card">
+      <div class="blog-thumb analysis">📊</div>
+      <div class="blog-body">
+        <div class="blog-cat cat-analysis">データ分析</div>
+        <div class="blog-title">2026年上半期バックテスト結果レポート・回収率と的中率の実績</div>
+        <div class="blog-excerpt">2026年1〜6月のAI予想バックテスト結果を公開。回収率・的中率・期待値の実績データ。</div>
+        <div class="blog-meta"><span>2026年7月3日</span><span class="ai-label">AI生成</span></div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="pagination">
+    <button class="page-btn active">1</button>
+    <button class="page-btn">2</button>
+    <button class="page-btn">3</button>
+    <button class="page-btn">次へ →</button>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-links">
+    <a href="/">ホーム</a>
+    <a href="/terms">利用規約</a>
+    <a href="/privacy">プライバシーポリシー</a>
+    <a href="/tokushoho">特定商取引法</a>
+  </div>
+  <div class="footer-copy">© 2026 勝ち筋解析システム</div>
+</footer>
+
+<script>
+document.querySelectorAll('.cat-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
