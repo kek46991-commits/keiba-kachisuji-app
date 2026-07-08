@@ -1,0 +1,18 @@
+[project]
+name = "keiba-kachisuji-web"
+version = "0.1.0"
+description = "G1競馬予測 有料Web SaaS (FastAPI + Stripe)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "stripe>=12.0.0",
+    "itsdangerous>=2.2.0",
+    "python-multipart>=0.0.9",
+    "jinja2>=3.1.4",
+    "psycopg[binary]>=3.2.1",
+    "mangum>=0.17.0",
+]
+
+[tool.setuptools]
+py-modules = ["main"]
