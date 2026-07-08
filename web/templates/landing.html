@@ -311,15 +311,10 @@
     <section class="section">
       <h2>アクセス復元</h2>
       <p class="muted">
-        購読後にログイン情報を失った場合のMVP機能です。<strong>メール認証は未実装</strong>で、
-        Stripe 上の有効な購読をメールで検索して cookie を再発行します。
-        本番では magic-link などの強化を予定しています。
+        アクセス復元機能は、メールアドレスの所有者確認 (magic-link など) が実装されるまで
+        一時的に無効化しています。購読直後は checkout 完了後のリンクからそのままアクセスできます。
+        ログイン情報を失った場合はお問い合わせください。
       </p>
-      <form class="restore" id="restore-form">
-        <input type="email" name="email" placeholder="checkout に使ったメールアドレス" required />
-        <button class="btn btn-primary" type="submit">アクセスを復元</button>
-        <div class="status" id="restore-status"></div>
-      </form>
     </section>
   </div>
 
@@ -335,7 +330,6 @@
 
   <script>
     const statusEl = document.getElementById("checkout-status");
-    const restoreStatusEl = document.getElementById("restore-status");
 
     document.getElementById("checkout-btn").addEventListener("click", async () => {
       statusEl.textContent = "Stripe のチェックアウトを準備中...";
@@ -348,24 +342,6 @@
         window.location.href = data.url;
       } catch (error) {
         statusEl.textContent = error.message;
-      }
-    });
-
-    document.getElementById("restore-form").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const fd = new FormData(form);
-      restoreStatusEl.textContent = "復元中...";
-      try {
-        const res = await fetch("/api/restore", { method: "POST", body: fd });
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.detail || "restore failed");
-        }
-        restoreStatusEl.textContent = data.message;
-        window.location.href = "/app";
-      } catch (error) {
-        restoreStatusEl.textContent = error.message;
       }
     });
   </script>
