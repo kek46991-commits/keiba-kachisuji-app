@@ -124,6 +124,56 @@
       border-radius: 20px;
       padding: 22px;
     }
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 18px;
+    }
+    .mini-card {
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+    }
+    .mini-card h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .feature-list li {
+      margin: 0 0 10px;
+      padding-left: 1.2em;
+      position: relative;
+      color: var(--text);
+    }
+    .feature-list li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+    }
+    .notice-box {
+      border-left: 4px solid var(--warn);
+      background: rgba(255,191,105,.12);
+      color: #ffe8c2;
+      border-radius: 14px;
+      padding: 16px 18px;
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+    .placeholder-box {
+      border: 1px dashed rgba(255,255,255,.25);
+      background: rgba(255,255,255,.03);
+      color: #d9ddff;
+      border-radius: 14px;
+      padding: 16px 18px;
+      line-height: 1.8;
+    }
     .restore {
       display: grid;
       gap: 10px;
@@ -147,7 +197,6 @@
     @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
   </style>
   <script type="application/ld+json">{{ json_ld | tojson }}</script>
-  <script type="application/ld+json">{{ json_ld | tojson }}</script>
 </head>
 <body>
   <div class="wrap">
@@ -158,6 +207,36 @@
         G1 専用の実データ × 機械学習 × バックテストで、競馬の期待値を検証するための分析ツールです。
         静的デモではなく、購読者向けに公開する G1 専用の本番Web版として提供します。
       </p>
+
+      <section class="section">
+        <h2>他社との違い・強み</h2>
+        <div class="section-grid">
+          <div class="mini-card">
+            <h3>実データ × 機械学習</h3>
+            <p class="muted">
+              経験則ではなく実データを使い、各馬の勝率を推定します。レース内で合計100%になるよう正規化し、相対比較に使える形で表示します。
+            </p>
+          </div>
+          <div class="mini-card">
+            <h3>バックテストで定量評価</h3>
+            <p class="muted">
+              時系列分割で学習/検証を分け、リークを避けながら回収率(ROI)を定量評価できます。
+            </p>
+          </div>
+          <div class="mini-card">
+            <h3>控除率を踏まえた EV 判定</h3>
+            <p class="muted">
+              約20%の控除率を前提に、当たる馬ではなく「買い/見送り」の妙味をEVで判定します。
+            </p>
+          </div>
+          <div class="mini-card">
+            <h3>G1特化・透明性重視</h3>
+            <p class="muted">
+              G1 専用の設計で、仕組み・前提・限界を公開し、「儲かる」と断言しない誠実な設計です。
+            </p>
+          </div>
+        </div>
+      </section>
 
       <div class="grid">
         <div class="card">
@@ -197,6 +276,35 @@
         <strong>注意:</strong>
         18歳未満の方や、居住地域で賭博関連サービスが制限される場合は利用できません。
         法令・規約・地域ルールを必ず確認してください。投資・投票判断は自己責任です。
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>検証結果(バックテスト)</h2>
+      <div class="notice-box">
+        <strong>重要:</strong>
+        これは<strong>合成(ダミー)データによるバックテストの検証結果</strong>であり、<strong>実際の的中実績・将来の成績を示すものではありません</strong>。
+        控除率は約20%あるため、回収率が100%を超えない限り利益は出ません。
+      </div>
+      <div class="section-grid">
+        <div class="mini-card">
+          <h3>検証方法</h3>
+          <ul class="feature-list">
+            <li>G1 専用の合成データを使用</li>
+            <li>学習/検証は時系列分割で実施</li>
+            <li>特徴量は過去データのみを参照し、リークを防止</li>
+            <li>買い目判断は EV とバックテスト結果で評価</li>
+          </ul>
+        </div>
+        <div class="mini-card">
+          <h3>表示方針</h3>
+          <p class="muted">
+            もし数値を表示する場合は、必ず「<strong>合成データでの検証値</strong>」と明示します。現在は実運用開始前のため、実際の的中実績や売上は掲載していません。
+          </p>
+          <div class="placeholder-box">
+            実運用開始後の的中実績はこちらで透明に公開予定（現在準備中）
+          </div>
+        </div>
       </div>
     </section>
 

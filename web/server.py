@@ -88,7 +88,7 @@ def _seo_context(
 
 def _seo_for_landing() -> dict[str, Any]:
     price_label = os.getenv("APP_PRICE_LABEL", "月額 1,980円")
-    description = "中央競馬G1の期待値(EV)をML予測とバックテストで検証するサブスク型SaaS。"
+    description = "中央競馬G1の期待値(EV)を実データ×ML予測とバックテストで検証し、比較・妙味を見極めるサブスク型SaaS。"
     json_ld = [
         {
             "@context": "https://schema.org",
