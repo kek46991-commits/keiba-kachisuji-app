@@ -484,13 +484,14 @@ def terms_en(request: Request) -> HTMLResponse:
 
 @app.get("/tokushoho", response_class=HTMLResponse)
 def tokushoho(request: Request) -> HTMLResponse:
-    return _legal_response(
-        request,
-        "legal/tokushoho.html",
-        "特定商取引法に基づく表記",
+    context = _seo_context(
+        title="特定商取引法に基づく表記",
         description="Japanese Specified Commercial Transactions Act disclosure for the subscription horse-racing analytics service.",
         path="/tokushoho",
     )
+    context["lang"] = "ja"
+    context["pricing_label"] = os.getenv("APP_PRICE_LABEL", "月額 1,980円")
+    return templates.TemplateResponse(request, "legal/tokushoho.html", context)
 
 
 @app.get("/privacy", response_class=HTMLResponse)
@@ -732,25 +733,13 @@ def paid_app_static_head(request: Request, file_path: str) -> Response:
 
 @app.post("/api/restore")
 def restore_access(request: Request, email: str = Form(...)) -> JSONResponse:
-    email = email.strip()
-    if not email:
-        raise HTTPException(status_code=400, detail="email が必要です。")
-    if not _stripe_ready():
-        return JSONResponse(
-            status_code=503,
-            content={"detail": "Stripe未設定: STRIPE_SECRET_KEY または STRIPE_PRICE_ID が未設定です。"},
-        )
-    _stripe_client()
-    customers = stripe.Customer.list(email=email, limit=10)
-    for customer in customers.auto_paging_iter():
-        subscriptions = stripe.Subscription.list(customer=customer.id, status="all", limit=10)
-        for subscription in subscriptions.auto_paging_iter():
-            if _subscription_is_active(subscription.status, subscription.current_period_end):
-                _sync_subscription(subscription, email=email)
-                response = JSONResponse({"ok": True, "message": "アクセスを復元しました。"})
-                _set_auth_cookie(response, customer_id=customer.id, email=email)
-                return response
-    raise HTTPException(status_code=404, detail="有効な購読が見つかりませんでした。")
+    # メールアドレスの所有者確認 (magic-link / OTP) が未実装のため、本人確認なしで
+    # Cookie を発行するのは認証バイパスになる。所有権確認を実装するまで無効化する。
+    # 購読者は checkout 完了時の /access?session_id=... フローでアクセスを得られる。
+    raise HTTPException(
+        status_code=503,
+        detail="アクセス復元は現在無効です。購読後のリンク (/access) からアクセスしてください。",
+    )
 
 
 @app.get("/logout")
