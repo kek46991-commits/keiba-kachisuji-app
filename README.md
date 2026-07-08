@@ -58,7 +58,7 @@ site/
 ## データ駆動パイプライン (Python)
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-ml.txt
 
 # 1) 合成データを生成 (実データを使う場合はこの手順を CSV 用意に置き換え)
 python -m data.fetch --out data/sample_races.csv --sqlite data/cache/races.sqlite
@@ -98,7 +98,7 @@ horse_weight_diff, odds, popularity, finish_pos, is_synthetic`
 ## Streamlitアプリ版
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-ml.txt
 streamlit run app.py
 ```
 
@@ -116,7 +116,6 @@ streamlit run app.py
 
 ```bash
 pip install -r requirements.txt
-pip install -r web/requirements.txt
 DEMO_MODE=1 uvicorn web.server:app --port 8000
 ```
 
@@ -142,8 +141,7 @@ Render / Railway / Fly では、この Dockerfile をそのまま使い、環境
 - Dockerfile からそのまま起動できます
 - SQLite で `web/subscribers.db` を使えるので MVP と相性が良いです
 - Render では persistent disk を `SUBSCRIBERS_DB_PATH` にマウントしてください
-- GitHub リポジトリをプロバイダ側で接続すると、branch への push で auto-deploy され
-ます
+- GitHub リポジトリをプロバイダ側で接続すると、branch への push で auto-deploy されます
 
 ### Vercel / Netlify
 
@@ -156,6 +154,35 @@ gres を必須にしてください**
 - Vercel は `vercel.json` をそのまま使い、`api/index.py` がエントリになります
 - Netlify は `netlify.toml` と `netlify/functions/app.py` を使いますが、こちらは Verc
 el より副次的な構成です
+
+## Vercel へのデプロイ手順
+
+Vercel は serverless なので、購入者情報を SQLite で保持しないでください。**Neon か Supabase の Postgres を必ず用意**し、`DATABASE_URL` を設定します。
+
+1. GitHub リポジトリを Vercel に Import します。
+2. Framework Preset は `Other` のままにします。
+3. Environment Variables を設定します。
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_PRICE_ID`
+   - `STRIPE_WEBHOOK_SECRET`
+   - `APP_SECRET_KEY`
+   - `PUBLIC_BASE_URL` = `https://あなたのVercelドメイン`
+   - `COOKIE_SECURE=1`
+   - `DATABASE_URL` = Neon / Supabase の接続文字列
+4. Neon / Supabase で無料 Postgres を作成します。
+   - Neon: Project を作成 → Connection string をコピー
+   - Supabase: Project を作成 → `Settings > Database > Connection string` をコピー
+5. Stripe ダッシュボードで Webhook を追加します。
+   - URL: `https://YOUR-DOMAIN/api/webhook`
+   - 少なくとも `checkout.session.completed` と `customer.subscription.*` を購読
+6. デプロイ後に確認します。
+   - `/` が表示されること
+   - `/app` が購読なしではリダイレクトすること
+   - `DEMO_MODE=1` の検証時は `/app` が開けること
+   - Checkout 完了後に `/access?session_id=...` で cookie が発行されること
+   - Webhook 後に購読状態が Postgres に保存されること
+
+補足: Vercel は root の `requirements.txt` を読みます。このリポジトリでは `requirements.txt` を web 用の薄い shim にし、重い ML 依存は `requirements-ml.txt` に分離しています。
 
 ### Stripe Webhook
 
@@ -176,6 +203,7 @@ Streamlit アプリを起動するデスクトップ向けランチャーと、P
 ### ローカルでビルド
 
 ```bash
+pip install -r requirements-ml.txt
 pip install pyinstaller
 pyinstaller keiba-app.spec
 ```
