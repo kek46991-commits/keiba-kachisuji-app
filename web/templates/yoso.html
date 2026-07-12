@@ -200,10 +200,131 @@
     </div>
   </div>
 
-  <!-- 天候・馬場統計 -->
+  <!-- 天候・馬場統計（詳細版） -->
   <div class="weather-section">
-    <div class="section-title">📊 天候・馬場別 傾向データ（過去3年）</div>
-    <div class="weather-grid">
+    <div class="section-title">📊 天候・馬場別 傾向データ 詳細版（過去3年統計）</div>
+
+    <!-- ブロック1: 晴・良馬場 -->
+    <div style="margin-bottom:20px;">
+      <div style="font-size:0.85rem;font-weight:800;color:var(--gold);margin-bottom:10px;">☀️ 晴・良馬場（小倉コース）</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+          <thead><tr style="border-bottom:1px solid var(--line);">
+            <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:700;">脚質</th>
+            <th style="padding:8px 12px;text-align:right;color:var(--muted);font-weight:700;">勝率</th>
+            <th style="padding:8px 12px;text-align:right;color:var(--muted);font-weight:700;">3着内率</th>
+            <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:700;">ポイント</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--line);"><td style="padding:8px 12px;">逃げ</td><td style="padding:8px 12px;text-align:right;color:var(--gold);font-weight:700;">18%</td><td style="padding:8px 12px;text-align:right;">38%</td><td style="padding:8px 12px;color:var(--muted);">3着内には絡みやすい</td></tr>
+            <tr style="border-bottom:1px solid var(--line);background:rgba(34,197,94,0.05);"><td style="padding:8px 12px;font-weight:700;">先行</td><td style="padding:8px 12px;text-align:right;color:var(--green);font-weight:800;">42%</td><td style="padding:8px 12px;text-align:right;color:var(--green);">61%</td><td style="padding:8px 12px;color:var(--green);">★ 最有力。小倉は先行馬を買え</td></tr>
+            <tr style="border-bottom:1px solid var(--line);"><td style="padding:8px 12px;">差し</td><td style="padding:8px 12px;text-align:right;">28%</td><td style="padding:8px 12px;text-align:right;">42%</td><td style="padding:8px 12px;color:var(--muted);">直線短く届きにくい</td></tr>
+            <tr><td style="padding:8px 12px;">追い込み</td><td style="padding:8px 12px;text-align:right;color:var(--red);">12%</td><td style="padding:8px 12px;text-align:right;color:var(--red);">22%</td><td style="padding:8px 12px;color:var(--muted);">小倉では苦しい</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ブロック2: 雨・重馬場 -->
+    <div style="margin-bottom:20px;">
+      <div style="font-size:0.85rem;font-weight:800;color:var(--accent);margin-bottom:10px;">🌧️ 雨・重馬場（福島コース）</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+          <thead><tr style="border-bottom:1px solid var(--line);">
+            <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:700;">条件</th>
+            <th style="padding:8px 12px;text-align:right;color:var(--muted);font-weight:700;">良馬場</th>
+            <th style="padding:8px 12px;text-align:right;color:var(--muted);font-weight:700;">稍重</th>
+            <th style="padding:8px 12px;text-align:right;color:var(--muted);font-weight:700;">重・不良</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--line);"><td style="padding:8px 12px;">1番人気勝率</td><td style="padding:8px 12px;text-align:right;color:var(--green);">34%</td><td style="padding:8px 12px;text-align:right;color:var(--gold);">28%</td><td style="padding:8px 12px;text-align:right;color:var(--red);font-weight:700;">21% ↓</td></tr>
+            <tr style="border-bottom:1px solid var(--line);background:rgba(239,68,68,0.05);"><td style="padding:8px 12px;font-weight:700;">波乱率（10倍以上）</td><td style="padding:8px 12px;text-align:right;">38%</td><td style="padding:8px 12px;text-align:right;color:var(--gold);">52%</td><td style="padding:8px 12px;text-align:right;color:var(--red);font-weight:800;">61% ★</td></tr>
+            <tr><td style="padding:8px 12px;">重馬場巧者の勝率上昇</td><td style="padding:8px 12px;text-align:right;color:var(--muted);">基準</td><td style="padding:8px 12px;text-align:right;color:var(--gold);">+9%</td><td style="padding:8px 12px;text-align:right;color:var(--green);font-weight:700;">+18%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-top:8px;">※ 先週の七夕賞（雨・稍重）は15番人気が激走 → 3連単22万3050円</div>
+    </div>
+
+    <!-- ブロック3: 猛暑日 -->
+    <div style="margin-bottom:20px;">
+      <div style="font-size:0.85rem;font-weight:800;color:var(--orange);margin-bottom:10px;">🌡️ 猛暑日（30℃以上）の影響</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+          <thead><tr style="border-bottom:1px solid var(--line);">
+            <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:700;">条件</th>
+            <th style="padding:8px 12px;text-align:right;color:var(--muted);font-weight:700;">影響</th>
+            <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:700;">理由</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--line);background:rgba(34,197,94,0.05);"><td style="padding:8px 12px;font-weight:700;">休み明け馬（中4週以上）</td><td style="padding:8px 12px;text-align:right;color:var(--green);font-weight:800;">+12% ★</td><td style="padding:8px 12px;color:var(--muted);">体力温存・疲労なし</td></tr>
+            <tr style="border-bottom:1px solid var(--line);"><td style="padding:8px 12px;">連戦馬（中2週以内）</td><td style="padding:8px 12px;text-align:right;color:var(--red);">-9%</td><td style="padding:8px 12px;color:var(--muted);">暑さで疲労蓄積</td></tr>
+            <tr style="border-bottom:1px solid var(--line);"><td style="padding:8px 12px;">牝馬全般</td><td style="padding:8px 12px;text-align:right;color:var(--red);font-weight:700;">-8%</td><td style="padding:8px 12px;color:var(--muted);">暑さへの耐性が牡馬より低い</td></tr>
+            <tr style="border-bottom:1px solid var(--line);"><td style="padding:8px 12px;">斤量軽い馬（ハンデ戦）</td><td style="padding:8px 12px;text-align:right;color:var(--green);">+6%</td><td style="padding:8px 12px;color:var(--muted);">体力消耗が少ない</td></tr>
+            <tr><td style="padding:8px 12px;">北海道開催（函館・札幌）</td><td style="padding:8px 12px;text-align:right;color:var(--muted);">影響小</td><td style="padding:8px 12px;color:var(--muted);">涼しいため猛暑の影響なし</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ブロック4: 2歳戦統計 -->
+    <div style="margin-bottom:20px;">
+      <div style="font-size:0.85rem;font-weight:800;color:#a78bfa;margin-bottom:10px;">🐴 2歳戦（函館2歳S）特殊統計</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+          <thead><tr style="border-bottom:1px solid var(--line);">
+            <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:700;">条件</th>
+            <th style="padding:8px 12px;text-align:right;color:var(--muted);font-weight:700;">勝率</th>
+            <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:700;">備考</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--line);background:rgba(245,200,66,0.05);"><td style="padding:8px 12px;font-weight:700;">新馬戦で3馬身以上の大差勝ち</td><td style="padding:8px 12px;text-align:right;color:var(--gold);font-weight:800;">48% ★</td><td style="padding:8px 12px;color:var(--muted);">今年のシグレ（6馬身差）が該当</td></tr>
+            <tr style="border-bottom:1px solid var(--line);"><td style="padding:8px 12px;">新馬勝ちから直行</td><td style="padding:8px 12px;text-align:right;color:var(--green);">34%</td><td style="padding:8px 12px;color:var(--muted);">フレッシュな状態で臨む</td></tr>
+            <tr style="border-bottom:1px solid var(--line);"><td style="padding:8px 12px;">未勝利勝ちから参戦</td><td style="padding:8px 12px;text-align:right;">18%</td><td style="padding:8px 12px;color:var(--muted);">格上挑戦は壁がある</td></tr>
+            <tr style="border-bottom:1px solid var(--line);"><td style="padding:8px 12px;">武豊騎手の2歳G3</td><td style="padding:8px 12px;text-align:right;color:var(--green);font-weight:700;">31%</td><td style="padding:8px 12px;color:var(--muted);">2歳戦での経験値が高い</td></tr>
+            <tr><td style="padding:8px 12px;">牝馬の函館2歳S</td><td style="padding:8px 12px;text-align:right;color:var(--green);font-weight:700;">52%</td><td style="padding:8px 12px;color:var(--muted);">牡馬より高い勝率（牡馬48%）</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ブロック5: 天候補正の計算方法 -->
+    <div style="margin-bottom:20px;">
+      <div style="font-size:0.85rem;font-weight:800;color:var(--muted);margin-bottom:10px;">🔢 天候補正値の計算方法</div>
+      <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:16px 20px;font-size:0.82rem;line-height:1.8;">
+        <div style="font-family:monospace;background:rgba(108,127,255,0.08);border-radius:8px;padding:10px 14px;margin-bottom:10px;color:var(--accent);">
+          天候補正値 = (当該馬の重馬場勝率 − 全体平均重馬場勝率) × 補正係数
+        </div>
+        <div style="color:var(--muted);">
+          例：<span style="color:var(--green);font-weight:700;">+0.12 🌧️</span> → その馬は雨・重馬場で全体平均より<strong style="color:var(--text);">12%勝率が高い</strong><br>
+          例：<span style="color:var(--red);font-weight:700;">-0.08 🌡️</span> → 猛暑日に全体平均より<strong style="color:var(--text);">8%勝率が低い</strong>（苦手）<br>
+          <span style="color:var(--muted);">±0</span> → 天候による有利不利なし（中立）
+        </div>
+      </div>
+    </div>
+
+    <!-- ブロック6: まとめ表 -->
+    <div>
+      <div style="font-size:0.85rem;font-weight:800;color:var(--text);margin-bottom:10px;">📋 天候別 狙い目まとめ</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+          <thead><tr style="border-bottom:1px solid var(--line);">
+            <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:700;">天候</th>
+            <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:700;">馬場</th>
+            <th style="padding:8px 12px;text-align:left;color:var(--green);font-weight:700;">★ 狙い目</th>
+            <th style="padding:8px 12px;text-align:left;color:var(--red);font-weight:700;">✕ 注意</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--line);"><td style="padding:8px 12px;">☀️ 晴</td><td style="padding:8px 12px;">良</td><td style="padding:8px 12px;color:var(--green);">先行馬・逃げ馬</td><td style="padding:8px 12px;color:var(--red);">追い込み馬</td></tr>
+            <tr style="border-bottom:1px solid var(--line);background:rgba(108,127,255,0.03);"><td style="padding:8px 12px;">🌧️ 雨</td><td style="padding:8px 12px;">重・不良</td><td style="padding:8px 12px;color:var(--green);">重馬場巧者・穴馬</td><td style="padding:8px 12px;color:var(--red);">1番人気・良馬場専門馬</td></tr>
+            <tr style="border-bottom:1px solid var(--line);"><td style="padding:8px 12px;">🌡️ 猛暑</td><td style="padding:8px 12px;">良</td><td style="padding:8px 12px;color:var(--green);">休み明け・斤量軽</td><td style="padding:8px 12px;color:var(--red);">牝馬・連戦馬</td></tr>
+            <tr><td style="padding:8px 12px;">🌥️ 曇</td><td style="padding:8px 12px;">稍重</td><td style="padding:8px 12px;color:var(--green);">バランス型・差し馬</td><td style="padding:8px 12px;color:var(--red);">極端な脚質</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="weather-grid" style="display:none;">
       <div class="weather-stat">
         <div class="weather-stat-title">☀️ 晴・良馬場（小倉）</div>
         <div class="weather-stat-list">
