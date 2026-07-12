@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>予想データ更新 | 勝ち筋解析</title>
+  <style>
+    :root { --bg:#0a0c1a; --panel:#141730; --panel2:#1a1f3a; --text:#f0f2ff; --muted:#8892c4; --accent:#6c7fff; --line:rgba(255,255,255,.1); }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic UI",sans-serif; }
+    main { max-width:900px; margin:0 auto; padding:40px 20px; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:24px; }
+    h1 { margin-top:0; }
+    p, label { color:var(--muted); line-height:1.7; }
+    textarea { width:100%; min-height:320px; padding:14px; border:1px solid var(--line); border-radius:10px; background:var(--panel2); color:var(--text); font:0.9rem/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    button { margin-top:14px; padding:10px 18px; border:0; border-radius:9px; background:linear-gradient(135deg,#6c7fff,#a855f7); color:#fff; font-weight:700; cursor:pointer; }
+    pre { white-space:pre-wrap; color:#b9c3ff; }
+    a { color:#9aa8ff; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="panel">
+    <h1>予想データ更新</h1>
+    <p>CSV（馬番,馬名,性齢,騎手,オッズ,パドック,コメント）またはレースJSONを貼り付けてください。自動スクレイピングは行いません。</p>
+    <p>Vercelなど読み取り専用環境ではJSONをレスポンスから保存し、<code>web/data/yoso.json</code>としてコミットしてください。</p>
+    <label for="payload">入力データ</label>
+    <textarea id="payload" placeholder="馬番,馬名,性齢,騎手,オッズ,パドック,コメント&#10;1,サンプル,牡4,騎手名,3.2,落ち着きあり,先行力"></textarea>
+    <button id="submit">予想データを更新</button>
+    <pre id="result" aria-live="polite"></pre>
+    <p><a href="/yoso1">予想ページへ戻る</a></p>
+  </div>
+</main>
+<script>
+const token = {{ token | tojson }};
+document.getElementById("submit").addEventListener("click", async () => {
+  const result = document.getElementById("result");
+  result.textContent = "更新中…";
+  const response = await fetch("/api/yoso/import", {
+    method: "POST",
+    headers: {"Authorization": `Bearer ${token}`, "Content-Type": "text/csv; charset=utf-8"},
+    body: document.getElementById("payload").value,
+  });
+  result.textContent = await response.text();
+});
+</script>
+</body>
+</html>

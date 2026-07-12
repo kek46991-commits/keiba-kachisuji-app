@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import csv
-import os
 import random
 from pathlib import Path
 

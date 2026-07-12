@@ -3,6 +3,9 @@
 
 from __future__ import annotations
 
+import csv
+import io
+import json
 import os
 import sqlite3
 from datetime import datetime, timezone
@@ -21,6 +24,7 @@ ROOT_DIR = WEB_DIR.parent
 SITE_DIR = ROOT_DIR / "site"
 TEMPLATES_DIR = WEB_DIR / "templates"
 STATIC_DIR = WEB_DIR / "static"
+YOSO_DATA_PATH = WEB_DIR / "data" / "yoso.json"
 DEFAULT_SQLITE_DB_PATH = WEB_DIR / "subscribers.db"
 
 
@@ -976,13 +980,194 @@ def blog_post_page(request: Request, slug: str) -> HTMLResponse:
 @app.get("/yoso1", response_class=HTMLResponse)
 def yoso_page(request: Request) -> HTMLResponse:
     session = _require_demo_or_auth(request)
+    yoso = _load_yoso_data()
     context = _seo_context(
-        title="今週の予想 | 勝ち筋解析",
-        description="AIによる今週の競馬予想。G1・重賞の期待値分析・推奨馬を公開。",
+        title=f"{yoso.get('page', {}).get('title', '今週の予想')} | 勝ち筋解析",
+        description=yoso.get("page", {}).get("description", "AIによる競馬予想。"),
         path="/yoso1",
     )
     context["is_subscriber"] = session is not None
+    context["yoso"] = yoso
     return templates.TemplateResponse(request, "yoso.html", context)
+
+
+# ===== 週次予想データ管理 =====
+def _bundled_yoso_data() -> dict[str, Any]:
+    try:
+        data = json.loads(YOSO_DATA_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"page": {}, "venues": [], "races": []}
+    return data if isinstance(data, dict) else {"page": {}, "venues": [], "races": []}
+
+
+def _ensure_yoso_table(cur) -> None:
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS yoso_races (
+            race_date DATE PRIMARY KEY,
+            payload JSONB NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+        """
+    )
+
+
+def _load_yoso_data() -> dict[str, Any]:
+    fallback = _bundled_yoso_data()
+    dsn = os.getenv("DATABASE_URL")
+    if not dsn:
+        return fallback
+    try:
+        import psycopg  # type: ignore[import-not-found]
+    except ImportError:
+        return fallback
+    try:
+        with psycopg.connect(dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT payload FROM yoso_races WHERE race_date = %s",
+                    (fallback.get("page", {}).get("date", "2026-07-19"),),
+                )
+                row = cur.fetchone()
+        if row and isinstance(row[0], dict):
+            return row[0]
+    except Exception:
+        return fallback
+    return fallback
+
+
+def _admin_auth_matches(request: Request, token: str | None = None) -> bool:
+    if not APP_SECRET_KEY:
+        return False
+    authorization = request.headers.get("Authorization", "")
+    return authorization == f"Bearer {APP_SECRET_KEY}" or token == APP_SECRET_KEY
+
+
+def _normalise_import_payload(payload: dict[str, Any], base: dict[str, Any]) -> dict[str, Any]:
+    if isinstance(payload.get("yoso"), dict):
+        payload = payload["yoso"]
+    if isinstance(payload.get("races"), list):
+        result = payload
+    else:
+        race = payload.get("race") if isinstance(payload.get("race"), dict) else payload
+        if not isinstance(race, dict):
+            raise ValueError("race または races を含むJSONを指定してください")
+        result = dict(base)
+        current = [r for r in result.get("races", []) if isinstance(r, dict)]
+        race_id = race.get("id", "imported")
+        current = [r for r in current if r.get("id") != race_id]
+        current.append(race)
+        result["races"] = current
+    if not result.get("page"):
+        result["page"] = base.get("page", {})
+    if not result.get("venues"):
+        result["venues"] = base.get("venues", [])
+    return result
+
+
+def _csv_import_payload(text: str, base: dict[str, Any], race_date: str | None) -> dict[str, Any]:
+    rows = list(csv.DictReader(io.StringIO(text)))
+    if not rows:
+        raise ValueError("CSVにデータ行がありません")
+    horses = []
+    for index, row in enumerate(rows, start=1):
+        name = (row.get("馬名") or row.get("name") or "").strip()
+        if not name:
+            raise ValueError(f"{index}行目: 馬名がありません")
+        horses.append(
+            {
+                "number": row.get("馬番") or row.get("number") or index,
+                "name": name,
+                "sex_age": (row.get("性齢") or row.get("sex_age") or "").strip(),
+                "jockey": (row.get("騎手") or row.get("jockey") or "未定").strip(),
+                "odds": (row.get("オッズ") or row.get("odds") or "").strip(),
+                "paddock": {
+                    "text": (row.get("パドック") or row.get("paddock") or "").strip(),
+                    "rating": None,
+                },
+                "comment": (row.get("コメント") or row.get("comment") or "").strip(),
+            }
+        )
+    race = {
+        "id": "imported",
+        "grade": "GⅢ",
+        "grade_class": "grade-g3",
+        "name": "最新レース",
+        "detail": f"{len(horses)}頭",
+        "meta": [],
+        "horses": horses,
+        "analysis_html": "",
+        "stats": [],
+    }
+    payload = {"race": race}
+    result = _normalise_import_payload(payload, base)
+    result.setdefault("page", {})["date"] = race_date or result.get("page", {}).get("date", "")
+    return result
+
+
+def _store_yoso_data(payload: dict[str, Any]) -> str:
+    dsn = os.getenv("DATABASE_URL")
+    race_date = payload.get("page", {}).get("date", "2026-07-19")
+    if dsn:
+        try:
+            import psycopg  # type: ignore[import-not-found]
+            from psycopg.types.json import Json  # type: ignore[import-not-found]
+            with psycopg.connect(dsn) as conn:
+                with conn.cursor() as cur:
+                    _ensure_yoso_table(cur)
+                    cur.execute(
+                        """
+                        INSERT INTO yoso_races (race_date, payload)
+                        VALUES (%s, %s)
+                        ON CONFLICT (race_date) DO UPDATE SET
+                            payload = EXCLUDED.payload,
+                            updated_at = NOW()
+                        """,
+                        (race_date, Json(payload)),
+                    )
+                conn.commit()
+            return "database"
+        except Exception:
+            pass
+    try:
+        YOSO_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+        YOSO_DATA_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return "file"
+    except OSError:
+        return "response"
+
+
+@app.get("/yoso/admin", response_class=HTMLResponse)
+def yoso_admin(request: Request, token: str | None = None) -> HTMLResponse:
+    if not _admin_auth_matches(request, token):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return templates.TemplateResponse(request, "yoso_admin.html", {"token": token or ""})
+
+
+@app.post("/api/yoso/import")
+async def import_yoso(request: Request, race_date: str | None = None) -> JSONResponse:
+    if not _admin_auth_matches(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    body = await request.body()
+    text = body.decode("utf-8-sig")
+    base = _load_yoso_data()
+    content_type = request.headers.get("content-type", "")
+    try:
+        if "json" in content_type or text.lstrip().startswith("{"):
+            parsed = json.loads(text)
+            payload = _normalise_import_payload(parsed, base)
+            if race_date:
+                payload.setdefault("page", {})["date"] = race_date
+        else:
+            payload = _csv_import_payload(text, base, race_date)
+    except (ValueError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    destination = _store_yoso_data(payload)
+    response: dict[str, Any] = {"status": "ok", "destination": destination, "race_count": len(payload.get("races", []))}
+    if destination == "response":
+        response["data"] = payload
+        response["note"] = "ファイルシステムが読み取り専用のため、生成JSONを保存してコミットしてください。"
+    return JSONResponse(response)
 
 
 # ===== レース結果データ投入API（管理者用） =====
@@ -999,7 +1184,7 @@ def seed_race_results(request: Request) -> JSONResponse:
 
     try:
         import psycopg  # type: ignore[import-not-found]
-        from web.seed_race_results import RACE_RESULTS, ensure_table, insert_results
+        from web.seed_race_results import ensure_table, insert_results
     except ImportError as e:
         raise HTTPException(status_code=500, detail=f"Import error: {e}")
 

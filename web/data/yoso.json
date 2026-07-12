@@ -1,0 +1,915 @@
+{
+  "page": {
+    "date": "2026-07-19",
+    "tag": "🤖 AI PREDICTION · 2026/07/19",
+    "title": "今週の予想 — 7月19日（日）",
+    "description": "小倉記念（GⅢ）・函館2歳ステークス（GⅢ）全馬AI分析。天候補正・馬場適性・騎手統計込み。"
+  },
+  "venues": [
+    {
+      "venue": "🏟 小倉競馬場",
+      "weather": "☀️",
+      "label": "良",
+      "status_class": "baba-good",
+      "detail": "芝：良 / ダート：良 / 気温：32℃（猛暑）"
+    },
+    {
+      "venue": "🏟 函館競馬場",
+      "weather": "🌥️",
+      "label": "良〜稍重",
+      "status_class": "baba-yaya",
+      "detail": "芝：良〜稍重 / ダート：良 / 気温：24℃"
+    },
+    {
+      "venue": "🏟 福島競馬場",
+      "weather": "🌧️",
+      "label": "稍重〜重",
+      "status_class": "baba-heavy",
+      "detail": "芝：稍重〜重 / ダート：稍重 / 気温：28℃"
+    }
+  ],
+  "races": [
+    {
+      "id": "kokura",
+      "grade": "GⅢ",
+      "grade_class": "grade-g3",
+      "name": "第62回 小倉記念",
+      "detail": "小倉競馬場 芝2000m（右・Aコース）ハンデ 19頭",
+      "meta": [
+        {
+          "text": "⏰ 15:45発走",
+          "style": "",
+          "class": "meta-time"
+        },
+        {
+          "text": "☀️ 晴・良馬場",
+          "style": "",
+          "class": "meta-weather"
+        },
+        {
+          "text": "🌡️ 32℃ 猛暑",
+          "style": "background:rgba(249,115,22,0.1);color:var(--orange);",
+          "class": "meta-badge"
+        }
+      ],
+      "horses": [
+        {
+          "rec_class": "◎",
+          "rec_style": "rec-honmei",
+          "name": "ジョバンニ",
+          "sub": "牡4 / エピファネイア産駒",
+          "sex_age": "牡4",
+          "jockey": "J.コレット",
+          "ai_prob": "34.2%",
+          "prob_class": "prob-high",
+          "conf": 82,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "+1.8",
+          "ev_class": "ev-plus",
+          "comment": "ホープフルS2着・金鯱賞2着。中距離実績No.1。コレット騎手継続",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 1,
+          "odds": ""
+        },
+        {
+          "rec_class": "○",
+          "rec_style": "rec-taikou",
+          "name": "ガイアメンテ",
+          "sub": "牡5 / ドゥラメンテ産駒",
+          "sex_age": "牡5",
+          "jockey": "川田将雅",
+          "ai_prob": "28.7%",
+          "prob_class": "prob-high",
+          "conf": 75,
+          "weather_adj": "+0.06 ☀️",
+          "weather_class": "adj-plus",
+          "ev": "+1.4",
+          "ev_class": "ev-plus",
+          "comment": "前走都大路Sレコード快勝。川田騎手継続。晴・良馬場は得意",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 2,
+          "odds": ""
+        },
+        {
+          "rec_class": "▲",
+          "rec_style": "rec-ana",
+          "name": "レーゼドラマ",
+          "sub": "牝4 / キズナ産駒",
+          "sex_age": "牝4",
+          "jockey": "松若風馬",
+          "ai_prob": "18.4%",
+          "prob_class": "prob-mid",
+          "conf": 58,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "+0.9",
+          "ev_class": "ev-plus",
+          "comment": "小倉日経賞（小倉2000m）逃げ切り勝ち。コース巧者。軽視禁物",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 3,
+          "odds": ""
+        },
+        {
+          "rec_class": "△",
+          "rec_style": "rec-chui",
+          "name": "タガノアビー",
+          "sub": "牝4 / アニマルキングダム産駒",
+          "sex_age": "牝4",
+          "jockey": "幸英明",
+          "ai_prob": "14.1%",
+          "prob_class": "prob-mid",
+          "conf": 48,
+          "weather_adj": "-0.05 🌡️",
+          "weather_class": "adj-minus",
+          "ev": "+0.5",
+          "ev_class": "ev-plus",
+          "comment": "オークス3着の実績。1800m以上は安定。猛暑の牝馬は割引",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 4,
+          "odds": ""
+        },
+        {
+          "rec_class": "△",
+          "rec_style": "rec-chui",
+          "name": "ジーティーアダマン",
+          "sub": "牡4 / ルーラーシップ産駒",
+          "sex_age": "牡4",
+          "jockey": "松山弘平",
+          "ai_prob": "12.8%",
+          "prob_class": "prob-mid",
+          "conf": 44,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "+0.4",
+          "ev_class": "ev-plus",
+          "comment": "都大路S3着（トップハンデ）。ハンデ差次第で逆転可能",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 5,
+          "odds": ""
+        },
+        {
+          "rec_class": "△",
+          "rec_style": "rec-chui",
+          "name": "エヒト",
+          "sub": "牡9 / ハービンジャー産駒",
+          "sex_age": "牡9",
+          "jockey": "未定",
+          "ai_prob": "10.2%",
+          "prob_class": "prob-mid",
+          "conf": 38,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "+0.3",
+          "ev_class": "ev-plus",
+          "comment": "2023年小倉記念優勝馬。コース巧者。9歳でも侮れない",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 6,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "サフィラ",
+          "sub": "牝5 / ハーツクライ産駒",
+          "sex_age": "牝5",
+          "jockey": "西村淳也",
+          "ai_prob": "4.8%",
+          "prob_class": "prob-low",
+          "conf": 22,
+          "weather_adj": "-0.08 🌡️",
+          "weather_class": "adj-minus",
+          "ev": "-0.6",
+          "ev_class": "ev-minus",
+          "comment": "近走大敗続き（13着・9着・5着）。猛暑の牝馬は割引。見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 7,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "アスクナイスショー",
+          "sub": "牡5 / ハービンジャー産駒",
+          "sex_age": "牡5",
+          "jockey": "田辺裕信",
+          "ai_prob": "6.1%",
+          "prob_class": "prob-low",
+          "conf": 28,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "-0.3",
+          "ev_class": "ev-minus",
+          "comment": "七夕賞15番人気激走後。反動懸念。良馬場は実績薄",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 8,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "カエルム",
+          "sub": "牡5 / ブラックタイド産駒",
+          "sex_age": "牡5",
+          "jockey": "M.デムーロ",
+          "ai_prob": "5.2%",
+          "prob_class": "prob-low",
+          "conf": 24,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "-0.4",
+          "ev_class": "ev-minus",
+          "comment": "外国人騎手起用も近走成績不安定",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 9,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "マイネルメモリー",
+          "sub": "牡6 / キングカメハメハ産駒",
+          "sex_age": "牡6",
+          "jockey": "菱田裕二",
+          "ai_prob": "3.1%",
+          "prob_class": "prob-low",
+          "conf": 16,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "-0.7",
+          "ev_class": "ev-minus",
+          "comment": "重賞実績薄。見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 10,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "ナヴォーナ",
+          "sub": "牡6 / ハービンジャー産駒",
+          "sex_age": "牡6",
+          "jockey": "未定",
+          "ai_prob": "2.8%",
+          "prob_class": "prob-low",
+          "conf": 14,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "-0.8",
+          "ev_class": "ev-minus",
+          "comment": "騎手未定。見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 11,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "ウエストナウ",
+          "sub": "牡5 / ドゥラメンテ産駒",
+          "sex_age": "牡5",
+          "jockey": "高杉吏麒",
+          "ai_prob": "3.4%",
+          "prob_class": "prob-low",
+          "conf": 18,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "-0.5",
+          "ev_class": "ev-minus",
+          "comment": "メトロポリタンS勝ちも重賞では苦戦",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 12,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "カネフラ",
+          "sub": "牡6 / ロードカナロア産駒",
+          "sex_age": "牡6",
+          "jockey": "永島まなみ",
+          "ai_prob": "2.2%",
+          "prob_class": "prob-low",
+          "conf": 12,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "-0.9",
+          "ev_class": "ev-minus",
+          "comment": "重賞実績薄。見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 13,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "コパノサントス",
+          "sub": "牡6 / イスラボニータ産駒",
+          "sex_age": "牡6",
+          "jockey": "藤懸貴志",
+          "ai_prob": "2.0%",
+          "prob_class": "prob-low",
+          "conf": 10,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "-1.0",
+          "ev_class": "ev-minus",
+          "comment": "見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 14,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "テーオーソラネル",
+          "sub": "牡7 / シルバーステート産駒",
+          "sex_age": "牡7",
+          "jockey": "田口貫太",
+          "ai_prob": "1.8%",
+          "prob_class": "prob-low",
+          "conf": 9,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "-1.1",
+          "ev_class": "ev-minus",
+          "comment": "高齢馬。見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 15,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "トータルクラリティ",
+          "sub": "セ4 / ドゥラメンテ産駒",
+          "sex_age": "セ4",
+          "jockey": "国分優作",
+          "ai_prob": "2.5%",
+          "prob_class": "prob-low",
+          "conf": 13,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "-0.8",
+          "ev_class": "ev-minus",
+          "comment": "重賞初挑戦。見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 16,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "ゼンダンハヤブサ",
+          "sub": "牡4 / ハービンジャー産駒",
+          "sex_age": "牡4",
+          "jockey": "酒井学",
+          "ai_prob": "2.1%",
+          "prob_class": "prob-low",
+          "conf": 11,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "-0.9",
+          "ev_class": "ev-minus",
+          "comment": "見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 17,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "ナムラエイハブ",
+          "sub": "牡5 / リアルスティール産駒",
+          "sex_age": "牡5",
+          "jockey": "田山旺佑",
+          "ai_prob": "1.9%",
+          "prob_class": "prob-low",
+          "conf": 10,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "-1.0",
+          "ev_class": "ev-minus",
+          "comment": "見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 18,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "ノーランサンライズ",
+          "sub": "牝4 / ロードカナロア産駒",
+          "sex_age": "牝4",
+          "jockey": "未定",
+          "ai_prob": "1.6%",
+          "prob_class": "prob-low",
+          "conf": 8,
+          "weather_adj": "-0.05 🌡️",
+          "weather_class": "adj-minus",
+          "ev": "-1.2",
+          "ev_class": "ev-minus",
+          "comment": "騎手未定・猛暑牝馬。見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 19,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "ケイズレーヴ",
+          "sub": "牡4 / 地方馬",
+          "sex_age": "牡4",
+          "jockey": "渡辺竜也",
+          "ai_prob": "1.4%",
+          "prob_class": "prob-low",
+          "conf": 7,
+          "weather_adj": "±0 ☀️",
+          "weather_class": "adj-neutral",
+          "ev": "-1.3",
+          "ev_class": "ev-minus",
+          "comment": "地方馬の中央重賞は壁が高い。見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 20,
+          "odds": ""
+        }
+      ],
+      "analysis_html": "<strong>AI総評：</strong>\n        今年の小倉記念は<strong>ジョバンニ（◎）</strong>が最有力。ホープフルS2着・金鯱賞2着と常に上位争いしており、J.コレット騎手との相性も良好。晴・良馬場の小倉2000mは先行馬有利のコースで、<strong>ガイアメンテ（○）</strong>の前走レコード勝ちも評価できる。穴は<strong>レーゼドラマ（▲）</strong>——小倉日経賞（同コース）を逃げ切った実績があり、コース適性は出走馬中トップクラス。猛暑（32℃）の影響で牝馬はやや割引。\n        <br/><br/>\n<strong>推奨馬券：</strong>3連複 ◎ジョバンニ－○ガイアメンテ－▲レーゼドラマ・△タガノアビー・△ジーティーアダマン",
+      "stats": [
+        {
+          "value": "34.2%",
+          "label": "◎本命 AI勝率"
+        },
+        {
+          "value": "19頭",
+          "label": "出走頭数"
+        },
+        {
+          "value": "32℃",
+          "label": "気温（猛暑）"
+        },
+        {
+          "value": "良",
+          "label": "馬場状態"
+        }
+      ]
+    },
+    {
+      "id": "hakodate",
+      "grade": "GⅢ",
+      "grade_class": "grade-g3",
+      "name": "第58回 函館2歳ステークス",
+      "detail": "函館競馬場 芝1200m（右）15頭 / 2歳限定",
+      "meta": [
+        {
+          "text": "⏰ 15:20発走",
+          "style": "",
+          "class": "meta-time"
+        },
+        {
+          "text": "🌥️ 曇・良〜稍重",
+          "style": "background:rgba(139,92,246,0.1);color:#a78bfa;",
+          "class": "meta-badge"
+        },
+        {
+          "text": "🌡️ 24℃ 快適",
+          "style": "background:rgba(34,197,94,0.1);color:var(--green);",
+          "class": "meta-badge"
+        }
+      ],
+      "horses": [
+        {
+          "rec_class": "◎",
+          "rec_style": "rec-honmei",
+          "name": "シグレ",
+          "sub": "牝2 / Twirling Candy産駒",
+          "sex_age": "牝2",
+          "jockey": "武豊",
+          "ai_prob": "38.5%",
+          "prob_class": "prob-high",
+          "conf": 88,
+          "weather_adj": "+0.04 🌥️",
+          "weather_class": "adj-plus",
+          "ev": "+2.1",
+          "ev_class": "ev-plus",
+          "comment": "新馬6馬身差圧勝。武豊「まだ良くなる」。牝馬の函館2歳S勝率52%",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 1,
+          "odds": ""
+        },
+        {
+          "rec_class": "○",
+          "rec_style": "rec-taikou",
+          "name": "ロンドンガーズ",
+          "sub": "牡2 / グレーターロンドン産駒",
+          "sex_age": "牡2",
+          "jockey": "北村友一",
+          "ai_prob": "26.3%",
+          "prob_class": "prob-high",
+          "conf": 72,
+          "weather_adj": "±0 🌥️",
+          "weather_class": "adj-neutral",
+          "ev": "+1.5",
+          "ev_class": "ev-plus",
+          "comment": "阪神芝1200m新馬3馬身差快勝。スピード型。乗り替わりも北村友一は信頼",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 2,
+          "odds": ""
+        },
+        {
+          "rec_class": "▲",
+          "rec_style": "rec-ana",
+          "name": "ダイメイビッグボス",
+          "sub": "牡2 / サートゥルナーリア産駒",
+          "sex_age": "牡2",
+          "jockey": "横山武史",
+          "ai_prob": "16.8%",
+          "prob_class": "prob-mid",
+          "conf": 55,
+          "weather_adj": "±0 🌥️",
+          "weather_class": "adj-neutral",
+          "ev": "+0.8",
+          "ev_class": "ev-plus",
+          "comment": "新馬差し切りV。横山武史騎手。サートゥルナーリア産駒は芝適性高い",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 3,
+          "odds": ""
+        },
+        {
+          "rec_class": "△",
+          "rec_style": "rec-chui",
+          "name": "ショウナンカノア",
+          "sub": "牝2 / ドレフォン産駒",
+          "sex_age": "牝2",
+          "jockey": "池添謙一",
+          "ai_prob": "10.2%",
+          "prob_class": "prob-mid",
+          "conf": 42,
+          "weather_adj": "+0.03 🌥️",
+          "weather_class": "adj-plus",
+          "ev": "+0.4",
+          "ev_class": "ev-plus",
+          "comment": "未勝利勝ち1:08.8の好タイム。ドレフォン産駒は芝も走れる",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 4,
+          "odds": ""
+        },
+        {
+          "rec_class": "△",
+          "rec_style": "rec-chui",
+          "name": "ノリヤンモーニン",
+          "sub": "牡2 / モーニン産駒",
+          "sex_age": "牡2",
+          "jockey": "浜中俊",
+          "ai_prob": "8.4%",
+          "prob_class": "prob-mid",
+          "conf": 36,
+          "weather_adj": "±0 🌥️",
+          "weather_class": "adj-neutral",
+          "ev": "+0.3",
+          "ev_class": "ev-plus",
+          "comment": "ダート新馬5馬身圧勝。芝は未知数だが地力は高い。穴候補",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 5,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "フェリチタ",
+          "sub": "牝2 / タワーオブロンドン産駒",
+          "sex_age": "牝2",
+          "jockey": "横山和生",
+          "ai_prob": "5.8%",
+          "prob_class": "prob-low",
+          "conf": 26,
+          "weather_adj": "±0 🌥️",
+          "weather_class": "adj-neutral",
+          "ev": "-0.2",
+          "ev_class": "ev-minus",
+          "comment": "タワーオブロンドン産駒。スピード型だが実績で劣る",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 6,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "イモージェン",
+          "sub": "牝2 / サリオス産駒",
+          "sex_age": "牝2",
+          "jockey": "佐々木大輔",
+          "ai_prob": "4.6%",
+          "prob_class": "prob-low",
+          "conf": 22,
+          "weather_adj": "±0 🌥️",
+          "weather_class": "adj-neutral",
+          "ev": "-0.4",
+          "ev_class": "ev-minus",
+          "comment": "サリオス産駒。佐々木大輔騎手。実績で劣る",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 7,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "クロリス",
+          "sub": "2歳 / 岩田康誠",
+          "sex_age": "2歳",
+          "jockey": "岩田康誠",
+          "ai_prob": "3.8%",
+          "prob_class": "prob-low",
+          "conf": 18,
+          "weather_adj": "±0 🌥️",
+          "weather_class": "adj-neutral",
+          "ev": "-0.5",
+          "ev_class": "ev-minus",
+          "comment": "見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 8,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "アルテクィーン",
+          "sub": "牝2 / 鮫島克駿",
+          "sex_age": "牝2",
+          "jockey": "鮫島克駿",
+          "ai_prob": "3.2%",
+          "prob_class": "prob-low",
+          "conf": 15,
+          "weather_adj": "±0 🌥️",
+          "weather_class": "adj-neutral",
+          "ev": "-0.6",
+          "ev_class": "ev-minus",
+          "comment": "見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 9,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "ダイシンドラゴン",
+          "sub": "2歳 / 丹内祐次",
+          "sex_age": "2歳",
+          "jockey": "丹内祐次",
+          "ai_prob": "2.8%",
+          "prob_class": "prob-low",
+          "conf": 13,
+          "weather_adj": "±0 🌥️",
+          "weather_class": "adj-neutral",
+          "ev": "-0.7",
+          "ev_class": "ev-minus",
+          "comment": "未勝利勝ち。重賞では壁",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 10,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "ウンスイ",
+          "sub": "2歳 / 横山琉人",
+          "sex_age": "2歳",
+          "jockey": "横山琉人",
+          "ai_prob": "2.4%",
+          "prob_class": "prob-low",
+          "conf": 11,
+          "weather_adj": "±0 🌥️",
+          "weather_class": "adj-neutral",
+          "ev": "-0.8",
+          "ev_class": "ev-minus",
+          "comment": "見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 11,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "セタキト",
+          "sub": "2歳 / 斎藤新",
+          "sex_age": "2歳",
+          "jockey": "斎藤新",
+          "ai_prob": "2.1%",
+          "prob_class": "prob-low",
+          "conf": 10,
+          "weather_adj": "±0 🌥️",
+          "weather_class": "adj-neutral",
+          "ev": "-0.9",
+          "ev_class": "ev-minus",
+          "comment": "見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 12,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "ダマスク",
+          "sub": "2歳 / 黛弘人",
+          "sex_age": "2歳",
+          "jockey": "黛弘人",
+          "ai_prob": "1.8%",
+          "prob_class": "prob-low",
+          "conf": 9,
+          "weather_adj": "±0 🌥️",
+          "weather_class": "adj-neutral",
+          "ev": "-1.0",
+          "ev_class": "ev-minus",
+          "comment": "見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 13,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "アイルドフルール",
+          "sub": "2歳 / 未定",
+          "sex_age": "2歳",
+          "jockey": "未定",
+          "ai_prob": "1.5%",
+          "prob_class": "prob-low",
+          "conf": 7,
+          "weather_adj": "±0 🌥️",
+          "weather_class": "adj-neutral",
+          "ev": "-1.1",
+          "ev_class": "ev-minus",
+          "comment": "騎手未定。見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 14,
+          "odds": ""
+        },
+        {
+          "rec_class": "×",
+          "rec_style": "rec-pass",
+          "name": "フレイコン",
+          "sub": "2歳 / 未定",
+          "sex_age": "2歳",
+          "jockey": "未定",
+          "ai_prob": "1.4%",
+          "prob_class": "prob-low",
+          "conf": 7,
+          "weather_adj": "±0 🌥️",
+          "weather_class": "adj-neutral",
+          "ev": "-1.2",
+          "ev_class": "ev-minus",
+          "comment": "騎手未定。見送り",
+          "paddock": {
+            "text": "",
+            "rating": null
+          },
+          "number": 15,
+          "odds": ""
+        }
+      ],
+      "analysis_html": "<strong>AI総評：</strong>\n        函館2歳Sは<strong>シグレ（◎）</strong>が断然の本命。新馬戦での6馬身差圧勝は近年でも稀な内容で、武豊騎手が「まだ良くなりそう」とコメントしたことも心強い。過去の統計でも「3馬身以上の大差勝ち馬」の重賞勝率は48%と高く、信頼度は高い。対抗は<strong>ロンドンガーズ（○）</strong>——阪神芝1200mで3馬身差快勝と距離適性も問題なし。穴は<strong>ダイメイビッグボス（▲）</strong>と<strong>ノリヤンモーニン（△）</strong>。\n        <br/><br/>\n<strong>推奨馬券：</strong>馬連 ◎シグレ－○ロンドンガーズ、3連複 ◎－○－▲ダイメイビッグボス",
+      "stats": [
+        {
+          "value": "38.5%",
+          "label": "◎本命 AI勝率"
+        },
+        {
+          "value": "15頭",
+          "label": "出走頭数"
+        },
+        {
+          "value": "24℃",
+          "label": "気温（快適）"
+        },
+        {
+          "value": "良〜稍重",
+          "label": "馬場状態"
+        }
+      ]
+    },
+    {
+      "id": "fukushima",
+      "grade": "重賞外",
+      "grade_class": "grade-op",
+      "name": "福島競馬場 注目レース",
+      "detail": "福島 芝・ダート各条件戦 / 雨・稍重〜重",
+      "meta": [
+        {
+          "text": "🌧️ 雨・稍重〜重",
+          "style": "",
+          "class": "meta-time"
+        },
+        {
+          "text": "⚠️ 波乱注意",
+          "style": "background:rgba(249,115,22,0.1);color:var(--orange);",
+          "class": "meta-badge"
+        }
+      ],
+      "horses": [],
+      "analysis_html": "<strong>福島・雨馬場の傾向（統計データ）：</strong><br/><br/>\n        先週（7/12）の七夕賞では<strong>15番人気のアスクナイスショーが激走</strong>し、3連単22万3050円の大波乱。雨・重馬場の福島では毎週のように波乱が起きています。<br/><br/>\n<strong>雨の日の福島・注目ポイント：</strong><br/>\n        ・重馬場巧者（過去に稍重・重で好走歴のある馬）の勝率が通常比 <strong>+18%上昇</strong><br/>\n        ・人気馬の信頼度は低下（1番人気の勝率：良馬場34% → 重馬場21%）<br/>\n        ・波乱率（10倍以上の馬が絡む確率）：<strong>61%</strong><br/>\n        ・ダート戦は雨の影響が少なく、実力通りになりやすい<br/><br/>\n<strong>推奨戦略：</strong>福島の雨の日は「重馬場実績のある馬」を軸に、人気薄を絡めたワイド・3連複が有効。",
+      "stats": []
+    }
+  ]
+}
