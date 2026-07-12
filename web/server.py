@@ -526,18 +526,6 @@ def terms_ja(request: Request) -> HTMLResponse:
     )
 
 
-@app.get("/terms/en", response_class=HTMLResponse)
-def terms_en(request: Request) -> HTMLResponse:
-    return _legal_response(
-        request,
-        "legal/terms_en.html",
-        "Terms of Service",
-        description="Terms for the G1 prediction and EV analytics subscription service. Japanese version prevails.",
-        path="/terms/en",
-        lang="en",
-    )
-
-
 @app.get("/tokushoho", response_class=HTMLResponse)
 def tokushoho(request: Request) -> HTMLResponse:
     context = _seo_context(
@@ -575,7 +563,7 @@ def robots_txt() -> PlainTextResponse:
 
 @app.get("/sitemap.xml")
 def sitemap_xml() -> Response:
-    urls = ["/", "/terms", "/terms/en", "/tokushoho", "/privacy"]
+    urls = ["/", "/terms", "/tokushoho", "/privacy"]
     items = "".join(f"<url><loc>{_public_url(path)}</loc></url>" for path in urls)
     body = (
         '<?xml version="1.0" encoding="UTF-8"?>'

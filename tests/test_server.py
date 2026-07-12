@@ -79,11 +79,6 @@ class TestLegalPages:
         assert res.status_code == 200
         assert "利用規約" in res.text
 
-    def test_terms_en_returns_200(self, client: TestClient) -> None:
-        res = client.get("/terms/en")
-        assert res.status_code == 200
-        assert "Terms" in res.text
-
     def test_tokushoho_returns_200(self, client: TestClient) -> None:
         res = client.get("/tokushoho")
         assert res.status_code == 200
