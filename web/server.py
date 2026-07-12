@@ -285,35 +285,65 @@ class PostgresSubscriberStore(SubscriberStore):
         status: str,
         current_period_end: int | None,
     ) -> None:
+        now = _now_utc()
         with self._connect() as conn:
             with conn.cursor() as cur:
+                # まずemailで既存レコードを確認し、あればstripe_customer_idを更新してupsert
                 cur.execute(
-                    """
-                    INSERT INTO subscribers (
-                        stripe_customer_id,
-                        email,
-                        stripe_subscription_id,
-                        status,
-                        current_period_end,
-                        updated_at
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (stripe_customer_id) DO UPDATE SET
-                        email = EXCLUDED.email,
-                        stripe_subscription_id = EXCLUDED.stripe_subscription_id,
-                        status = EXCLUDED.status,
-                        current_period_end = EXCLUDED.current_period_end,
-                        updated_at = EXCLUDED.updated_at
-                    """,
-                    (
-                        stripe_customer_id,
-                        email,
-                        stripe_subscription_id,
-                        status,
-                        current_period_end,
-                        _now_utc(),
-                    ),
+                    "SELECT stripe_customer_id FROM subscribers WHERE email = %s",
+                    (email,),
                 )
+                existing = cur.fetchone()
+                if existing:
+                    # emailが既存 → そのレコードをUPDATE
+                    cur.execute(
+                        """
+                        UPDATE subscribers SET
+                            stripe_customer_id = %s,
+                            stripe_subscription_id = %s,
+                            status = %s,
+                            current_period_end = %s,
+                            updated_at = %s
+                        WHERE email = %s
+                        """,
+                        (
+                            stripe_customer_id,
+                            stripe_subscription_id,
+                            status,
+                            current_period_end,
+                            now,
+                            email,
+                        ),
+                    )
+                else:
+                    # 新規INSERT（stripe_customer_idが重複した場合もUPDATE）
+                    cur.execute(
+                        """
+                        INSERT INTO subscribers (
+                            stripe_customer_id,
+                            email,
+                            stripe_subscription_id,
+                            status,
+                            current_period_end,
+                            updated_at
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (stripe_customer_id) DO UPDATE SET
+                            email = EXCLUDED.email,
+                            stripe_subscription_id = EXCLUDED.stripe_subscription_id,
+                            status = EXCLUDED.status,
+                            current_period_end = EXCLUDED.current_period_end,
+                            updated_at = EXCLUDED.updated_at
+                        """,
+                        (
+                            stripe_customer_id,
+                            email,
+                            stripe_subscription_id,
+                            status,
+                            current_period_end,
+                            now,
+                        ),
+                    )
             conn.commit()
 
     def get(
