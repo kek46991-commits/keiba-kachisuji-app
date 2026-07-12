@@ -80,6 +80,21 @@
       <!-- 馬データ入力 -->
       <section id="tab-input" class="tab-panel active">
         <h2>🐴 出走馬データ入力</h2>
+        <div class="entries-import">
+          <label for="entries-paste">出馬表・オッズの貼り付け</label>
+          <textarea id="entries-paste" rows="5" placeholder="馬番,馬名,オッズ
+1,サンプルホース,3.2
+2,テストホース,8.5"></textarea>
+          <div class="entries-import-actions">
+            <button id="import-entries-btn" class="ghost-btn">📥 出馬表を反映</button>
+            <label class="file-btn">
+              CSV/TXTを読み込む
+              <input type="file" id="entries-file" accept=".csv,.txt" />
+            </label>
+          </div>
+          <p class="import-note">最新G1レースの出走馬・確定オッズを貼り付けてください。自動リアルタイム取得（JRA-VAN等の正規データ）は別途データ契約が必要です。</p>
+          <p id="import-status" class="import-status" aria-live="polite"></p>
+        </div>
         <div class="controls">
           <label class="inline-field">
             頭数

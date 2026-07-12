@@ -15,3 +15,5 @@ web/*.sqlite
 data/cache/
 *.sqlite
 *.pkl
+.vercel
+.env*
