@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import sqlite3
 from datetime import datetime, timezone
@@ -195,6 +196,11 @@ class SQLiteSubscriberStore(SubscriberStore):
         current_period_end: int | None,
     ) -> None:
         with self._connect() as conn:
+            # 同じ customer_id でメールが変わった場合の重複を防ぐ
+            conn.execute(
+                "DELETE FROM subscribers WHERE stripe_customer_id = ? AND email != ?",
+                (stripe_customer_id, email),
+            )
             conn.execute(
                 """
                 INSERT INTO subscribers (
@@ -206,8 +212,8 @@ class SQLiteSubscriberStore(SubscriberStore):
                     updated_at
                 )
                 VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT(stripe_customer_id) DO UPDATE SET
-                    email = excluded.email,
+                ON CONFLICT(email) DO UPDATE SET
+                    stripe_customer_id = excluded.stripe_customer_id,
                     stripe_subscription_id = excluded.stripe_subscription_id,
                     status = excluded.status,
                     current_period_end = excluded.current_period_end,
@@ -257,6 +263,9 @@ class PostgresSubscriberStore(SubscriberStore):
             self._psycopg = psycopg
         return self._psycopg.connect(self.dsn)
 
+    def _advisory_lock_id(self, key: str) -> int:
+        return int(hashlib.sha256(key.encode()).hexdigest(), 16) % (2**63 - 1) + 1
+
     def ensure_schema(self) -> None:
         with self._connect() as conn:
             with conn.cursor() as cur:
@@ -288,62 +297,44 @@ class PostgresSubscriberStore(SubscriberStore):
         now = _now_utc()
         with self._connect() as conn:
             with conn.cursor() as cur:
-                # まずemailで既存レコードを確認し、あればstripe_customer_idを更新してupsert
+                # 同一 customer_id での並列 upsert をアドバイザリロックで直列化
                 cur.execute(
-                    "SELECT stripe_customer_id FROM subscribers WHERE email = %s",
-                    (email,),
+                    "SELECT pg_advisory_xact_lock(%s)",
+                    (self._advisory_lock_id(stripe_customer_id),),
                 )
-                existing = cur.fetchone()
-                if existing:
-                    # emailが既存 → そのレコードをUPDATE
-                    cur.execute(
-                        """
-                        UPDATE subscribers SET
-                            stripe_customer_id = %s,
-                            stripe_subscription_id = %s,
-                            status = %s,
-                            current_period_end = %s,
-                            updated_at = %s
-                        WHERE email = %s
-                        """,
-                        (
-                            stripe_customer_id,
-                            stripe_subscription_id,
-                            status,
-                            current_period_end,
-                            now,
-                            email,
-                        ),
+                # 同じ customer_id でメールが変わった場合の重複を防ぐ
+                cur.execute(
+                    "DELETE FROM subscribers WHERE stripe_customer_id = %s AND email != %s",
+                    (stripe_customer_id, email),
+                )
+                # email ユニーク制約を ON CONFLICT で処理し、並列な同 email 挿入も atomic に更新する
+                cur.execute(
+                    """
+                    INSERT INTO subscribers (
+                        stripe_customer_id,
+                        email,
+                        stripe_subscription_id,
+                        status,
+                        current_period_end,
+                        updated_at
                     )
-                else:
-                    # 新規INSERT（stripe_customer_idが重複した場合もUPDATE）
-                    cur.execute(
-                        """
-                        INSERT INTO subscribers (
-                            stripe_customer_id,
-                            email,
-                            stripe_subscription_id,
-                            status,
-                            current_period_end,
-                            updated_at
-                        )
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (stripe_customer_id) DO UPDATE SET
-                            email = EXCLUDED.email,
-                            stripe_subscription_id = EXCLUDED.stripe_subscription_id,
-                            status = EXCLUDED.status,
-                            current_period_end = EXCLUDED.current_period_end,
-                            updated_at = EXCLUDED.updated_at
-                        """,
-                        (
-                            stripe_customer_id,
-                            email,
-                            stripe_subscription_id,
-                            status,
-                            current_period_end,
-                            now,
-                        ),
-                    )
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (email) DO UPDATE SET
+                        stripe_customer_id = EXCLUDED.stripe_customer_id,
+                        stripe_subscription_id = EXCLUDED.stripe_subscription_id,
+                        status = EXCLUDED.status,
+                        current_period_end = EXCLUDED.current_period_end,
+                        updated_at = EXCLUDED.updated_at
+                    """,
+                    (
+                        stripe_customer_id,
+                        email,
+                        stripe_subscription_id,
+                        status,
+                        current_period_end,
+                        now,
+                    ),
+                )
             conn.commit()
 
     def get(
