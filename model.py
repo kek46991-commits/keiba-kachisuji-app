@@ -137,9 +137,21 @@ class WinProbabilityModel:
 
 
 def train_from_races(races_df: pd.DataFrame,
-                     config: TrainConfig | None = None) -> WinProbabilityModel:
-    """生レースデータから特徴量生成 → 学習までを一括で行う。"""
-    feats = build_features(filter_grade(races_df, "G1"))
+                     config: TrainConfig | None = None,
+                     grade: str | None = None) -> WinProbabilityModel:
+    """生レースデータから特徴量生成 → 学習までを一括で行う。
+
+    grade が None の場合は全クラスを学習対象にする（未勝利・重賞含む）。
+    grade="G1" を指定すると G1 のみに絞る。
+    """
+    from data.fetch import _coerce_schema
+    if grade is not None:
+        filtered = filter_grade(races_df, grade)
+    else:
+        filtered = _coerce_schema(races_df)  # 全クラス
+    if filtered.empty:
+        raise ValueError(f"学習データが空です（grade={grade}）")
+    feats = build_features(filtered)
     return WinProbabilityModel(config).fit(feats)
 
 
@@ -171,7 +183,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     races = load_races_csv(args.csv) if args.csv else generate_synthetic_dataset()
-    model = train_from_races(races)
+    model = train_from_races(races, grade=None)  # 全クラス学習
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     model.save(args.out)
     print(f"backend={model.backend} / 学習行数={len(races)}")

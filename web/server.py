@@ -275,6 +275,28 @@ class PostgresSubscriberStore(SubscriberStore):
                 cur.execute(
                     "CREATE INDEX IF NOT EXISTS idx_subscribers_email ON subscribers(email)"
                 )
+                # レース結果テーブル（学習データ蓄積用）
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS race_results (
+                        id SERIAL PRIMARY KEY,
+                        race_date DATE NOT NULL,
+                        venue TEXT NOT NULL,
+                        race_num INTEGER NOT NULL,
+                        race_name TEXT NOT NULL,
+                        race_class TEXT,
+                        distance INTEGER,
+                        track_type TEXT,
+                        winner_horse TEXT NOT NULL,
+                        winner_number INTEGER,
+                        trifecta_payout_yen INTEGER,
+                        note TEXT,
+                        created_at TIMESTAMPTZ DEFAULT NOW(),
+                        UNIQUE(race_date, venue, race_num)
+                    )
+                    """
+                )
+            conn.commit()
 
     def upsert(
         self,
@@ -961,3 +983,127 @@ def yoso_page(request: Request) -> HTMLResponse:
     )
     context["is_subscriber"] = session is not None
     return templates.TemplateResponse(request, "yoso.html", context)
+
+
+# ===== レース結果データ投入API（管理者用） =====
+@app.post("/api/race-results/seed")
+def seed_race_results(request: Request) -> JSONResponse:
+    """レース結果データをDBに投入する（管理者専用エンドポイント）"""
+    # 簡易認証: APP_SECRET_KEYをBearerトークンとして使用
+    auth = request.headers.get("Authorization", "")
+    if APP_SECRET_KEY and auth != f"Bearer {APP_SECRET_KEY}":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    if not os.getenv("DATABASE_URL"):
+        raise HTTPException(status_code=503, detail="DATABASE_URL が未設定です")
+
+    try:
+        import psycopg  # type: ignore[import-not-found]
+        from web.seed_race_results import RACE_RESULTS, ensure_table, insert_results
+    except ImportError as e:
+        raise HTTPException(status_code=500, detail=f"Import error: {e}")
+
+    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
+        with conn.cursor() as cur:
+            ensure_table(cur)
+            count = insert_results(cur)
+        conn.commit()
+
+    return JSONResponse({"status": "ok", "inserted": count})
+
+
+# ===== レース結果一覧API（予想モデル学習用） =====
+@app.get("/api/race-results")
+def get_race_results(
+    venue: str | None = None,
+    race_class: str | None = None,
+    limit: int = 100,
+) -> JSONResponse:
+    """蓄積したレース結果データを返す（AIモデル学習・統計用）"""
+    if not os.getenv("DATABASE_URL"):
+        return JSONResponse({"results": [], "note": "DATABASE_URL未設定"})
+
+    try:
+        import psycopg  # type: ignore[import-not-found]
+    except ImportError:
+        return JSONResponse({"results": [], "note": "psycopg未インストール"})
+
+    query = "SELECT * FROM race_results WHERE 1=1"
+    params: list = []
+    if venue:
+        query += " AND venue = %s"
+        params.append(venue)
+    if race_class:
+        query += " AND race_class = %s"
+        params.append(race_class)
+    query += " ORDER BY race_date DESC, race_num ASC LIMIT %s"
+    params.append(limit)
+
+    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
+        with conn.cursor() as cur:
+            cur.execute(query, params)
+            rows = cur.fetchall()
+            columns = [col.name for col in cur.description]
+
+    results = [dict(zip(columns, row, strict=False)) for row in rows]
+    # date型をstr変換
+    for r in results:
+        if hasattr(r.get("race_date"), "isoformat"):
+            r["race_date"] = r["race_date"].isoformat()
+        if hasattr(r.get("created_at"), "isoformat"):
+            r["created_at"] = r["created_at"].isoformat()
+
+    return JSONResponse({"results": results, "count": len(results)})
+
+
+# ===== レース結果統計API（天候・馬場・騎手統計） =====
+@app.get("/api/race-results/stats")
+def get_race_stats() -> JSONResponse:
+    """レース結果の統計サマリーを返す（予想精度向上用）"""
+    if not os.getenv("DATABASE_URL"):
+        return JSONResponse({"stats": {}, "note": "DATABASE_URL未設定"})
+
+    try:
+        import psycopg  # type: ignore[import-not-found]
+    except ImportError:
+        return JSONResponse({"stats": {}, "note": "psycopg未インストール"})
+
+    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
+        with conn.cursor() as cur:
+            # 開催場別集計
+            cur.execute(
+                "SELECT venue, COUNT(*) as cnt, AVG(trifecta_payout_yen) as avg_payout "
+                "FROM race_results GROUP BY venue ORDER BY cnt DESC"
+            )
+            venue_stats = [
+                {"venue": r[0], "count": r[1], "avg_trifecta": round(r[2] or 0)}
+                for r in cur.fetchall()
+            ]
+            # 馬場種別集計
+            cur.execute(
+                "SELECT track_type, COUNT(*) as cnt, AVG(trifecta_payout_yen) as avg_payout "
+                "FROM race_results GROUP BY track_type ORDER BY cnt DESC"
+            )
+            track_stats = [
+                {"track_type": r[0], "count": r[1], "avg_trifecta": round(r[2] or 0)}
+                for r in cur.fetchall()
+            ]
+            # クラス別集計
+            cur.execute(
+                "SELECT race_class, COUNT(*) as cnt, AVG(trifecta_payout_yen) as avg_payout "
+                "FROM race_results GROUP BY race_class ORDER BY avg_payout DESC"
+            )
+            class_stats = [
+                {"race_class": r[0], "count": r[1], "avg_trifecta": round(r[2] or 0)}
+                for r in cur.fetchall()
+            ]
+            # 総件数
+            cur.execute("SELECT COUNT(*) FROM race_results")
+            total = cur.fetchone()[0]
+
+    return JSONResponse({
+        "total_races": total,
+        "venue_stats": venue_stats,
+        "track_stats": track_stats,
+        "class_stats": class_stats,
+    })
