@@ -110,6 +110,70 @@ function initHorseControls() {
   });
 }
 
+function parseEntries(text) {
+  const rows = [];
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const tokens = /[,\t]/.test(line)
+      ? line.split(/[,\t]/).map((token) => token.trim()).filter(Boolean)
+      : line.split(/\s+/).filter(Boolean);
+    const numericIndexes = tokens
+      .map((token, index) => ({ token, index }))
+      .filter(({ token }) => /^\d+(?:\.\d+)?$/.test(token));
+    if (numericIndexes.length < 2) continue;
+
+    const umabanToken = numericIndexes[0].token;
+    const oddsToken = numericIndexes[numericIndexes.length - 1].token;
+    const umaban = Number(umabanToken);
+    const odds = Number(oddsToken);
+    const name = tokens
+      .filter((_, index) => index !== numericIndexes[0].index && index !== numericIndexes[numericIndexes.length - 1].index)
+      .join(" ")
+      .trim();
+    if (!Number.isInteger(umaban) || umaban < 1 || umaban > 18 || !Number.isFinite(odds) || odds <= 0 || !name) {
+      continue;
+    }
+    rows.push({ umaban, name, odds });
+  }
+  return rows.slice(0, 18);
+}
+
+function importEntries() {
+  const rows = parseEntries($("entries-paste").value);
+  const status = $("import-status");
+  if (!rows.length) {
+    status.textContent = "出馬表を読み取れませんでした。馬番,馬名,オッズの形式を確認してください。";
+    return;
+  }
+  state.horses = rows.map(({ umaban, name, odds }) => {
+    const horse = emptyHorse(umaban);
+    horse.name = name;
+    horse.odds = odds;
+    return horse;
+  });
+  $("num-horses").value = rows.length;
+  renderHorses();
+  status.textContent = `${rows.length}頭を反映しました`;
+}
+
+function initImport() {
+  $("import-entries-btn").addEventListener("click", importEntries);
+  $("entries-file").addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      $("entries-paste").value = reader.result;
+      importEntries();
+    });
+    reader.addEventListener("error", () => {
+      $("import-status").textContent = "ファイルを読み込めませんでした。";
+    });
+    reader.readAsText(file);
+  });
+}
+
 function slider(label, value, min, max, step, onInput, help) {
   const wrap = document.createElement("div");
   wrap.className = "slider-field";
@@ -436,5 +500,6 @@ function updateBox() {
 initSidebar();
 initTabs();
 initHorseControls();
+initImport();
 initBox();
 renderHorses();
