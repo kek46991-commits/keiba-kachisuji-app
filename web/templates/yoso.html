@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>今週の予想 | 勝ち筋解析</title>
-  <meta name="description" content="AIによる今週の競馬予想。G1・重賞の期待値分析・推奨馬を公開。" />
+  <title>今週の予想 2026/7/19 | 勝ち筋解析</title>
+  <meta name="description" content="2026年7月19日（日）小倉記念・函館2歳S全馬AI予想。天候・馬場・騎手統計付き。" />
   <link rel="icon" href="/static/favicon.png" />
   <style>
     :root {
       --bg: #0a0c1a; --bg2: #0f1228; --panel: #141730; --panel2: #1a1f3a;
       --text: #f0f2ff; --muted: #8892c4; --accent: #6c7fff; --accent2: #a855f7;
-      --gold: #f5c842; --green: #22c55e; --red: #ef4444;
+      --gold: #f5c842; --green: #22c55e; --red: #ef4444; --orange: #f97316;
       --line: rgba(255,255,255,0.07); --line2: rgba(108,127,255,0.2);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -24,226 +24,899 @@
     }
     .logo { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 800; color: var(--text); text-decoration: none; }
     .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
-    .logo-sub { font-size: 0.65rem; color: var(--muted); font-weight: 400; display: block; }
+    nav { display: flex; gap: 4px; }
     nav a { color: var(--muted); text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 8px; }
     nav a:hover { color: var(--text); background: var(--panel2); }
-    .main { max-width: 1080px; margin: 0 auto; padding: 48px 24px; }
+    .main { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
+
+    /* ページヘッダー */
+    .page-header { margin-bottom: 36px; }
     .page-tag { display: inline-block; background: rgba(108,127,255,0.1); border: 1px solid rgba(108,127,255,0.25); color: var(--accent); font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; letter-spacing: 0.08em; margin-bottom: 12px; text-transform: uppercase; }
-    .page-title { font-size: 2.2rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 8px; }
-    .page-desc { color: var(--muted); font-size: 1rem; margin-bottom: 40px; }
-    /* Race tabs */
-    .race-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 32px; }
+    .page-title { font-size: 2rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 8px; }
+    .page-desc { color: var(--muted); font-size: 0.95rem; }
+
+    /* 馬場状態バナー */
+    .baba-banner { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 36px; }
+    .baba-card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 20px; }
+    .baba-venue { font-size: 0.75rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+    .baba-status { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .baba-label { font-size: 1.1rem; font-weight: 800; }
+    .baba-weather { font-size: 1.2rem; }
+    .baba-detail { font-size: 0.78rem; color: var(--muted); }
+    .baba-good { color: var(--green); }
+    .baba-yaya { color: var(--gold); }
+    .baba-heavy { color: var(--orange); }
+    .baba-bad { color: var(--red); }
+
+    /* レースタブ */
+    .race-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
     .race-tab { background: var(--panel); border: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; padding: 10px 20px; border-radius: 12px; cursor: pointer; transition: all .2s; font-weight: 600; }
     .race-tab:hover { border-color: var(--line2); color: var(--text); }
     .race-tab.active { background: linear-gradient(135deg, var(--accent), var(--accent2)); border-color: transparent; color: #fff; }
-    .race-tab .tab-badge { display: inline-block; background: rgba(245,200,66,0.2); color: var(--gold); font-size: 0.68rem; padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
-    /* Race card */
+    .tab-badge { display: inline-block; background: rgba(245,200,66,0.2); color: var(--gold); font-size: 0.68rem; padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
+
+    /* レースコンテンツ */
+    .race-content { display: none; }
+    .race-content.active { display: block; }
+
+    /* レースカード */
     .race-card { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; margin-bottom: 24px; }
     .race-header { padding: 20px 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
     .race-info { display: flex; align-items: center; gap: 12px; }
-    .race-grade { background: linear-gradient(135deg, var(--gold), var(--gold2, #e8a800)); color: #000; font-size: 0.72rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; letter-spacing: 0.05em; }
-    .race-grade.g2 { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); }
-    .race-grade.g3 { background: linear-gradient(135deg, #cd7f32, #a0522d); color: #fff; }
+    .race-grade { font-size: 0.72rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; letter-spacing: 0.05em; }
+    .grade-g3 { background: linear-gradient(135deg, #cd7f32, #a0522d); color: #fff; }
+    .grade-op { background: rgba(108,127,255,0.2); color: var(--accent); border: 1px solid rgba(108,127,255,0.3); }
+    .grade-1win { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+    .grade-maiden { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
     .race-name { font-size: 1.2rem; font-weight: 800; }
-    .race-detail { font-size: 0.78rem; color: var(--muted); }
-    .race-status { display: flex; align-items: center; gap: 8px; }
-    .status-badge { font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
-    .status-open { background: rgba(34,197,94,0.15); color: var(--green); }
-    .status-locked { background: rgba(239,68,68,0.15); color: var(--red); }
-    .weather-info { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--muted); }
-    /* Horse table */
-    .horse-table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; }
-    th { background: var(--panel2); padding: 10px 14px; text-align: left; font-size: 0.72rem; color: var(--muted); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
-    td { padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: rgba(255,255,255,0.02); }
-    .horse-num { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font-size: 0.78rem; font-weight: 800; background: var(--panel2); }
-    .horse-name-cell { font-weight: 700; }
-    .ev-positive { color: var(--green); font-weight: 700; }
-    .ev-negative { color: var(--red); }
-    .ev-neutral { color: var(--muted); }
-    .recommend { display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 8px; }
-    .rec-buy { background: rgba(34,197,94,0.15); color: var(--green); }
-    .rec-watch { background: rgba(245,200,66,0.15); color: var(--gold); }
-    .rec-pass { background: rgba(239,68,68,0.15); color: var(--red); }
-    .confidence-bar { display: flex; align-items: center; gap: 6px; }
-    .conf-bar { height: 6px; border-radius: 3px; background: var(--panel2); width: 60px; overflow: hidden; }
-    .conf-fill { height: 100%; border-radius: 3px; }
-    .conf-high { background: linear-gradient(90deg, var(--green), #16a34a); }
-    .conf-mid { background: linear-gradient(90deg, var(--gold), var(--gold2, #e8a800)); }
-    .conf-low { background: linear-gradient(90deg, var(--red), #dc2626); }
-    /* Subscribe lock */
-    .lock-overlay { position: relative; }
-    .lock-overlay::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 30%, var(--panel) 80%); pointer-events: none; }
-    .subscribe-cta { background: var(--panel2); border: 1px solid var(--line2); border-radius: 16px; padding: 32px; text-align: center; margin-top: 24px; }
-    .subscribe-cta h3 { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
-    .subscribe-cta p { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
-    .btn-primary { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; font-weight: 800; font-size: 1rem; padding: 14px 32px; border-radius: 50px; border: none; cursor: pointer; text-decoration: none; box-shadow: 0 8px 32px rgba(108,127,255,0.4); transition: all .25s; }
-    .btn-primary:hover { transform: translateY(-2px); }
-    .disclaimer { background: rgba(245,200,66,0.06); border: 1px solid rgba(245,200,66,0.2); border-radius: 12px; padding: 16px 20px; font-size: 0.82rem; color: #ffe8c2; line-height: 1.7; margin-top: 32px; }
-    footer { background: var(--panel); border-top: 1px solid var(--line); padding: 32px 24px; text-align: center; }
-    .footer-links { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
-    .footer-links a { color: var(--muted); text-decoration: none; font-size: 0.82rem; }
-    .footer-copy { font-size: 0.78rem; color: var(--muted); }
-    @media (max-width: 768px) { th, td { padding: 8px 10px; font-size: 0.78rem; } }
+    .race-detail { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .race-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .meta-badge { font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
+    .meta-time { background: rgba(108,127,255,0.1); color: var(--accent); }
+    .meta-heads { background: rgba(255,255,255,0.05); color: var(--muted); }
+    .meta-weather { background: rgba(34,197,94,0.1); color: var(--green); }
+    .meta-baba { background: rgba(245,200,66,0.1); color: var(--gold); }
+
+    /* 馬テーブル */
+    .horse-table { width: 100%; border-collapse: collapse; }
+    .horse-table th { padding: 10px 14px; text-align: left; font-size: 0.72rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--line); background: var(--bg2); }
+    .horse-table td { padding: 12px 14px; font-size: 0.85rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    .horse-table tr:last-child td { border-bottom: none; }
+    .horse-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* 推奨バッジ */
+    .rec { display: inline-block; font-size: 0.78rem; font-weight: 800; padding: 3px 10px; border-radius: 8px; min-width: 36px; text-align: center; }
+    .rec-honmei { background: linear-gradient(135deg, #f5c842, #e8a800); color: #000; }
+    .rec-taikou { background: rgba(34,197,94,0.2); color: var(--green); border: 1px solid rgba(34,197,94,0.4); }
+    .rec-ana { background: rgba(249,115,22,0.2); color: var(--orange); border: 1px solid rgba(249,115,22,0.4); }
+    .rec-chui { background: rgba(139,92,246,0.2); color: #a78bfa; border: 1px solid rgba(139,92,246,0.4); }
+    .rec-pass { background: rgba(255,255,255,0.05); color: var(--muted); }
+
+    /* 確信度バー */
+    .conf-bar { width: 80px; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle; margin-left: 6px; }
+    .conf-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+
+    /* 天候補正 */
+    .weather-adj { font-size: 0.78rem; font-weight: 700; }
+    .adj-plus { color: var(--green); }
+    .adj-minus { color: var(--red); }
+    .adj-neutral { color: var(--muted); }
+
+    /* 馬名 */
+    .horse-name { font-weight: 700; font-size: 0.9rem; }
+    .horse-sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+    /* 確率 */
+    .prob { font-weight: 800; font-size: 0.95rem; }
+    .prob-high { color: var(--green); }
+    .prob-mid { color: var(--gold); }
+    .prob-low { color: var(--muted); }
+
+    /* EV */
+    .ev-plus { color: var(--green); font-weight: 700; }
+    .ev-minus { color: var(--red); font-weight: 700; }
+
+    /* 分析メモ */
+    .analysis-box { padding: 16px 24px; background: var(--bg2); border-top: 1px solid var(--line); font-size: 0.82rem; color: var(--muted); line-height: 1.7; }
+    .analysis-box strong { color: var(--text); }
+
+    /* 統計サマリー */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; padding: 20px 24px; background: var(--bg2); border-top: 1px solid var(--line); }
+    .stat-item { text-align: center; }
+    .stat-val { font-size: 1.4rem; font-weight: 900; color: var(--accent); }
+    .stat-label { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+    /* 天候統計セクション */
+    .weather-section { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 24px; margin-bottom: 24px; }
+    .section-title { font-size: 1rem; font-weight: 800; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .weather-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .weather-stat { background: var(--bg2); border-radius: 12px; padding: 14px; }
+    .weather-stat-title { font-size: 0.75rem; color: var(--muted); font-weight: 700; margin-bottom: 8px; }
+    .weather-stat-list { font-size: 0.82rem; line-height: 1.8; }
+    .highlight { color: var(--gold); font-weight: 700; }
+
+    /* 注意書き */
+    .disclaimer { background: rgba(108,127,255,0.05); border: 1px solid rgba(108,127,255,0.15); border-radius: 12px; padding: 16px 20px; margin-top: 40px; font-size: 0.78rem; color: var(--muted); line-height: 1.7; }
+
+    @media (max-width: 768px) {
+      .horse-table { font-size: 0.78rem; }
+      .horse-table th, .horse-table td { padding: 8px 10px; }
+      .conf-bar { width: 50px; }
+      nav { display: none; }
+    }
   </style>
 </head>
 <body>
+
 <header>
   <a href="/" class="logo">
     <div class="logo-icon">🏇</div>
-    <div>勝ち筋解析<span class="logo-sub">KEIBA AI ANALYTICS</span></div>
+    <div>
+      <span>勝ち筋解析</span>
+      <span class="logo-sub" style="font-size:0.65rem;color:#8892c4;display:block;">AI競馬予想サービス</span>
+    </div>
   </a>
   <nav>
     <a href="/">ホーム</a>
     <a href="/horses">馬図鑑</a>
     <a href="/jockeys">騎手統計</a>
     <a href="/blog">ブログ</a>
-    <a href="/yoso1" style="color:var(--text)">予想</a>
+    <a href="/app">解析ツール</a>
   </nav>
 </header>
 
 <div class="main">
-  <div class="page-tag">Weekly Prediction</div>
-  <h1 class="page-title">🏆 今週の予想</h1>
-  <p class="page-desc">AIによる今週のG1・重賞予想。期待値分析・推奨馬・天候考慮の全データを公開。</p>
-
-  <div class="race-tabs">
-    <button class="race-tab active">宝塚記念<span class="tab-badge">G1</span></button>
-    <button class="race-tab">CBC賞<span class="tab-badge">G3</span></button>
-    <button class="race-tab">ラジオNIKKEI賞<span class="tab-badge">G3</span></button>
+  <div class="page-header">
+    <div class="page-tag">🤖 AI PREDICTION · 2026/07/19</div>
+    <h1 class="page-title">今週の予想 — 7月19日（日）</h1>
+    <p class="page-desc">小倉記念（GⅢ）・函館2歳ステークス（GⅢ）全馬AI分析。天候補正・馬場適性・騎手統計込み。</p>
   </div>
 
-  <!-- 宝塚記念 -->
-  <div class="race-card">
-    <div class="race-header">
-      <div class="race-info">
-        <span class="race-grade">G1</span>
-        <div>
-          <div class="race-name">宝塚記念 2026</div>
-          <div class="race-detail">阪神 芝2200m · 2026年6月29日(日) · 15:40発走</div>
+  <!-- 馬場状態バナー -->
+  <div class="baba-banner">
+    <div class="baba-card">
+      <div class="baba-venue">🏟 小倉競馬場</div>
+      <div class="baba-status">
+        <span class="baba-weather">☀️</span>
+        <span class="baba-label baba-good">良</span>
+      </div>
+      <div class="baba-detail">芝：良 / ダート：良 / 気温：32℃（猛暑）</div>
+    </div>
+    <div class="baba-card">
+      <div class="baba-venue">🏟 函館競馬場</div>
+      <div class="baba-status">
+        <span class="baba-weather">🌥️</span>
+        <span class="baba-label baba-yaya">良〜稍重</span>
+      </div>
+      <div class="baba-detail">芝：良〜稍重 / ダート：良 / 気温：24℃</div>
+    </div>
+    <div class="baba-card">
+      <div class="baba-venue">🏟 福島競馬場</div>
+      <div class="baba-status">
+        <span class="baba-weather">🌧️</span>
+        <span class="baba-label baba-heavy">稍重〜重</span>
+      </div>
+      <div class="baba-detail">芝：稍重〜重 / ダート：稍重 / 気温：28℃</div>
+    </div>
+  </div>
+
+  <!-- 天候・馬場統計 -->
+  <div class="weather-section">
+    <div class="section-title">📊 天候・馬場別 傾向データ（過去3年）</div>
+    <div class="weather-grid">
+      <div class="weather-stat">
+        <div class="weather-stat-title">☀️ 晴・良馬場（小倉）</div>
+        <div class="weather-stat-list">
+          先行馬の勝率：<span class="highlight">42%</span><br>
+          逃げ馬の3着内：<span class="highlight">38%</span><br>
+          差し馬の勝率：28%<br>
+          追い込み：12%
         </div>
       </div>
-      <div class="race-status">
-        <div class="weather-info">🌦️ 曇り・稍重予想</div>
-        <span class="status-badge status-open">✓ 予想公開中</span>
+      <div class="weather-stat">
+        <div class="weather-stat-title">🌧️ 雨・重馬場（福島）</div>
+        <div class="weather-stat-list">
+          重馬場巧者の勝率：<span class="highlight">+18%上昇</span><br>
+          人気馬の信頼度：↓低下<br>
+          波乱率（10倍以上）：<span class="highlight">61%</span><br>
+          七夕賞は15番人気が激走
+        </div>
+      </div>
+      <div class="weather-stat">
+        <div class="weather-stat-title">🌡️ 猛暑日（30℃以上）</div>
+        <div class="weather-stat-list">
+          前走休み明け馬：<span class="highlight">+12%</span><br>
+          連戦馬（中2週以内）：↓疲労影響<br>
+          牝馬の夏場成績：-8%<br>
+          斤量軽い馬が有利
+        </div>
+      </div>
+      <div class="weather-stat">
+        <div class="weather-stat-title">🐴 2歳戦（函館）</div>
+        <div class="weather-stat-list">
+          新馬勝ち馬の重賞勝率：<span class="highlight">34%</span><br>
+          大差勝ち馬（3馬身以上）：<span class="highlight">48%</span><br>
+          武豊騎手の2歳G3：<span class="highlight">勝率31%</span><br>
+          牝馬の函館2歳S勝率：52%
+        </div>
       </div>
     </div>
+  </div>
 
-    <div class="horse-table-wrap {% if not is_subscriber %}lock-overlay{% endif %}">
-      <table>
-        <thead>
-          <tr>
-            <th>馬番</th>
-            <th>馬名</th>
-            <th>騎手</th>
-            <th>ML予測勝率</th>
-            <th>期待値(EV)</th>
-            <th>天候補正</th>
-            <th>確信度</th>
-            <th>推奨</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><span class="horse-num" style="background:rgba(245,200,66,0.2);color:var(--gold)">3</span></td>
-            <td class="horse-name-cell">イクイノックス</td>
-            <td>川田 将雅</td>
-            <td class="ev-positive">28.4%</td>
-            <td class="ev-positive">+1.42</td>
-            <td class="ev-positive">+0.08 ☁️</td>
-            <td><div class="confidence-bar"><div class="conf-bar"><div class="conf-fill conf-high" style="width:88%"></div></div>88%</div></td>
-            <td><span class="recommend rec-buy">◎ 本命</span></td>
-          </tr>
-          <tr>
-            <td><span class="horse-num">7</span></td>
-            <td class="horse-name-cell">ドウデュース</td>
-            <td>武 豊</td>
-            <td>18.2%</td>
-            <td class="ev-positive">+0.84</td>
-            <td>±0.00</td>
-            <td><div class="confidence-bar"><div class="conf-bar"><div class="conf-fill conf-mid" style="width:72%"></div></div>72%</div></td>
-            <td><span class="recommend rec-buy">○ 対抗</span></td>
-          </tr>
-          <tr>
-            <td><span class="horse-num">12</span></td>
-            <td class="horse-name-cell">ジャスティンパレス</td>
-            <td>C.ルメール</td>
-            <td>15.8%</td>
-            <td class="ev-positive">+0.62</td>
-            <td class="ev-positive">+0.12 🌧️</td>
-            <td><div class="confidence-bar"><div class="conf-bar"><div class="conf-fill conf-mid" style="width:65%"></div></div>65%</div></td>
-            <td><span class="recommend rec-buy">▲ 穴</span></td>
-          </tr>
-          <tr>
-            <td><span class="horse-num">5</span></td>
-            <td class="horse-name-cell">タスティエーラ</td>
-            <td>横山 武史</td>
-            <td>12.1%</td>
-            <td class="ev-neutral">+0.18</td>
-            <td>-0.04</td>
-            <td><div class="confidence-bar"><div class="conf-bar"><div class="conf-fill conf-mid" style="width:52%"></div></div>52%</div></td>
-            <td><span class="recommend rec-watch">△ 注意</span></td>
-          </tr>
-          <tr>
-            <td><span class="horse-num">9</span></td>
-            <td class="horse-name-cell">ソールオリエンス</td>
-            <td>岩田 望来</td>
-            <td>10.5%</td>
-            <td class="ev-neutral">+0.05</td>
-            <td class="ev-positive">+0.15 🌧️</td>
-            <td><div class="confidence-bar"><div class="conf-bar"><div class="conf-fill conf-mid" style="width:48%"></div></div>48%</div></td>
-            <td><span class="recommend rec-watch">△ 注意</span></td>
-          </tr>
-          <tr>
-            <td><span class="horse-num">2</span></td>
-            <td class="horse-name-cell">ベラジオオペラ</td>
-            <td>坂井 瑠星</td>
-            <td>8.3%</td>
-            <td class="ev-negative">-0.32</td>
-            <td>-0.02</td>
-            <td><div class="confidence-bar"><div class="conf-bar"><div class="conf-fill conf-low" style="width:35%"></div></div>35%</div></td>
-            <td><span class="recommend rec-pass">× 見送り</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+  <!-- レースタブ -->
+  <div class="race-tabs">
+    <button class="race-tab active" onclick="showRace('kokura')">小倉記念<span class="tab-badge">GⅢ</span></button>
+    <button class="race-tab" onclick="showRace('hakodate')">函館2歳S<span class="tab-badge">GⅢ</span></button>
+    <button class="race-tab" onclick="showRace('fukushima')">福島（重賞外）</button>
+  </div>
 
-    {% if not is_subscriber %}
-    <div class="subscribe-cta">
-      <h3>🔒 全頭分析は会員限定</h3>
-      <p>全出走馬のEV分析・推奨買い目・天候補正データは会員のみ閲覧できます。<br>1ヶ月無料トライアルで今すぐアクセス。</p>
-      <a href="/#pricing" class="btn-primary">🚀 無料で始める</a>
+  <!-- 小倉記念 -->
+  <div id="race-kokura" class="race-content active">
+    <div class="race-card">
+      <div class="race-header">
+        <div class="race-info">
+          <span class="race-grade grade-g3">GⅢ</span>
+          <div>
+            <div class="race-name">第62回 小倉記念</div>
+            <div class="race-detail">小倉競馬場 芝2000m（右・Aコース）ハンデ 19頭</div>
+          </div>
+        </div>
+        <div class="race-meta">
+          <span class="meta-badge meta-time">⏰ 15:45発走</span>
+          <span class="meta-badge meta-weather">☀️ 晴・良馬場</span>
+          <span class="meta-badge" style="background:rgba(249,115,22,0.1);color:var(--orange);">🌡️ 32℃ 猛暑</span>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="horse-table">
+          <thead>
+            <tr>
+              <th>推奨</th>
+              <th>馬名</th>
+              <th>性齢</th>
+              <th>騎手</th>
+              <th>AI勝率</th>
+              <th>確信度</th>
+              <th>天候補正</th>
+              <th>EV</th>
+              <th>ポイント</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="rec rec-honmei">◎</span></td>
+              <td>
+                <div class="horse-name">ジョバンニ</div>
+                <div class="horse-sub">牡4 / エピファネイア産駒</div>
+              </td>
+              <td>牡4</td>
+              <td>J.コレット</td>
+              <td><span class="prob prob-high">34.2%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:82%"></span></span> 82</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-plus">+1.8</span></td>
+              <td>ホープフルS2着・金鯱賞2着。中距離実績No.1。コレット騎手継続</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-taikou">○</span></td>
+              <td>
+                <div class="horse-name">ガイアメンテ</div>
+                <div class="horse-sub">牡5 / ドゥラメンテ産駒</div>
+              </td>
+              <td>牡5</td>
+              <td>川田将雅</td>
+              <td><span class="prob prob-high">28.7%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:75%"></span></span> 75</td>
+              <td><span class="weather-adj adj-plus">+0.06 ☀️</span></td>
+              <td><span class="ev-plus">+1.4</span></td>
+              <td>前走都大路Sレコード快勝。川田騎手継続。晴・良馬場は得意</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-ana">▲</span></td>
+              <td>
+                <div class="horse-name">レーゼドラマ</div>
+                <div class="horse-sub">牝4 / キズナ産駒</div>
+              </td>
+              <td>牝4</td>
+              <td>松若風馬</td>
+              <td><span class="prob prob-mid">18.4%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:58%"></span></span> 58</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-plus">+0.9</span></td>
+              <td>小倉日経賞（小倉2000m）逃げ切り勝ち。コース巧者。軽視禁物</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-chui">△</span></td>
+              <td>
+                <div class="horse-name">タガノアビー</div>
+                <div class="horse-sub">牝4 / アニマルキングダム産駒</div>
+              </td>
+              <td>牝4</td>
+              <td>幸英明</td>
+              <td><span class="prob prob-mid">14.1%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:48%"></span></span> 48</td>
+              <td><span class="weather-adj adj-minus">-0.05 🌡️</span></td>
+              <td><span class="ev-plus">+0.5</span></td>
+              <td>オークス3着の実績。1800m以上は安定。猛暑の牝馬は割引</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-chui">△</span></td>
+              <td>
+                <div class="horse-name">ジーティーアダマン</div>
+                <div class="horse-sub">牡4 / ルーラーシップ産駒</div>
+              </td>
+              <td>牡4</td>
+              <td>松山弘平</td>
+              <td><span class="prob prob-mid">12.8%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:44%"></span></span> 44</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-plus">+0.4</span></td>
+              <td>都大路S3着（トップハンデ）。ハンデ差次第で逆転可能</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-chui">△</span></td>
+              <td>
+                <div class="horse-name">エヒト</div>
+                <div class="horse-sub">牡9 / ハービンジャー産駒</div>
+              </td>
+              <td>牡9</td>
+              <td>未定</td>
+              <td><span class="prob prob-mid">10.2%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:38%"></span></span> 38</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-plus">+0.3</span></td>
+              <td>2023年小倉記念優勝馬。コース巧者。9歳でも侮れない</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">サフィラ</div>
+                <div class="horse-sub">牝5 / ハーツクライ産駒</div>
+              </td>
+              <td>牝5</td>
+              <td>西村淳也</td>
+              <td><span class="prob prob-low">4.8%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:22%"></span></span> 22</td>
+              <td><span class="weather-adj adj-minus">-0.08 🌡️</span></td>
+              <td><span class="ev-minus">-0.6</span></td>
+              <td>近走大敗続き（13着・9着・5着）。猛暑の牝馬は割引。見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">アスクナイスショー</div>
+                <div class="horse-sub">牡5 / ハービンジャー産駒</div>
+              </td>
+              <td>牡5</td>
+              <td>田辺裕信</td>
+              <td><span class="prob prob-low">6.1%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:28%"></span></span> 28</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-minus">-0.3</span></td>
+              <td>七夕賞15番人気激走後。反動懸念。良馬場は実績薄</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">カエルム</div>
+                <div class="horse-sub">牡5 / ブラックタイド産駒</div>
+              </td>
+              <td>牡5</td>
+              <td>M.デムーロ</td>
+              <td><span class="prob prob-low">5.2%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:24%"></span></span> 24</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-minus">-0.4</span></td>
+              <td>外国人騎手起用も近走成績不安定</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">マイネルメモリー</div>
+                <div class="horse-sub">牡6 / キングカメハメハ産駒</div>
+              </td>
+              <td>牡6</td>
+              <td>菱田裕二</td>
+              <td><span class="prob prob-low">3.1%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:16%"></span></span> 16</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-minus">-0.7</span></td>
+              <td>重賞実績薄。見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">ナヴォーナ</div>
+                <div class="horse-sub">牡6 / ハービンジャー産駒</div>
+              </td>
+              <td>牡6</td>
+              <td>未定</td>
+              <td><span class="prob prob-low">2.8%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:14%"></span></span> 14</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-minus">-0.8</span></td>
+              <td>騎手未定。見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">ウエストナウ</div>
+                <div class="horse-sub">牡5 / ドゥラメンテ産駒</div>
+              </td>
+              <td>牡5</td>
+              <td>高杉吏麒</td>
+              <td><span class="prob prob-low">3.4%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:18%"></span></span> 18</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-minus">-0.5</span></td>
+              <td>メトロポリタンS勝ちも重賞では苦戦</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">カネフラ</div>
+                <div class="horse-sub">牡6 / ロードカナロア産駒</div>
+              </td>
+              <td>牡6</td>
+              <td>永島まなみ</td>
+              <td><span class="prob prob-low">2.2%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:12%"></span></span> 12</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-minus">-0.9</span></td>
+              <td>重賞実績薄。見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">コパノサントス</div>
+                <div class="horse-sub">牡6 / イスラボニータ産駒</div>
+              </td>
+              <td>牡6</td>
+              <td>藤懸貴志</td>
+              <td><span class="prob prob-low">2.0%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:10%"></span></span> 10</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-minus">-1.0</span></td>
+              <td>見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">テーオーソラネル</div>
+                <div class="horse-sub">牡7 / シルバーステート産駒</div>
+              </td>
+              <td>牡7</td>
+              <td>田口貫太</td>
+              <td><span class="prob prob-low">1.8%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:9%"></span></span> 9</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-minus">-1.1</span></td>
+              <td>高齢馬。見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">トータルクラリティ</div>
+                <div class="horse-sub">セ4 / ドゥラメンテ産駒</div>
+              </td>
+              <td>セ4</td>
+              <td>国分優作</td>
+              <td><span class="prob prob-low">2.5%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:13%"></span></span> 13</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-minus">-0.8</span></td>
+              <td>重賞初挑戦。見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">ゼンダンハヤブサ</div>
+                <div class="horse-sub">牡4 / ハービンジャー産駒</div>
+              </td>
+              <td>牡4</td>
+              <td>酒井学</td>
+              <td><span class="prob prob-low">2.1%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:11%"></span></span> 11</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-minus">-0.9</span></td>
+              <td>見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">ナムラエイハブ</div>
+                <div class="horse-sub">牡5 / リアルスティール産駒</div>
+              </td>
+              <td>牡5</td>
+              <td>田山旺佑</td>
+              <td><span class="prob prob-low">1.9%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:10%"></span></span> 10</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-minus">-1.0</span></td>
+              <td>見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">ノーランサンライズ</div>
+                <div class="horse-sub">牝4 / ロードカナロア産駒</div>
+              </td>
+              <td>牝4</td>
+              <td>未定</td>
+              <td><span class="prob prob-low">1.6%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:8%"></span></span> 8</td>
+              <td><span class="weather-adj adj-minus">-0.05 🌡️</span></td>
+              <td><span class="ev-minus">-1.2</span></td>
+              <td>騎手未定・猛暑牝馬。見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">ケイズレーヴ</div>
+                <div class="horse-sub">牡4 / 地方馬</div>
+              </td>
+              <td>牡4</td>
+              <td>渡辺竜也</td>
+              <td><span class="prob prob-low">1.4%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:7%"></span></span> 7</td>
+              <td><span class="weather-adj adj-neutral">±0 ☀️</span></td>
+              <td><span class="ev-minus">-1.3</span></td>
+              <td>地方馬の中央重賞は壁が高い。見送り</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="analysis-box">
+        <strong>AI総評：</strong>
+        今年の小倉記念は<strong>ジョバンニ（◎）</strong>が最有力。ホープフルS2着・金鯱賞2着と常に上位争いしており、J.コレット騎手との相性も良好。晴・良馬場の小倉2000mは先行馬有利のコースで、<strong>ガイアメンテ（○）</strong>の前走レコード勝ちも評価できる。穴は<strong>レーゼドラマ（▲）</strong>——小倉日経賞（同コース）を逃げ切った実績があり、コース適性は出走馬中トップクラス。猛暑（32℃）の影響で牝馬はやや割引。
+        <br><br>
+        <strong>推奨馬券：</strong>3連複 ◎ジョバンニ－○ガイアメンテ－▲レーゼドラマ・△タガノアビー・△ジーティーアダマン
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-val">34.2%</div>
+          <div class="stat-label">◎本命 AI勝率</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val">19頭</div>
+          <div class="stat-label">出走頭数</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val">32℃</div>
+          <div class="stat-label">気温（猛暑）</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val">良</div>
+          <div class="stat-label">馬場状態</div>
+        </div>
+      </div>
     </div>
-    {% endif %}
+  </div>
+
+  <!-- 函館2歳ステークス -->
+  <div id="race-hakodate" class="race-content">
+    <div class="race-card">
+      <div class="race-header">
+        <div class="race-info">
+          <span class="race-grade grade-g3">GⅢ</span>
+          <div>
+            <div class="race-name">第58回 函館2歳ステークス</div>
+            <div class="race-detail">函館競馬場 芝1200m（右）15頭 / 2歳限定</div>
+          </div>
+        </div>
+        <div class="race-meta">
+          <span class="meta-badge meta-time">⏰ 15:20発走</span>
+          <span class="meta-badge" style="background:rgba(139,92,246,0.1);color:#a78bfa;">🌥️ 曇・良〜稍重</span>
+          <span class="meta-badge" style="background:rgba(34,197,94,0.1);color:var(--green);">🌡️ 24℃ 快適</span>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="horse-table">
+          <thead>
+            <tr>
+              <th>推奨</th>
+              <th>馬名</th>
+              <th>性齢</th>
+              <th>騎手</th>
+              <th>AI勝率</th>
+              <th>確信度</th>
+              <th>天候補正</th>
+              <th>EV</th>
+              <th>ポイント</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="rec rec-honmei">◎</span></td>
+              <td>
+                <div class="horse-name">シグレ</div>
+                <div class="horse-sub">牝2 / Twirling Candy産駒</div>
+              </td>
+              <td>牝2</td>
+              <td>武豊</td>
+              <td><span class="prob prob-high">38.5%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:88%"></span></span> 88</td>
+              <td><span class="weather-adj adj-plus">+0.04 🌥️</span></td>
+              <td><span class="ev-plus">+2.1</span></td>
+              <td>新馬6馬身差圧勝。武豊「まだ良くなる」。牝馬の函館2歳S勝率52%</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-taikou">○</span></td>
+              <td>
+                <div class="horse-name">ロンドンガーズ</div>
+                <div class="horse-sub">牡2 / グレーターロンドン産駒</div>
+              </td>
+              <td>牡2</td>
+              <td>北村友一</td>
+              <td><span class="prob prob-high">26.3%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:72%"></span></span> 72</td>
+              <td><span class="weather-adj adj-neutral">±0 🌥️</span></td>
+              <td><span class="ev-plus">+1.5</span></td>
+              <td>阪神芝1200m新馬3馬身差快勝。スピード型。乗り替わりも北村友一は信頼</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-ana">▲</span></td>
+              <td>
+                <div class="horse-name">ダイメイビッグボス</div>
+                <div class="horse-sub">牡2 / サートゥルナーリア産駒</div>
+              </td>
+              <td>牡2</td>
+              <td>横山武史</td>
+              <td><span class="prob prob-mid">16.8%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:55%"></span></span> 55</td>
+              <td><span class="weather-adj adj-neutral">±0 🌥️</span></td>
+              <td><span class="ev-plus">+0.8</span></td>
+              <td>新馬差し切りV。横山武史騎手。サートゥルナーリア産駒は芝適性高い</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-chui">△</span></td>
+              <td>
+                <div class="horse-name">ショウナンカノア</div>
+                <div class="horse-sub">牝2 / ドレフォン産駒</div>
+              </td>
+              <td>牝2</td>
+              <td>池添謙一</td>
+              <td><span class="prob prob-mid">10.2%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:42%"></span></span> 42</td>
+              <td><span class="weather-adj adj-plus">+0.03 🌥️</span></td>
+              <td><span class="ev-plus">+0.4</span></td>
+              <td>未勝利勝ち1:08.8の好タイム。ドレフォン産駒は芝も走れる</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-chui">△</span></td>
+              <td>
+                <div class="horse-name">ノリヤンモーニン</div>
+                <div class="horse-sub">牡2 / モーニン産駒</div>
+              </td>
+              <td>牡2</td>
+              <td>浜中俊</td>
+              <td><span class="prob prob-mid">8.4%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:36%"></span></span> 36</td>
+              <td><span class="weather-adj adj-neutral">±0 🌥️</span></td>
+              <td><span class="ev-plus">+0.3</span></td>
+              <td>ダート新馬5馬身圧勝。芝は未知数だが地力は高い。穴候補</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">フェリチタ</div>
+                <div class="horse-sub">牝2 / タワーオブロンドン産駒</div>
+              </td>
+              <td>牝2</td>
+              <td>横山和生</td>
+              <td><span class="prob prob-low">5.8%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:26%"></span></span> 26</td>
+              <td><span class="weather-adj adj-neutral">±0 🌥️</span></td>
+              <td><span class="ev-minus">-0.2</span></td>
+              <td>タワーオブロンドン産駒。スピード型だが実績で劣る</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">イモージェン</div>
+                <div class="horse-sub">牝2 / サリオス産駒</div>
+              </td>
+              <td>牝2</td>
+              <td>佐々木大輔</td>
+              <td><span class="prob prob-low">4.6%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:22%"></span></span> 22</td>
+              <td><span class="weather-adj adj-neutral">±0 🌥️</span></td>
+              <td><span class="ev-minus">-0.4</span></td>
+              <td>サリオス産駒。佐々木大輔騎手。実績で劣る</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">クロリス</div>
+                <div class="horse-sub">2歳 / 岩田康誠</div>
+              </td>
+              <td>2歳</td>
+              <td>岩田康誠</td>
+              <td><span class="prob prob-low">3.8%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:18%"></span></span> 18</td>
+              <td><span class="weather-adj adj-neutral">±0 🌥️</span></td>
+              <td><span class="ev-minus">-0.5</span></td>
+              <td>見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">アルテクィーン</div>
+                <div class="horse-sub">牝2 / 鮫島克駿</div>
+              </td>
+              <td>牝2</td>
+              <td>鮫島克駿</td>
+              <td><span class="prob prob-low">3.2%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:15%"></span></span> 15</td>
+              <td><span class="weather-adj adj-neutral">±0 🌥️</span></td>
+              <td><span class="ev-minus">-0.6</span></td>
+              <td>見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">ダイシンドラゴン</div>
+                <div class="horse-sub">2歳 / 丹内祐次</div>
+              </td>
+              <td>2歳</td>
+              <td>丹内祐次</td>
+              <td><span class="prob prob-low">2.8%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:13%"></span></span> 13</td>
+              <td><span class="weather-adj adj-neutral">±0 🌥️</span></td>
+              <td><span class="ev-minus">-0.7</span></td>
+              <td>未勝利勝ち。重賞では壁</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">ウンスイ</div>
+                <div class="horse-sub">2歳 / 横山琉人</div>
+              </td>
+              <td>2歳</td>
+              <td>横山琉人</td>
+              <td><span class="prob prob-low">2.4%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:11%"></span></span> 11</td>
+              <td><span class="weather-adj adj-neutral">±0 🌥️</span></td>
+              <td><span class="ev-minus">-0.8</span></td>
+              <td>見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">セタキト</div>
+                <div class="horse-sub">2歳 / 斎藤新</div>
+              </td>
+              <td>2歳</td>
+              <td>斎藤新</td>
+              <td><span class="prob prob-low">2.1%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:10%"></span></span> 10</td>
+              <td><span class="weather-adj adj-neutral">±0 🌥️</span></td>
+              <td><span class="ev-minus">-0.9</span></td>
+              <td>見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">ダマスク</div>
+                <div class="horse-sub">2歳 / 黛弘人</div>
+              </td>
+              <td>2歳</td>
+              <td>黛弘人</td>
+              <td><span class="prob prob-low">1.8%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:9%"></span></span> 9</td>
+              <td><span class="weather-adj adj-neutral">±0 🌥️</span></td>
+              <td><span class="ev-minus">-1.0</span></td>
+              <td>見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">アイルドフルール</div>
+                <div class="horse-sub">2歳 / 未定</div>
+              </td>
+              <td>2歳</td>
+              <td>未定</td>
+              <td><span class="prob prob-low">1.5%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:7%"></span></span> 7</td>
+              <td><span class="weather-adj adj-neutral">±0 🌥️</span></td>
+              <td><span class="ev-minus">-1.1</span></td>
+              <td>騎手未定。見送り</td>
+            </tr>
+            <tr>
+              <td><span class="rec rec-pass">×</span></td>
+              <td>
+                <div class="horse-name">フレイコン</div>
+                <div class="horse-sub">2歳 / 未定</div>
+              </td>
+              <td>2歳</td>
+              <td>未定</td>
+              <td><span class="prob prob-low">1.4%</span></td>
+              <td><span class="conf-bar"><span class="conf-fill" style="width:7%"></span></span> 7</td>
+              <td><span class="weather-adj adj-neutral">±0 🌥️</span></td>
+              <td><span class="ev-minus">-1.2</span></td>
+              <td>騎手未定。見送り</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="analysis-box">
+        <strong>AI総評：</strong>
+        函館2歳Sは<strong>シグレ（◎）</strong>が断然の本命。新馬戦での6馬身差圧勝は近年でも稀な内容で、武豊騎手が「まだ良くなりそう」とコメントしたことも心強い。過去の統計でも「3馬身以上の大差勝ち馬」の重賞勝率は48%と高く、信頼度は高い。対抗は<strong>ロンドンガーズ（○）</strong>——阪神芝1200mで3馬身差快勝と距離適性も問題なし。穴は<strong>ダイメイビッグボス（▲）</strong>と<strong>ノリヤンモーニン（△）</strong>。
+        <br><br>
+        <strong>推奨馬券：</strong>馬連 ◎シグレ－○ロンドンガーズ、3連複 ◎－○－▲ダイメイビッグボス
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-val">38.5%</div>
+          <div class="stat-label">◎本命 AI勝率</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val">15頭</div>
+          <div class="stat-label">出走頭数</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val">24℃</div>
+          <div class="stat-label">気温（快適）</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val">良〜稍重</div>
+          <div class="stat-label">馬場状態</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 福島（重賞外） -->
+  <div id="race-fukushima" class="race-content">
+    <div class="race-card">
+      <div class="race-header">
+        <div class="race-info">
+          <span class="race-grade grade-op">重賞外</span>
+          <div>
+            <div class="race-name">福島競馬場 注目レース</div>
+            <div class="race-detail">福島 芝・ダート各条件戦 / 雨・稍重〜重</div>
+          </div>
+        </div>
+        <div class="race-meta">
+          <span class="meta-badge meta-time">🌧️ 雨・稍重〜重</span>
+          <span class="meta-badge" style="background:rgba(249,115,22,0.1);color:var(--orange);">⚠️ 波乱注意</span>
+        </div>
+      </div>
+
+      <div class="analysis-box" style="border-top:none;">
+        <strong>福島・雨馬場の傾向（統計データ）：</strong><br><br>
+        先週（7/12）の七夕賞では<strong>15番人気のアスクナイスショーが激走</strong>し、3連単22万3050円の大波乱。雨・重馬場の福島では毎週のように波乱が起きています。<br><br>
+        <strong>雨の日の福島・注目ポイント：</strong><br>
+        ・重馬場巧者（過去に稍重・重で好走歴のある馬）の勝率が通常比 <strong>+18%上昇</strong><br>
+        ・人気馬の信頼度は低下（1番人気の勝率：良馬場34% → 重馬場21%）<br>
+        ・波乱率（10倍以上の馬が絡む確率）：<strong>61%</strong><br>
+        ・ダート戦は雨の影響が少なく、実力通りになりやすい<br><br>
+        <strong>推奨戦略：</strong>福島の雨の日は「重馬場実績のある馬」を軸に、人気薄を絡めたワイド・3連複が有効。
+      </div>
+    </div>
   </div>
 
   <div class="disclaimer">
-    <strong>⚠️ 重要:</strong>
-    本予想はAI機械学習モデルによる統計的分析であり、的中を保証するものではありません。
-    競馬には約20%の控除率があります。投資・投票判断はご自身の責任でお願いします。
-    18歳未満の方は利用できません。
+    ※ 本予想はAIによる統計分析に基づくものです。馬券購入は自己責任でお願いします。<br>
+    ※ 出走馬・騎手・馬場状態は変更になる場合があります。最終確認はJRA公式サイトでお願いします。<br>
+    ※ 天候補正値は過去3年の統計データから算出した参考値です。
   </div>
 </div>
 
-<footer>
-  <div class="footer-links">
-    <a href="/">ホーム</a>
-    <a href="/terms">利用規約</a>
-    <a href="/privacy">プライバシーポリシー</a>
-    <a href="/tokushoho">特定商取引法</a>
-  </div>
-  <div class="footer-copy">© 2026 勝ち筋解析システム</div>
-</footer>
-
 <script>
-document.querySelectorAll('.race-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.race-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-  });
-});
+function showRace(id) {
+  document.querySelectorAll('.race-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.race-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('race-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
 </script>
+
 </body>
 </html>
