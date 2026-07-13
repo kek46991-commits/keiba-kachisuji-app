@@ -842,23 +842,92 @@ def jockeys_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request, "jockeys.html", context)
 
 
+# ===== ブログJSON読み込みヘルパー =====
+def _load_blog_posts_json() -> list[dict]:
+    """web/data/blog_posts.jsonから記事を読み込む。"""
+    import json as _json
+    json_path = Path(ROOT_DIR) / "web" / "data" / "blog_posts.json"
+    if not json_path.exists():
+        return []
+    try:
+        with open(json_path, encoding="utf-8") as f:
+            posts = _json.load(f)
+        # blog_list.htmlが期待するフォーマットに変換
+        result = []
+        for p in posts:
+            result.append({
+                "slug": p["slug"],
+                "title": p["title"],
+                "category": p["category"],
+                "cat_class": p.get("cat_class", "cat-data"),
+                "thumb_class": p.get("thumb_class", "thumb-data"),
+                "emoji": p.get("emoji", "📝"),
+                "excerpt": p["excerpt"],
+                "read_time": p.get("read_time", 5),
+                "published_at": p["published_at"],
+            })
+        return result
+    except Exception:
+        return []
+
+
+def _get_blog_post_json(slug: str) -> dict | None:
+    """web/data/blog_posts.jsonから特定記事を取得する。"""
+    import json as _json
+    json_path = Path(ROOT_DIR) / "web" / "data" / "blog_posts.json"
+    if not json_path.exists():
+        return None
+    try:
+        with open(json_path, encoding="utf-8") as f:
+            posts = _json.load(f)
+        for p in posts:
+            if p["slug"] == slug:
+                return p
+        return None
+    except Exception:
+        return None
+
+
 # ===== ブログ一覧 =====
 @app.get("/blog", response_class=HTMLResponse)
 def blog_list(request: Request) -> HTMLResponse:
-    from web.blog_generator import _get_blog_posts, BLOG_DB_PATH
+    from blog_generator import _get_blog_posts, BLOG_DB_PATH
     context = _seo_context(
         title="AIブログ | 勝ち筋解析",
         description="競馬AIが毎日自動生成するブログ。G1分析・騎手情報・馬場レポートをお届け。",
         path="/blog",
     )
-    context["posts"] = _get_blog_posts(BLOG_DB_PATH)
+    # JSONファイルの記事を優先、その後DBの記事を追加
+    json_posts = _load_blog_posts_json()
+    db_posts = _get_blog_posts(BLOG_DB_PATH)
+    # slugが重複しないようにマージ（JSONを先頭に）
+    seen_slugs = {p["slug"] for p in json_posts}
+    merged = json_posts + [p for p in db_posts if p["slug"] not in seen_slugs]
+    context["posts"] = merged
     return templates.TemplateResponse(request, "blog_list.html", context)
 
 
 # ===== ブログ記事詳細 =====
 @app.get("/blog/{slug}", response_class=HTMLResponse)
 def blog_post_page(request: Request, slug: str) -> HTMLResponse:
-    from web.blog_generator import _get_blog_post, BLOG_DB_PATH
+    from blog_generator import _get_blog_post, BLOG_DB_PATH
+    # JSONファイルから取得を優先試みる
+    json_post = _get_blog_post_json(slug)
+    if json_post:
+        context = _seo_context(
+            title=f"{json_post['title']} | 勝ち筋解析",
+            description=json_post["excerpt"],
+            path=f"/blog/{slug}",
+        )
+        context["post"] = {
+            "title": json_post["title"],
+            "category": json_post["category"],
+            "date": json_post["published_at"][:10],
+            "excerpt": json_post["excerpt"],
+            "read_time": json_post.get("read_time", 5),
+            "content": json_post["content"],
+        }
+        return templates.TemplateResponse(request, "blog_post.html", context)
     # DBから取得を試みる
     db_post = _get_blog_post(BLOG_DB_PATH, slug)
     if db_post:
