@@ -80,13 +80,25 @@ function updateBaba() {
 
 // ---------- Tabs ----------
 function initTabs() {
-  document.querySelectorAll(".tab").forEach((tab) => {
+  // メインタブ（馬データ入力・解析結果・買い目計算・競馬場データ）
+  document.querySelectorAll(".tab[data-tab]").forEach((tab) => {
     tab.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+      document.querySelectorAll(".tab[data-tab]").forEach((t) => t.classList.remove("active"));
       document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
       tab.classList.add("active");
       $("tab-" + tab.dataset.tab).classList.add("active");
       if (tab.dataset.tab === "box") renderBoxCheckboxes();
+    });
+  });
+
+  // 競馬場サブタブ
+  document.querySelectorAll(".tab[data-keibajo]").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".tab[data-keibajo]").forEach((t) => t.classList.remove("active"));
+      document.querySelectorAll(".keibajo-panel").forEach((p) => { p.style.display = "none"; });
+      tab.classList.add("active");
+      const panel = document.getElementById("keibajo-" + tab.dataset.keibajo);
+      if (panel) panel.style.display = "block";
     });
   });
 }

@@ -75,6 +75,7 @@
         <button class="tab active" data-tab="input">📝 馬データ入力</button>
         <button class="tab" data-tab="results">📊 解析結果</button>
         <button class="tab" data-tab="box">🎰 買い目計算</button>
+        <button class="tab" data-tab="keibajo">🏟️ 競馬場データ</button>
       </nav>
 
       <!-- 馬データ入力 -->
@@ -151,6 +152,141 @@
 
           <h3>🔍 詳細分析</h3>
           <div id="details-list"></div>
+        </div>
+      </section>
+
+      <!-- 競馬場データ -->
+      <section id="tab-keibajo" class="tab-panel">
+        <h2>🏟️ 競馬場別 1番人気 複勝率データ</h2>
+        <p class="meta" style="margin-bottom:16px;">各競馬場・コース別の1番人気が3着以内に来る確率（複勝率）の統計データです。馬券購入の参考にご活用ください。</p>
+
+        <!-- 競馬場タブ -->
+        <nav class="tabs" style="margin-bottom:16px;">
+          <button class="tab active" data-keibajo="hanshin">阪神</button>
+          <button class="tab" data-keibajo="kyoto">京都</button>
+          <button class="tab" data-keibajo="tokyo">東京</button>
+          <button class="tab" data-keibajo="fukushima">福島</button>
+          <button class="tab" data-keibajo="hakodate">函館</button>
+        </nav>
+
+        <!-- 阪神 -->
+        <div id="keibajo-hanshin" class="keibajo-panel active">
+          <div class="metric-grid">
+            <div class="metric-card"><span class="metric-label">全体平均複勝率</span><span class="metric-value" style="color:#22c55e;">約64〜65%</span></div>
+            <div class="metric-card"><span class="metric-label">最高信頼度</span><span class="metric-value" style="color:#f5c842;">芝外回り</span></div>
+            <div class="metric-card"><span class="metric-label">最低信頼度</span><span class="metric-value" style="color:#ef4444;">芝内回り</span></div>
+          </div>
+          <div class="table-wrap" style="margin-top:16px;">
+            <table>
+              <thead><tr><th>コース</th><th>信頼度</th><th>複勝率目安</th><th>ポイント</th></tr></thead>
+              <tbody>
+                <tr><td>ダート</td><td><span style="color:#22c55e;font-weight:700;">高</span></td><td>65%前後</td><td>特に午前中の未勝利戦。実力馬が能力通りに走りやすい</td></tr>
+                <tr><td>芝 内回り</td><td><span style="color:#f97316;font-weight:700;">中〜低</span></td><td>58〜62%</td><td>コーナーが多く展開の紛れが起きやすい</td></tr>
+                <tr><td>芝 外回り</td><td><span style="color:#22c55e;font-weight:700;">高</span></td><td>65%以上</td><td>長い直線で実力が出やすい。1番人気の軸として安定</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="info-box" style="margin-top:12px;">
+            <strong>💡 狙い目：</strong>「午前中のダート戦」「芝・外回りコースの内枠を引いた1番人気」<br>
+            <strong>⚠️ 警戒：</strong>「芝・内回りコース」「最終12Rのダート短距離」
+          </div>
+        </div>
+
+        <!-- 京都 -->
+        <div id="keibajo-kyoto" class="keibajo-panel" style="display:none;">
+          <div class="metric-grid">
+            <div class="metric-card"><span class="metric-label">全体平均複勝率</span><span class="metric-value" style="color:#22c55e;">約64〜65%</span></div>
+            <div class="metric-card"><span class="metric-label">最高信頼度</span><span class="metric-value" style="color:#f5c842;">芝外回り</span></div>
+            <div class="metric-card"><span class="metric-label">最低信頼度</span><span class="metric-value" style="color:#ef4444;">芝内回り</span></div>
+          </div>
+          <div class="table-wrap" style="margin-top:16px;">
+            <table>
+              <thead><tr><th>コース</th><th>信頼度</th><th>複勝率目安</th><th>ポイント</th></tr></thead>
+              <tbody>
+                <tr><td>ダート</td><td><span style="color:#22c55e;font-weight:700;">高</span></td><td>64%前後</td><td>ただし1200mなどの短距離は前が激しくやり合うため過信は禁物</td></tr>
+                <tr><td>芝 内回り</td><td><span style="color:#f97316;font-weight:700;">中〜低</span></td><td>57〜61%</td><td>2000m・秋華賞マイル等。直線が短く3コーナーの坂下りで伏兵が台頭しやすい</td></tr>
+                <tr><td>芝 外回り</td><td><span style="color:#22c55e;font-weight:700;">超高</span></td><td>68〜70%</td><td>1600m・2200m・2400m・3200m（天皇賞・春）。長い直線と坂の下りでトップスピードに乗り能力馬が安定。複勝率70%に迫る条件も</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="info-box" style="margin-top:12px;">
+            <strong>💡 狙い目：</strong>「午前中のダート戦」「芝・外回りコースの内枠を引いた1番人気」<br>
+            <strong>⚠️ 警戒：</strong>「芝・内回りコース」「最終12Rのダート短距離」
+          </div>
+        </div>
+
+        <!-- 東京 -->
+        <div id="keibajo-tokyo" class="keibajo-panel" style="display:none;">
+          <div class="metric-grid">
+            <div class="metric-card"><span class="metric-label">全体平均複勝率</span><span class="metric-value" style="color:#22c55e;">約63〜64%</span></div>
+            <div class="metric-card"><span class="metric-label">最高信頼度</span><span class="metric-value" style="color:#f5c842;">芝中・長距離</span></div>
+            <div class="metric-card"><span class="metric-label">最低信頼度</span><span class="metric-value" style="color:#ef4444;">最終12R</span></div>
+          </div>
+          <div class="table-wrap" style="margin-top:16px;">
+            <table>
+              <thead><tr><th>コース</th><th>信頼度</th><th>複勝率目安</th><th>ポイント</th></tr></thead>
+              <tbody>
+                <tr><td>ダート（全般）</td><td><span style="color:#22c55e;font-weight:700;">高</span></td><td>65〜68%</td><td>直線が長く実力馬が前を捕まえやすい。特にダート1600m・2100mが安定</td></tr>
+                <tr><td>芝 短距離・マイル</td><td><span style="color:#f5c842;font-weight:700;">中〜高</span></td><td>62〜65%</td><td>1400m・1600m。スローペースからの瞬発力勝負で進路を無くすリスクあり</td></tr>
+                <tr><td>芝 中・長距離</td><td><span style="color:#22c55e;font-weight:700;">非常に高い</span></td><td>66〜70%</td><td>1800m・2000m（天皇賞・秋）・2400m（日本ダービー）。紛れが最も起きにくい実力勝負</td></tr>
+                <tr><td>午前中 未勝利・新馬</td><td><span style="color:#22c55e;font-weight:700;">かなり高い</span></td><td>66〜70%</td><td>ダートの未勝利戦が多く、能力の足りない馬が直線で脱落するため実力馬が順当に走る</td></tr>
+                <tr><td>最終12R</td><td><span style="color:#ef4444;font-weight:700;">低</span></td><td>55〜60%</td><td>過剰人気になりやすく1番人気の信頼度が1日の中で最も下落するゾーン</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="info-box" style="margin-top:12px;">
+            <strong>💡 狙い目：</strong>午前のダート戦、芝2000m以上の主要レース、東京得意のトップジョッキー（ルメール・戸崎）が乗る1番人気<br>
+            <strong>⚠️ 警戒：</strong>芝・ダートともに短距離戦、最終12R
+          </div>
+        </div>
+
+        <!-- 福島 -->
+        <div id="keibajo-fukushima" class="keibajo-panel" style="display:none;">
+          <div class="metric-grid">
+            <div class="metric-card"><span class="metric-label">全体平均複勝率</span><span class="metric-value" style="color:#f97316;">約57〜59%</span></div>
+            <div class="metric-card"><span class="metric-label">最高信頼度</span><span class="metric-value" style="color:#f5c842;">ダート1150m</span></div>
+            <div class="metric-card"><span class="metric-label">最低信頼度</span><span class="metric-value" style="color:#ef4444;">ダート1700m</span></div>
+          </div>
+          <div class="table-wrap" style="margin-top:16px;">
+            <table>
+              <thead><tr><th>コース</th><th>信頼度</th><th>複勝率目安</th><th>ポイント</th></tr></thead>
+              <tbody>
+                <tr><td>芝（全般）</td><td><span style="color:#f5c842;font-weight:700;">中</span></td><td>56〜59%</td><td>直線約292mと非常に短く前残り有利。開催後半は外差しが決まりやすくなる</td></tr>
+                <tr><td>ダート 1150m</td><td><span style="color:#22c55e;font-weight:700;">高</span></td><td>約60%</td><td>芝スタートコース。スピードに乗ってそのまま押し切れるため1番人気が残りやすい</td></tr>
+                <tr><td>ダート 1700m</td><td><span style="color:#ef4444;font-weight:700;">【最危険】</span></td><td>47〜50%</td><td>1番人気の複勝率が50%を割り込む「お化けコース」。先行争いが激しくスタミナをロスして自滅しやすい</td></tr>
+                <tr><td>午後 条件戦（5〜9R）</td><td><span style="color:#ef4444;font-weight:700;">低</span></td><td>55〜58%</td><td>フルゲートの混戦が多く、後方に置かれた1番人気が4着まで…という「福島あるある」が多発</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="info-box" style="margin-top:12px;">
+            <strong>💡 狙い目：</strong>ダート1150m（芝スタート）のスピード馬、実績のあるトップジョッキーが乗る1番人気<br>
+            <strong>⚠️ 警戒：</strong>「ダート1700m」の1番人気は半分が4着以下に消える。軸にする際は穴馬ボックスへの切り替えも検討
+          </div>
+        </div>
+
+        <!-- 函館 -->
+        <div id="keibajo-hakodate" class="keibajo-panel" style="display:none;">
+          <div class="metric-grid">
+            <div class="metric-card"><span class="metric-label">全体平均複勝率</span><span class="metric-value" style="color:#f5c842;">約61〜63%</span></div>
+            <div class="metric-card"><span class="metric-label">最高信頼度</span><span class="metric-value" style="color:#f5c842;">ダート1000m</span></div>
+            <div class="metric-card"><span class="metric-label">最低信頼度</span><span class="metric-value" style="color:#ef4444;">芝1200m（外枠）</span></div>
+          </div>
+          <div class="table-wrap" style="margin-top:16px;">
+            <table>
+              <thead><tr><th>コース</th><th>信頼度</th><th>複勝率目安</th><th>ポイント</th></tr></thead>
+              <tbody>
+                <tr><td>ダート 1000m</td><td><span style="color:#22c55e;font-weight:700;">高</span></td><td>約65%</td><td>直線が短すぎるため4コーナー3番手以内の圧倒的スピード馬が堅実</td></tr>
+                <tr><td>ダート 1700m</td><td><span style="color:#f5c842;font-weight:700;">中〜低</span></td><td>57〜61%</td><td>コーナー4回の小回りコース。先行争いが激しくスタミナをロスした1番人気が失速しやすい</td></tr>
+                <tr><td>芝 1200m</td><td><span style="color:#ef4444;font-weight:700;">低</span></td><td>50%台後半</td><td>外枠を引いた1番人気は終始外を回らされるロスが生じやすく3着以内を外す確率が高い</td></tr>
+                <tr><td>芝 1800m・2000m（内枠）</td><td><span style="color:#22c55e;font-weight:700;">中〜高</span></td><td>62〜66%</td><td>「内枠（1〜3枠）を引いた先行脚質の1番人気」の信頼度が抜群。外枠の差し馬は信頼度が大きく低下</td></tr>
+                <tr><td>メイン重賞（函館記念）</td><td><span style="color:#ef4444;font-weight:700;">非常に低い</span></td><td>約30%</td><td>過去10年の1番人気複勝率が30%という驚異的な低さ。荒れる傾向が強い</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="info-box" style="margin-top:12px;">
+            <strong>💡 狙い目：</strong>ダート1000mの1番人気、芝の中距離で「内枠」を引いた先行型の1番人気<br>
+            <strong>⚠️ 警戒：</strong>芝1200mの1番人気（特に外枠）、函館記念などのメイン重賞
+          </div>
         </div>
       </section>
 
