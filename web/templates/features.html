@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>機能紹介 | 勝ち筋解析システム</title>
+  <meta name="description" content="期待値×物理統計で競馬を科学する。勝ち筋解析システムの全機能を詳しく紹介します。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --orange: #FF6D00;
+      --dark: #212121;
+      --gray: #F5F5F5;
+      --border: #EEEEEE;
+      --text: #424242;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans JP', 'Meiryo', sans-serif;
+      background: #fff;
+      color: var(--dark);
+    }
+
+    /* ===== NAVBAR ===== */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--dark);
+      padding: 0 40px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-logo {
+      color: #fff;
+      font-weight: 900;
+      font-size: 1.2rem;
+      text-decoration: none;
+    }
+    .nav-logo span { color: var(--orange); }
+    .nav-links { display: flex; gap: 32px; }
+    .nav-links a {
+      color: #ccc;
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: #fff; }
+    .nav-cta {
+      background: var(--orange);
+      color: #fff !important;
+      padding: 8px 20px;
+      font-weight: 700;
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      background: var(--dark);
+      color: #fff;
+      padding: 100px 40px 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -30%;
+      right: -10%;
+      width: 50%;
+      height: 160%;
+      background: var(--orange);
+      transform: skewX(-8deg);
+      opacity: 0.08;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: var(--orange);
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 6px 18px;
+      margin-bottom: 24px;
+      letter-spacing: 0.05em;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 900;
+      line-height: 1.15;
+      margin-bottom: 20px;
+    }
+    .hero h1 span { color: var(--orange); }
+    .hero p {
+      font-size: 1.15rem;
+      color: #bbb;
+      max-width: 600px;
+      margin: 0 auto 40px;
+      line-height: 1.8;
+    }
+    .hero-url {
+      display: inline-block;
+      background: rgba(255,255,255,0.08);
+      border-left: 6px solid var(--orange);
+      padding: 14px 28px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.03em;
+    }
+
+    /* ===== SECTION COMMON ===== */
+    section {
+      padding: 80px 40px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .section-label {
+      display: inline-block;
+      background: var(--orange);
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 4px 14px;
+      margin-bottom: 12px;
+      letter-spacing: 0.1em;
+    }
+    h2.section-title {
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      font-weight: 900;
+      border-left: 8px solid var(--orange);
+      padding-left: 20px;
+      margin-bottom: 40px;
+      line-height: 1.3;
+    }
+    .divider {
+      border: none;
+      border-top: 2px solid var(--border);
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* ===== CORE FEATURES (3カード) ===== */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 32px;
+    }
+    .feature-card {
+      border-left: 6px solid var(--orange);
+      padding: 28px 24px;
+      background: var(--gray);
+    }
+    .feature-card .icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+    }
+    .feature-card h3 {
+      font-size: 1.2rem;
+      font-weight: 900;
+      margin-bottom: 10px;
+    }
+    .feature-card p {
+      font-size: 0.95rem;
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    /* ===== SCORE TABLE ===== */
+    .score-layout {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+    @media (max-width: 768px) {
+      .score-layout { grid-template-columns: 1fr; }
+    }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-left: 8px solid var(--orange);
+    }
+    table.data-table th, table.data-table td {
+      padding: 16px 20px;
+      text-align: left;
+      font-size: 0.95rem;
+      border-bottom: 2px solid var(--border);
+    }
+    table.data-table th {
+      background: var(--dark);
+      color: #fff;
+      font-weight: 700;
+    }
+    table.data-table tr:nth-child(even) td { background: var(--gray); }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .badge.high { background: var(--orange); }
+    .badge.mid { background: var(--dark); }
+    .badge.low { background: #9E9E9E; }
+    .verdict-list {
+      list-style: none;
+      border-left: 6px solid var(--orange);
+      padding-left: 20px;
+    }
+    .verdict-list li {
+      font-size: 0.95rem;
+      color: var(--text);
+      margin-bottom: 14px;
+      line-height: 1.6;
+      position: relative;
+    }
+    .verdict-list li::before {
+      content: "■";
+      color: var(--orange);
+      position: absolute;
+      left: -20px;
+      font-size: 0.7rem;
+      top: 5px;
+    }
+    .verdict-list li strong { color: var(--orange); }
+
+    /* ===== SETTINGS ===== */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 24px;
+    }
+    .setting-item {
+      background: var(--gray);
+      border-top: 4px solid var(--orange);
+      padding: 24px 20px;
+    }
+    .setting-item h4 {
+      font-size: 1rem;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+    .setting-item p {
+      font-size: 0.88rem;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ===== KEIBAJO TABLE ===== */
+    .keibajo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+    }
+    @media (max-width: 768px) {
+      .keibajo-grid { grid-template-columns: 1fr; }
+    }
+    .keibajo-block h3 {
+      font-size: 1.1rem;
+      font-weight: 900;
+      border-left: 6px solid var(--orange);
+      padding-left: 14px;
+      margin-bottom: 16px;
+    }
+    .keibajo-block table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .keibajo-block th, .keibajo-block td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    .keibajo-block th {
+      background: var(--dark);
+      color: #fff;
+      font-weight: 700;
+    }
+    .keibajo-block tr:nth-child(even) td { background: var(--gray); }
+    .trust-high { color: var(--orange); font-weight: 700; }
+    .trust-low { color: #e53935; font-weight: 700; }
+
+    /* ===== BETTING CALC ===== */
+    .calc-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: start;
+    }
+    @media (max-width: 768px) {
+      .calc-layout { grid-template-columns: 1fr; }
+    }
+    .calc-steps {
+      counter-reset: step;
+      list-style: none;
+    }
+    .calc-steps li {
+      counter-increment: step;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .calc-steps li::before {
+      content: counter(step);
+      min-width: 36px;
+      height: 36px;
+      background: var(--orange);
+      color: #fff;
+      font-weight: 900;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .calc-steps li .step-text h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .calc-steps li .step-text p {
+      font-size: 0.88rem;
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .calc-box {
+      background: var(--gray);
+      border-left: 6px solid var(--orange);
+      padding: 28px 24px;
+    }
+    .calc-box h4 {
+      font-size: 1rem;
+      font-weight: 900;
+      margin-bottom: 16px;
+    }
+    .calc-box .calc-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    .calc-box .calc-row:last-child { border-bottom: none; }
+    .calc-box .calc-row span:last-child { font-weight: 700; color: var(--orange); }
+
+    /* ===== CTA ===== */
+    .cta-section {
+      background: var(--dark);
+      color: #fff;
+      text-align: center;
+      padding: 80px 40px;
+    }
+    .cta-section h2 {
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      font-weight: 900;
+      margin-bottom: 16px;
+    }
+    .cta-section h2 span { color: var(--orange); }
+    .cta-section p {
+      color: #bbb;
+      margin-bottom: 40px;
+      font-size: 1rem;
+      line-height: 1.8;
+    }
+    .btn-orange {
+      display: inline-block;
+      background: var(--orange);
+      color: #fff;
+      font-weight: 900;
+      font-size: 1.1rem;
+      padding: 18px 48px;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .btn-orange:hover { opacity: 0.85; }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: #111;
+      color: #888;
+      text-align: center;
+      padding: 32px 40px;
+      font-size: 0.85rem;
+    }
+    footer a { color: #aaa; text-decoration: none; margin: 0 12px; }
+    footer a:hover { color: #fff; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      section { padding: 60px 20px; }
+      .hero { padding: 80px 20px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav>
+  <a href="/" class="nav-logo">🏇 勝ち筋解析 <span>KEIBA AI</span></a>
+  <div class="nav-links">
+    <a href="/blog">ブログ</a>
+    <a href="/yoso1">予想</a>
+    <a href="/horses">馬図鑑</a>
+    <a href="/jockeys">騎手統計</a>
+    <a href="/#pricing" class="nav-cta">今すぐ始める</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">FEATURE GUIDE</div>
+  <h1>🏇 勝ち筋解析システム<br><span>機能紹介</span></h1>
+  <p>期待値×物理統計で競馬を科学する<br>有料会員専用ツールの全機能を解説します</p>
+  <div class="hero-url">
+    <i class="fas fa-link" style="color: var(--orange); margin-right: 10px;"></i>
+    keiba-kachisuji-app.vercel.app/app
+  </div>
+</div>
+
+<!-- SECTION 1: 3つのコア機能 -->
+<section>
+  <div class="section-label">CORE FEATURES</div>
+  <h2 class="section-title">3つのコア機能で「買うべき馬」を数値化する</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="icon">📝</div>
+      <h3>馬データ入力</h3>
+      <p>出走馬の馬番・馬名・オッズを入力またはCSV貼り付けで一括インポート。出馬表をそのまま貼り付けるだけで即座に解析開始できます。</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📊</div>
+      <h3>解析結果</h3>
+      <p>期待値・合計スコア・勝率を自動計算し、全馬をランキング表示。期待値が高い「激アツ馬」を自動ハイライトします。</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🎰</div>
+      <h3>買い目計算</h3>
+      <p>ボックス買い目の点数・投資額を自動算出。馬券種別・頭数を選ぶだけで投資額が即座に計算されます。</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SECTION 2: スコア計算 -->
+<section>
+  <div class="section-label">SCORE SYSTEM</div>
+  <h2 class="section-title">スコア = 基礎点 + 物理補正 + 状態補正で構成される</h2>
+  <div class="score-layout">
+    <div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>要素</th>
+            <th>内容</th>
+            <th>影響度</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>基礎点</strong></td>
+            <td>オッズから逆算した市場評価（最大60点）</td>
+            <td><span class="badge high">大</span></td>
+          </tr>
+          <tr>
+            <td><strong>物理補正</strong></td>
+            <td>馬場含水率・天候・距離・コーナー半径による補正</td>
+            <td><span class="badge mid">中</span></td>
+          </tr>
+          <tr>
+            <td><strong>状態補正</strong></td>
+            <td>馬場状態（良〜不良）による加算</td>
+            <td><span class="badge low">小〜中</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <ul class="verdict-list">
+        <li>合計スコアが高いほど<strong>「期待値あり・買い」</strong>判定</li>
+        <li>期待値1.0以上が買い推奨ライン（控除率25%を考慮）</li>
+        <li>🔥 妙味大・強い買い → ⭐ 期待値あり・買い → 🔄 損益分岐近し の3段階判定</li>
+        <li>馬場・天候・距離を考慮した補正スコアで精度を向上</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SECTION 3: 詳細設定 -->
+<section>
+  <div class="section-label">SETTINGS</div>
+  <h2 class="section-title">開催場所・天候・馬場含水率まで設定して精度を高める</h2>
+  <div class="settings-grid">
+    <div class="setting-item">
+      <h4>🏟️ 開催場所</h4>
+      <p>阪神・京都・東京・中山・小倉・函館など主要競馬場を選択。コース特性に応じた補正が自動適用されます。</p>
+    </div>
+    <div class="setting-item">
+      <h4>🌦️ 天候</h4>
+      <p>晴れ・曇り・雨・雪を選択。天候ごとの馬場への影響を補正スコアに反映します。</p>
+    </div>
+    <div class="setting-item">
+      <h4>💧 馬場含水率</h4>
+      <p>良・稍重・重・不良の4段階から選択。含水率が高いほど先行有利の傾向を加味します。</p>
+    </div>
+    <div class="setting-item">
+      <h4>📏 距離・コース</h4>
+      <p>芝・ダート、距離（1000m〜3600m）を設定。距離適性とコーナー半径を補正に組み込みます。</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SECTION 4: 競馬場別データ -->
+<section>
+  <div class="section-label">KEIBAJO DATA</div>
+  <h2 class="section-title">競馬場別・1番人気複勝率データ</h2>
+  <div class="keibajo-grid">
+    <div class="keibajo-block">
+      <h3>阪神・京都（関西主要2場）</h3>
+      <table>
+        <thead><tr><th>コース</th><th>複勝率目安</th><th>信頼度</th></tr></thead>
+        <tbody>
+          <tr><td>芝外回り</td><td>65〜70%</td><td class="trust-high">◎ 高</td></tr>
+          <tr><td>芝内回り</td><td>60〜63%</td><td>○ 中</td></tr>
+          <tr><td>ダート</td><td>62〜65%</td><td>○ 中</td></tr>
+          <tr><td>ハンデ重賞</td><td>50〜58%</td><td class="trust-low">△ 低</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="keibajo-block">
+      <h3>東京（最強コース）</h3>
+      <table>
+        <thead><tr><th>コース</th><th>複勝率目安</th><th>信頼度</th></tr></thead>
+        <tbody>
+          <tr><td>芝中・長距離</td><td>66〜70%</td><td class="trust-high">◎ 高</td></tr>
+          <tr><td>芝1400m・1600m</td><td>63〜66%</td><td>○ 中</td></tr>
+          <tr><td>ダート</td><td>62〜65%</td><td>○ 中</td></tr>
+          <tr><td>最終12R</td><td>55〜58%</td><td class="trust-low">△ 低</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="keibajo-block">
+      <h3>小倉（ハイスピード平坦コース）</h3>
+      <table>
+        <thead><tr><th>コース</th><th>複勝率目安</th><th>信頼度</th></tr></thead>
+        <tbody>
+          <tr><td>ダート1000m</td><td>約65%</td><td class="trust-high">◎ 高</td></tr>
+          <tr><td>芝1800m・2000m（内枠）</td><td>63〜67%</td><td>○ 中</td></tr>
+          <tr><td>ダート1700m</td><td>60%前後</td><td>○ 中</td></tr>
+          <tr><td>芝1200m（外枠・差し馬）</td><td>55〜58%</td><td class="trust-low">△ 低</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="keibajo-block">
+      <h3>福島・函館（地雷コースに注意）</h3>
+      <table>
+        <thead><tr><th>コース</th><th>複勝率目安</th><th>信頼度</th></tr></thead>
+        <tbody>
+          <tr><td>福島ダート1150m</td><td>約62%</td><td>○ 中</td></tr>
+          <tr><td>函館ダート1000m</td><td>約63%</td><td>○ 中</td></tr>
+          <tr><td>福島ダート1700m</td><td>50%割れ</td><td class="trust-low">✕ 地雷</td></tr>
+          <tr><td>函館記念（ハンデ）</td><td>約30%</td><td class="trust-low">✕ 地雷</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SECTION 5: 使い方 -->
+<section>
+  <div class="section-label">HOW TO USE</div>
+  <h2 class="section-title">出馬表を貼り付けて「解析実行」を押すだけ</h2>
+  <div class="calc-layout">
+    <div>
+      <ol class="calc-steps">
+        <li>
+          <div class="step-text">
+            <h4>出馬表を入力</h4>
+            <p>馬番・馬名・オッズを手入力、またはCSV形式で一括貼り付け。出馬表をそのままコピペするだけでOK。</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-text">
+            <h4>レース条件を設定</h4>
+            <p>開催場所・天候・馬場状態・距離・コースを選択。設定するほど補正精度が上がります。</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-text">
+            <h4>解析実行</h4>
+            <p>「解析実行」ボタンを押すだけ。全馬の期待値・スコア・判定が瞬時に表示されます。</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-text">
+            <h4>買い目を確認</h4>
+            <p>「買い目計算」タブで馬券種別・頭数を選択。投資額と点数が自動計算されます。</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+    <div>
+      <div class="calc-box">
+        <h4>📊 買い目計算の例（3連複ボックス）</h4>
+        <div class="calc-row"><span>選択馬数</span><span>4頭</span></div>
+        <div class="calc-row"><span>馬券種別</span><span>3連複</span></div>
+        <div class="calc-row"><span>組み合わせ数</span><span>4点</span></div>
+        <div class="calc-row"><span>1点あたり</span><span>500円</span></div>
+        <div class="calc-row"><span>合計投資額</span><span>2,000円</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2>「感覚」から<span>「数値」</span>へ<br>データドリブンな馬券購入を実現</h2>
+  <p>まずは1ヶ月無料でお試しください。<br>いつでも解約できます。</p>
+  <a href="/#pricing" class="btn-orange">🚀 1ヶ月無料で始める</a>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <p style="margin-bottom: 12px;">
+    <a href="/terms">利用規約</a>
+    <a href="/privacy">プライバシーポリシー</a>
+    <a href="/tokushoho">特定商取引法</a>
+    <a href="/blog">ブログ</a>
+    <a href="/horses">馬図鑑</a>
+    <a href="/jockeys">騎手統計</a>
+  </p>
+  <p>© 2026 勝ち筋解析システム. All rights reserved.</p>
+  <p style="margin-top: 8px; font-size: 0.8rem;">本サービスは分析・期待値(EV)の検証ツールであり、利益を保証するものではありません。18歳以上の方のみご利用いただけます。</p>
+</footer>
+
+</body>
+</html>

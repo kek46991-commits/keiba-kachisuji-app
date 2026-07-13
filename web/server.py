@@ -549,6 +549,16 @@ def privacy(request: Request) -> HTMLResponse:
     )
 
 
+@app.get("/features", response_class=HTMLResponse)
+def features(request: Request) -> HTMLResponse:
+    context = _seo_context(
+        title="機能紹介 | 勝ち筋解析システム",
+        description="期待値×物理統計で競馬を科学する。勝ち筋解析システムの全機能（スコア計算・競馬場別データ・買い目計算）を詳しく紹介します。",
+        path="/features",
+    )
+    return templates.TemplateResponse(request, "features.html", context)
+
+
 @app.get("/robots.txt")
 def robots_txt() -> PlainTextResponse:
     body = "\n".join([
