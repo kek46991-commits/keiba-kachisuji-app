@@ -48,6 +48,41 @@
     .baba-heavy { color: var(--orange); }
     .baba-bad { color: var(--red); }
 
+    /* ===== 出馬表 ===== */
+    .shutuba-section { margin-top: 24px; }
+    .shutuba-title { font-size: 0.82rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; padding: 0 24px; }
+    .shutuba-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .shutuba-table th { padding: 8px 12px; text-align: center; font-size: 0.7rem; color: var(--muted); font-weight: 700; letter-spacing: 0.05em; border-bottom: 1px solid var(--line); background: var(--bg2); }
+    .shutuba-table td { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: center; vertical-align: middle; }
+    .shutuba-table tr:last-child td { border-bottom: none; }
+    .shutuba-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .waku-badge { display: inline-block; width: 22px; height: 22px; border-radius: 4px; font-size: 0.75rem; font-weight: 800; line-height: 22px; text-align: center; }
+    .waku-1 { background: #fff; color: #111; }
+    .waku-2 { background: #111; color: #fff; border: 1px solid #444; }
+    .waku-3 { background: #e63946; color: #fff; }
+    .waku-4 { background: #457b9d; color: #fff; }
+    .waku-5 { background: #f4a261; color: #111; }
+    .waku-6 { background: #2a9d8f; color: #fff; }
+    .waku-7 { background: #e9c46a; color: #111; }
+    .waku-8 { background: #e76f51; color: #fff; }
+    .shutuba-horse-name { font-weight: 700; font-size: 0.85rem; }
+    .shutuba-note { font-size: 0.7rem; color: var(--muted); }
+    /* ===== コース情報 ===== */
+    .course-section { margin-top: 28px; padding: 0 24px 24px; }
+    .course-section-title { font-size: 0.82rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; }
+    .course-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media(max-width:640px){ .course-grid { grid-template-columns: 1fr; } }
+    .course-card { background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+    .course-card-title { font-size: 0.85rem; font-weight: 800; margin-bottom: 8px; }
+    .course-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.7; margin-bottom: 12px; }
+    .course-bias-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    .course-bias-table th { padding: 5px 8px; text-align: left; color: var(--muted); font-size: 0.7rem; border-bottom: 1px solid var(--line); }
+    .course-bias-table td { padding: 5px 8px; border-bottom: 1px solid var(--line); }
+    .course-bias-table tr:last-child td { border-bottom: none; }
+    .past-winners { margin-top: 12px; }
+    .past-winners-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+    .past-winner-row { display: flex; gap: 8px; font-size: 0.75rem; padding: 4px 0; border-bottom: 1px solid var(--line); }
+    .past-winner-row:last-child { border-bottom: none; }
     /* レースタブ */
     .race-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
     .race-tab { background: var(--panel); border: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; padding: 10px 20px; border-radius: 12px; cursor: pointer; transition: all .2s; font-weight: 600; }
@@ -405,6 +440,80 @@
 
       {% if race.analysis_html %}<div class="analysis-box">{{ race.analysis_html | safe }}</div>{% endif %}
       {% if race.stats %}<div class="stats-grid">{% for stat in race.stats %}<div class="stat-item"><div class="stat-val">{{ stat.value }}</div><div class="stat-label">{{ stat.label }}</div></div>{% endfor %}</div>{% endif %}
+
+      {# ===== 出馬表 ===== #}
+      {% if race.shutuba %}
+      <div class="shutuba-section">
+        <div class="shutuba-title">📋 出馬表</div>
+        <div style="overflow-x:auto;">
+          <table class="shutuba-table">
+            <thead><tr>
+              <th>枠</th><th>馬番</th><th style="text-align:left;">馬名</th><th>騎手</th><th>斤量</th><th>馬体重</th><th>単勝オッズ</th>
+            </tr></thead>
+            <tbody>
+            {% for s in race.shutuba %}
+              <tr>
+                <td><span class="waku-badge waku-{{ s.waku }}">{{ s.waku }}</span></td>
+                <td style="font-weight:700;">{{ s.num }}</td>
+                <td style="text-align:left;"><span class="shutuba-horse-name">{{ s.name }}</span></td>
+                <td>{{ s.jockey }}</td>
+                <td>{{ s.kg }}kg</td>
+                <td>{{ s.weight or '—' }}</td>
+                <td>{{ s.odds or '—' }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="shutuba-note" style="padding:8px 24px 0;">※ 馬体重・オッズは発走前に更新予定。最終確認はJRA公式サイトでお願いします。</div>
+      </div>
+      {% endif %}
+
+      {# ===== コース情報 ===== #}
+      {% if race.course %}
+      {% set c = race.course %}
+      <div class="course-section">
+        <div class="course-section-title">🏟 コース情報 — {{ c.venue }} {{ c.track }}</div>
+        <div class="course-grid">
+          <div class="course-card">
+            <div class="course-card-title">コース解説</div>
+            <div class="course-desc">{{ c.description }}</div>
+            {% if c.course_points %}
+            <div style="font-size:0.75rem;">
+              {% for pt in c.course_points %}
+              <div style="padding:4px 0;border-bottom:1px solid var(--line);"><strong>{{ pt.label }}</strong> — {{ pt.note }}</div>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+          <div class="course-card">
+            <div class="course-card-title">馬場バイアス（{{ c.surface }}{{ c.distance }}m）</div>
+            <table class="course-bias-table">
+              <thead><tr><th>脚質</th><th>評価</th><th>コメント</th></tr></thead>
+              <tbody>
+              {% for b in c.bias %}
+                <tr><td style="font-weight:700;">{{ b.key }}</td><td style="font-weight:800;color:var(--gold);">{{ b.val }}</td><td style="color:var(--muted);">{{ b.note }}</td></tr>
+              {% endfor %}
+              </tbody>
+            </table>
+            {% if c.past_winners %}
+            <div class="past-winners">
+              <div class="past-winners-title">過去3年の優勝馬</div>
+              {% for w in c.past_winners %}
+              <div class="past-winner-row">
+                <span style="color:var(--muted);min-width:40px;">{{ w.year }}</span>
+                <span style="font-weight:700;">{{ w.name }}</span>
+                <span style="color:var(--muted);">{{ w.jockey }}</span>
+                <span style="color:var(--muted);">{{ w.kg }}kg</span>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
     </div>
   </div>
   {% endfor %}
