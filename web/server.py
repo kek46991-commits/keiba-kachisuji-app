@@ -11,6 +11,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs
 
 import stripe
 from fastapi import FastAPI, Form, Header, HTTPException, Request, Response
@@ -46,6 +47,12 @@ APP_SECRET_KEY = os.getenv("APP_SECRET_KEY", "")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+TELECOM_CREDIT_CHECKOUT_URL = os.getenv("TELECOM_CREDIT_CHECKOUT_URL", "").strip()
+TELECOM_CREDIT_URL_CARD = os.getenv("TELECOM_CREDIT_URL_CARD", "").strip()
+TELECOM_CREDIT_URL_CARRIER = os.getenv("TELECOM_CREDIT_URL_CARRIER", "").strip()
+TELECOM_CREDIT_URL_BANK = os.getenv("TELECOM_CREDIT_URL_BANK", "").strip()
+TELECOM_CREDIT_URL_PAYPAY = os.getenv("TELECOM_CREDIT_URL_PAYPAY", "").strip()
+TELECOM_CREDIT_CALLBACK_SECRET = os.getenv("TELECOM_CREDIT_CALLBACK_SECRET", "")
 DEMO_MODE = os.getenv("DEMO_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
 
@@ -588,6 +595,30 @@ def _stripe_ready() -> bool:
     return bool(STRIPE_SECRET_KEY and STRIPE_PRICE_ID)
 
 
+def _telecom_ready() -> bool:
+    methods = _telecom_methods()
+    return bool(methods["subscription"] or methods["one_time"])
+
+
+def _telecom_methods() -> dict[str, list[dict[str, str]]]:
+    """Return configured Telecom Credit methods.
+
+    Card/carrier/bank are subscription-capable; PayPay is intentionally
+    separate because its Telecom Credit integration is one-time only.
+    """
+    card_url = TELECOM_CREDIT_URL_CARD or TELECOM_CREDIT_CHECKOUT_URL
+    subscription = [
+        {"key": "card", "label": "クレジットカード", "url": card_url},
+        {"key": "carrier", "label": "キャリア決済（ドコモ・au・ソフトバンク）", "url": TELECOM_CREDIT_URL_CARRIER},
+        {"key": "bank", "label": "銀行振込", "url": TELECOM_CREDIT_URL_BANK},
+    ]
+    one_time = [{"key": "paypay", "label": "PayPay（都度購入）", "url": TELECOM_CREDIT_URL_PAYPAY}]
+    return {
+        "subscription": [method for method in subscription if method["url"]],
+        "one_time": [method for method in one_time if method["url"]],
+    }
+
+
 def _stripe_client() -> None:
     if not STRIPE_SECRET_KEY:
         raise HTTPException(status_code=503, detail="Stripe未設定: STRIPE_SECRET_KEY が未設定です。")
@@ -628,7 +659,21 @@ def _sync_subscription(subscription: Any, *, email: str | None = None) -> None:
 @app.get("/", response_class=HTMLResponse)
 def landing(request: Request) -> HTMLResponse:
     context = _seo_for_landing()
-    context.update({"demo_mode": DEMO_MODE, "stripe_ready": _stripe_ready()})
+    telecom_methods = _telecom_methods()
+    telecom_ready = bool(telecom_methods["subscription"] or telecom_methods["one_time"])
+    stripe_ready = _stripe_ready()
+    context.update(
+        {
+            "demo_mode": DEMO_MODE,
+            "stripe_ready": stripe_ready,
+            "telecom_ready": telecom_ready,
+            "payment_ready": telecom_ready or stripe_ready,
+            "payment_provider": "テレコムクレジット" if telecom_ready else "Stripe" if stripe_ready else "",
+            "checkout_url": telecom_methods["subscription"][0]["url"] if telecom_methods["subscription"] else "",
+            "telecom_subscription_methods": telecom_methods["subscription"],
+            "telecom_one_time_methods": telecom_methods["one_time"],
+        }
+    )
     return templates.TemplateResponse(request, "landing.html", context)
 
 
@@ -661,6 +706,66 @@ def create_checkout_session(request: Request) -> JSONResponse:
         payment_method_collection="if_required",
     )
     return JSONResponse({"url": session.url})
+
+
+@app.post("/api/telecom/callback")
+async def telecom_callback(request: Request) -> Response:
+    """テレコムクレジット結果通知の暫定アダプター。
+
+    正式な項目名は審査・契約後に発行される仕様書で確定するため、
+    現在は一般的な email/result/order_id の別名を受け付ける。
+    """
+    if not TELECOM_CREDIT_CALLBACK_SECRET:
+        raise HTTPException(status_code=503, detail="TELECOM_CREDIT_CALLBACK_SECRET が未設定です。")
+
+    body = await request.body()
+    content_type = request.headers.get("content-type", "")
+    payload: dict[str, Any]
+    if "json" in content_type:
+        try:
+            parsed = json.loads(body.decode("utf-8-sig"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise HTTPException(status_code=400, detail="JSONを読み取れません。") from exc
+        payload = parsed if isinstance(parsed, dict) else {}
+    else:
+        parsed_form = parse_qs(body.decode("utf-8-sig"), keep_blank_values=True)
+        payload = {key: values[-1] if values else "" for key, values in parsed_form.items()}
+
+    provided_secret = (
+        request.headers.get("X-Telecom-Credit-Secret")
+        or request.headers.get("X-Callback-Secret")
+        or payload.get("callback_secret")
+        or payload.get("secret")
+        or payload.get("token")
+    )
+    if provided_secret != TELECOM_CREDIT_CALLBACK_SECRET:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    email = str(payload.get("email") or payload.get("customer_email") or payload.get("mail") or "").strip()
+    result = str(payload.get("result") or payload.get("status") or payload.get("success") or "").strip().lower()
+    success_values = {"1", "ok", "paid", "success", "succeeded", "completed", "settled", "true"}
+    if not email or result not in success_values:
+        raise HTTPException(status_code=400, detail="成功結果とメールアドレスが必要です。")
+
+    order_id = str(
+        payload.get("subscription_id")
+        or payload.get("order_id")
+        or payload.get("transaction_id")
+        or payload.get("customer_id")
+        or email
+    ).strip()
+    customer_id = f"telecom:{order_id}"
+    subscription_id = str(payload.get("subscription_id") or payload.get("order_id") or order_id)
+    _upsert_subscriber(
+        stripe_customer_id=customer_id,
+        email=email,
+        stripe_subscription_id=subscription_id,
+        status="active",
+        current_period_end=None,
+    )
+    response = JSONResponse({"status": "ok", "email": email})
+    _set_auth_cookie(response, customer_id=customer_id, email=email)
+    return response
 
 
 @app.post("/api/webhook")
