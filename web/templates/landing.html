@@ -335,6 +335,7 @@
     .pricing-features li:last-child { border-bottom: none; }
     .pricing-features li::before { content: "✓"; color: var(--green); font-weight: 700; flex-shrink: 0; }
     .btn-cta {
+      display: block; text-decoration: none;
       width: 100%;
       background: linear-gradient(135deg, var(--accent), var(--accent2));
       color: #fff; font-weight: 800; font-size: 1.05rem;
@@ -344,7 +345,11 @@
       transition: all .25s; letter-spacing: 0.02em;
     }
     .btn-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(108,127,255,0.5); }
+    .btn-primary:disabled, .btn-cta:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
     .pricing-note { font-size: 0.78rem; color: var(--muted); margin-top: 16px; }
+    .payment-methods { margin-top: 12px; color: var(--muted); font-size: 0.78rem; line-height: 1.6; }
+    .one-time-methods { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.78rem; }
+    .one-time-methods a { color: var(--accent); }
     /* DISCLAIMER */
     .disclaimer-section { background: var(--bg); }
     .disclaimer-box {
@@ -460,15 +465,27 @@
       天候・馬場状態・騎手統計を組み合わせた、本格的な競馬予想サービス。
     </p>
     <div class="hero-cta">
+      {% if telecom_subscription_methods %}
+      <a class="btn-primary" id="heroCheckoutBtn" href="{{ telecom_subscription_methods[0].url }}">
+        🚀 月額プランを申し込む
+      </a>
+      <div class="payment-methods">月額対応: {% for method in telecom_subscription_methods %}{{ method.label }}{% if not loop.last %} / {% endif %}{% endfor %}</div>
+      {% elif stripe_ready %}
       <button class="btn-primary" id="heroCheckoutBtn">
         🚀 無料で試してみる
       </button>
+      {% else %}
+      <button class="btn-primary" id="heroCheckoutBtn" disabled>
+        決済準備中（決済代行の審査申請中です）
+      </button>
+      {% endif %}
       <a href="#features" class="btn-secondary">
         詳しく見る →
       </a>
     </div>
     <p class="price-note">
       <strong>1ヶ月無料トライアル</strong>付き · その後 月額1,980円 · いつでも解約可能
+      {% if payment_provider %}<br>決済: {{ payment_provider }}（クレジットカード対応）{% endif %}
     </p>
   </div>
 </section>
@@ -674,13 +691,33 @@
         <li>バックテスト結果の完全公開</li>
         <li>メールサポート対応</li>
       </ul>
+      {% if telecom_subscription_methods %}
+      {% for method in telecom_subscription_methods %}
+      <a class="btn-cta"{% if loop.first %} id="pricingCheckoutBtn"{% endif %} href="{{ method.url }}">
+        🚀 1ヶ月無料で始める（{{ method.label }}）
+      </a>
+      {% endfor %}
+      {% elif stripe_ready %}
       <button class="btn-cta" id="pricingCheckoutBtn">
         🚀 1ヶ月無料で始める
       </button>
+      {% else %}
+      <button class="btn-cta" id="pricingCheckoutBtn" disabled>
+        決済準備中（決済代行の審査申請中です）
+      </button>
+      {% endif %}
       <p class="pricing-note">
-        クレジットカード登録後、1ヶ月間は完全無料。<br>
+        クレジットカード登録後、1ヶ月間は完全無料。{% if payment_provider %} 決済は{{ payment_provider }}が処理します。{% endif %}<br>
         無料期間中はいつでも解約可能です。
       </p>
+      {% if telecom_one_time_methods %}
+      <div class="one-time-methods">
+        月額プランではない都度購入:
+        {% for method in telecom_one_time_methods %}
+        <a href="{{ method.url }}">{{ method.label }}</a>{% if not loop.last %} / {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
   </div>
 </section>
@@ -721,7 +758,7 @@
       </div>
       <div class="faq-item">
         <div class="faq-q">支払い方法は何が使えますか？<span class="faq-icon">+</span></div>
-        <div class="faq-a">Visa、Mastercard、American Express、JCBなど主要クレジットカードに対応しています。決済はStripeを使用しており、カード情報は安全に管理されます。</div>
+        <div class="faq-a">Visa、Mastercard、American Express、JCBなど主要クレジットカードに対応予定です。{% if telecom_ready %}決済はテレコムクレジット株式会社が処理します。{% elif stripe_ready %}決済はStripeを使用しています。{% else %}決済代行会社の審査完了後にご利用いただけます。{% endif %}カード情報は当社で保持しません。</div>
       </div>
       <div class="faq-item">
         <div class="faq-q">予想の的中を保証していますか？<span class="faq-icon">+</span></div>
@@ -756,7 +793,7 @@
   <div class="modal">
     <div class="modal-spinner"></div>
     <h3>決済ページへ移動中...</h3>
-    <p>Stripeの安全な決済ページに移動します。<br>しばらくお待ちください。</p>
+    <p>{{ payment_provider or "決済代行会社" }}の決済ページに移動します。<br>しばらくお待ちください。</p>
   </div>
 </div>
 
@@ -777,8 +814,14 @@ async function startCheckout() {
     alert('決済ページへの移動に失敗しました。しばらくしてから再度お試しください。');
   }
 }
-document.getElementById('heroCheckoutBtn').addEventListener('click', startCheckout);
-document.getElementById('pricingCheckoutBtn').addEventListener('click', startCheckout);
+const heroCheckoutBtn = document.getElementById('heroCheckoutBtn');
+const pricingCheckoutBtn = document.getElementById('pricingCheckoutBtn');
+if (heroCheckoutBtn && heroCheckoutBtn.tagName === 'BUTTON' && !heroCheckoutBtn.disabled) {
+  heroCheckoutBtn.addEventListener('click', startCheckout);
+}
+if (pricingCheckoutBtn && pricingCheckoutBtn.tagName === 'BUTTON' && !pricingCheckoutBtn.disabled) {
+  pricingCheckoutBtn.addEventListener('click', startCheckout);
+}
 
 document.querySelectorAll('.faq-q').forEach(q => {
   q.addEventListener('click', () => {
