@@ -131,6 +131,30 @@ Render / Railway / Fly では、この Dockerfile をそのまま使い、環境
 を設定してください。Stripe の鍵が未設定でも landing page は表示され、checkout は
 `Stripe未設定` エラーを返します。
 
+## 共有リンク (トークン付き期限リンク)
+
+購読ゲート付きページ (`/app`, `/yoso1`, `/horses`, `/jockeys`) への一時アクセスを、
+**署名付き・期限付き・失効可能** な共有リンクで発行できます。管理者は
+`APP_SECRET_KEY` を Bearer トークンとして各 API を呼び出します。
+
+- 発行: `POST /api/share` — `target` / `ttl_seconds` / `max_uses` / `label` を指定。
+  レスポンスの `url` (`/s/<token>`) を配布します。
+- 利用: 受け取った人が `/s/<token>` を開くと、有効期限内かつ利用回数内であれば
+  短命 Cookie が付与され対象ページへ遷移します。
+- 一覧: `GET /api/share` — 発行済みリンクと利用回数・失効状態を返します。
+- 失効: `POST /api/share/{id}/revoke` — 即座にアクセスを無効化します。
+
+トークンは `itsdangerous` で署名され改ざんを検知します。有効期限・利用回数・失効は
+サーバー側 (SQLite / PostgreSQL) で追跡されるため、リンクを配布した後でも管理者が
+アクセスを取り消せます。`target` はホワイトリスト検証され、オープンリダイレクトを防ぎます。
+
+```bash
+curl -X POST http://localhost:8000/api/share \
+  -H "Authorization: Bearer $APP_SECRET_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"target": "/app", "ttl_seconds": 86400, "max_uses": 5, "label": "友人用"}'
+```
+
 ## デプロイ
 
 この Web SaaS は、**常時起動の stateful ホスト** と **serverless** で要件が異なり
