@@ -19,6 +19,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
+try:
+    from share_links import ShareLinkService, build_store as build_share_store
+except ImportError:  # web.server として import された場合
+    from web.share_links import ShareLinkService, build_store as build_share_store
+
 WEB_DIR = Path(__file__).resolve().parent
 ROOT_DIR = WEB_DIR.parent
 SITE_DIR = ROOT_DIR / "site"
@@ -42,6 +47,12 @@ SUBSCRIBERS_DB_PATH = _sqlite_db_path()
 COOKIE_NAME = "kachisuji_session"
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 
+SHARE_COOKIE_NAME = "kachisuji_share"
+# 共有 Cookie を保持する上限。リンク自体の有効期限とは別で、これより長くは保持しない。
+SHARE_COOKIE_MAX_AGE_CAP = 60 * 60 * 24
+# 共有リンクを発行してよいアプリ内パスのホワイトリスト（オープンリダイレクト防止）。
+SHARE_ALLOWED_TARGETS = {"/app", "/yoso1", "/horses", "/jockeys"}
+
 APP_SECRET_KEY = os.getenv("APP_SECRET_KEY", "")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "")
@@ -51,6 +62,11 @@ PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 serializer = URLSafeTimedSerializer(APP_SECRET_KEY or "demo-secret", salt="kachisuji-session")
+share_cookie_serializer = URLSafeTimedSerializer(
+    APP_SECRET_KEY or "demo-secret", salt="kachisuji-share-cookie"
+)
+
+_SHARE_SERVICE: ShareLinkService | None = None
 
 app = FastAPI(title="勝ち筋解析システム Web", version="0.1.0")
 
@@ -491,6 +507,57 @@ def _require_demo_or_auth(request: Request) -> dict[str, Any] | None:
     return None
 
 
+def _share_service() -> ShareLinkService:
+    if not APP_SECRET_KEY:
+        raise HTTPException(status_code=503, detail="APP_SECRET_KEY が未設定です。")
+    global _SHARE_SERVICE
+    if _SHARE_SERVICE is None:
+        _SHARE_SERVICE = ShareLinkService(
+            store=build_share_store(SUBSCRIBERS_DB_PATH),
+            secret_key=APP_SECRET_KEY,
+        )
+    return _SHARE_SERVICE
+
+
+def _set_share_cookie(response: Response, *, jti: str, target: str, max_age: int) -> None:
+    response.set_cookie(
+        SHARE_COOKIE_NAME,
+        share_cookie_serializer.dumps({"jti": jti, "target": target}),
+        max_age=max_age,
+        httponly=True,
+        samesite="lax",
+        secure=os.getenv("COOKIE_SECURE", "").strip().lower() in {"1", "true", "yes", "on"},
+        path="/",
+    )
+
+
+def _share_access_target(request: Request) -> str | None:
+    """有効な共有 Cookie が付与しているアクセス先パスを返す（無効なら None）。"""
+    token = request.cookies.get(SHARE_COOKIE_NAME)
+    if not token or not APP_SECRET_KEY:
+        return None
+    try:
+        data = share_cookie_serializer.loads(token, max_age=SHARE_COOKIE_MAX_AGE_CAP)
+    except (BadSignature, SignatureExpired):
+        return None
+    if not isinstance(data, dict):
+        return None
+    jti = data.get("jti")
+    target = data.get("target")
+    if not isinstance(jti, str) or not isinstance(target, str):
+        return None
+    link = _share_service().store.get(jti)
+    if link is None or not link.is_active() or link.target != target:
+        return None
+    return target
+
+
+def _has_gated_access(request: Request, target: str) -> bool:
+    if _require_demo_or_auth(request) is not None:
+        return True
+    return _share_access_target(request) == target
+
+
 def _render_paid_app() -> str:
     html = (SITE_DIR / "index.html").read_text(encoding="utf-8")
     html = html.replace('href="styles.css"', 'href="/app/static/styles.css"')
@@ -566,6 +633,7 @@ def robots_txt() -> PlainTextResponse:
         "Allow: /",
         "Disallow: /app",
         "Disallow: /api/",
+        "Disallow: /s/",
         f"Sitemap: {_public_url('/sitemap.xml')}",
     ]) + "\n"
     return PlainTextResponse(body, media_type="text/plain; charset=utf-8")
@@ -771,7 +839,7 @@ def access(request: Request, session_id: str | None = None) -> Response:
 
 @app.get("/app")
 def paid_app(request: Request) -> Response:
-    if not _require_demo_or_auth(request):
+    if not _has_gated_access(request, "/app"):
         return RedirectResponse("/", status_code=303)
     return HTMLResponse(_render_paid_app())
 
@@ -793,7 +861,7 @@ def paid_app_slash_head() -> Response:
 
 @app.get("/app/static/{file_path:path}")
 def paid_app_static(request: Request, file_path: str) -> Response:
-    if not _require_demo_or_auth(request):
+    if not _has_gated_access(request, "/app"):
         return RedirectResponse("/", status_code=303)
     resolved = (SITE_DIR / file_path).resolve()
     if SITE_DIR not in resolved.parents and resolved != SITE_DIR:
@@ -823,32 +891,123 @@ def restore_access(request: Request, email: str = Form(...)) -> JSONResponse:
 def logout() -> Response:
     response = RedirectResponse("/", status_code=303)
     _clear_auth_cookie(response)
+    response.delete_cookie(SHARE_COOKIE_NAME, path="/")
+    return response
+
+
+# ===== 共有リンク（トークン付き期限リンク） =====
+def _normalise_share_target(target: str | None) -> str:
+    value = (target or "/app").strip()
+    if value not in SHARE_ALLOWED_TARGETS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"共有先は {sorted(SHARE_ALLOWED_TARGETS)} のいずれかを指定してください。",
+        )
+    return value
+
+
+def _parse_optional_int(value: Any, field: str) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=f"{field} は整数で指定してください。") from exc
+
+
+@app.post("/api/share")
+async def create_share_link(request: Request) -> JSONResponse:
+    """管理者が共有リンクを発行する。JSON または フォームで受け付ける。"""
+    if not _admin_auth_matches(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    content_type = request.headers.get("content-type", "")
+    if "json" in content_type:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise HTTPException(status_code=400, detail="JSON オブジェクトを指定してください。")
+    else:
+        form = await request.form()
+        body = dict(form)
+
+    target = _normalise_share_target(body.get("target"))
+    ttl_seconds = _parse_optional_int(body.get("ttl_seconds"), "ttl_seconds")
+    max_uses = _parse_optional_int(body.get("max_uses"), "max_uses")
+    label = str(body.get("label") or "").strip()
+
+    service = _share_service()
+    kwargs: dict[str, Any] = {"target": target, "max_uses": max_uses, "label": label}
+    if ttl_seconds is not None:
+        kwargs["ttl_seconds"] = ttl_seconds
+    token, link = service.create(**kwargs)
+
+    return JSONResponse(
+        {
+            "status": "ok",
+            "url": _public_url(f"/s/{token}"),
+            "token": token,
+            "link": link.to_public_dict(),
+        }
+    )
+
+
+@app.get("/api/share")
+def list_share_links(request: Request, include_inactive: bool = True) -> JSONResponse:
+    if not _admin_auth_matches(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    service = _share_service()
+    links = service.list(include_inactive=include_inactive)
+    return JSONResponse({"links": [link.to_public_dict() for link in links]})
+
+
+@app.post("/api/share/{jti}/revoke")
+def revoke_share_link(request: Request, jti: str) -> JSONResponse:
+    if not _admin_auth_matches(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    service = _share_service()
+    revoked = service.revoke(jti)
+    if not revoked:
+        raise HTTPException(status_code=404, detail="共有リンクが見つかりません。")
+    return JSONResponse({"status": "ok", "revoked": True, "id": jti})
+
+
+@app.get("/s/{token}")
+def redeem_share_link(request: Request, token: str) -> Response:
+    """共有リンクを検証し、有効なら短命 Cookie を付与して対象ページへ遷移させる。"""
+    service = _share_service()
+    link = service.redeem(token)
+    if link is None:
+        raise HTTPException(status_code=410, detail="この共有リンクは無効か、有効期限が切れています。")
+    if link.target not in SHARE_ALLOWED_TARGETS:
+        raise HTTPException(status_code=400, detail="不正な共有先です。")
+    now = int(_now_utc().timestamp())
+    remaining = max(1, link.expires_at - now)
+    max_age = min(remaining, SHARE_COOKIE_MAX_AGE_CAP)
+    response = RedirectResponse(link.target, status_code=303)
+    _set_share_cookie(response, jti=link.jti, target=link.target, max_age=max_age)
     return response
 
 
 # ===== 馬データ図鑑 =====
 @app.get("/horses", response_class=HTMLResponse)
 def horses_page(request: Request) -> HTMLResponse:
-    session = _require_demo_or_auth(request)
     context = _seo_context(
         title="馬データ図鑑 | 勝ち筋解析",
         description="中央競馬の主要競走馬データ図鑑。各馬の成績・得意条件・馬場適性を詳細分析。",
         path="/horses",
     )
-    context["is_subscriber"] = session is not None
+    context["is_subscriber"] = _has_gated_access(request, "/horses")
     return templates.TemplateResponse(request, "horses.html", context)
 
 
 # ===== 騎手統計 =====
 @app.get("/jockeys", response_class=HTMLResponse)
 def jockeys_page(request: Request) -> HTMLResponse:
-    session = _require_demo_or_auth(request)
     context = _seo_context(
         title="騎手統計 | 勝ち筋解析",
         description="中央競馬の騎手別統計データ。勝率・回収率・天候別成績を詳細分析。",
         path="/jockeys",
     )
-    context["is_subscriber"] = session is not None
+    context["is_subscriber"] = _has_gated_access(request, "/jockeys")
     return templates.TemplateResponse(request, "jockeys.html", context)
 
 
@@ -1046,14 +1205,13 @@ def blog_post_page(request: Request, slug: str) -> HTMLResponse:
 # ===== 週次予想ページ =====
 @app.get("/yoso1", response_class=HTMLResponse)
 def yoso_page(request: Request) -> HTMLResponse:
-    session = _require_demo_or_auth(request)
     yoso = _load_yoso_data()
     context = _seo_context(
         title=f"{yoso.get('page', {}).get('title', '今週の予想')} | 勝ち筋解析",
         description=yoso.get("page", {}).get("description", "AIによる競馬予想。"),
         path="/yoso1",
     )
-    context["is_subscriber"] = session is not None
+    context["is_subscriber"] = _has_gated_access(request, "/yoso1")
     context["yoso"] = yoso
     return templates.TemplateResponse(request, "yoso.html", context)
 
