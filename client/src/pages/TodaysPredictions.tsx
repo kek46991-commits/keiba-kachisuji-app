@@ -1,0 +1,111 @@
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { trpc } from '@/lib/trpc';
+import Navbar from '@/components/Navbar';
+
+export default function TodaysPredictions() {
+  const { data: races, isLoading } = trpc.raceData.getThisWeekend.useQuery();
+
+  return (
+    <div className="min-h-screen" style={{ backgroundColor: '#0A1128' }}>
+      <Navbar />
+      <div className="container mx-auto px-4 pt-24 pb-12">
+        <h1 className="text-2xl font-bold mb-2" style={{ color: '#c9a84c', fontFamily: "'Playfair Display', serif" }}>
+          今週の予想
+        </h1>
+        <p className="text-sm mb-8" style={{ color: '#94a3b8' }}>
+          JRA公式データに基づくAI解析予想
+        </p>
+
+        {isLoading && (
+          <div className="text-center py-12" style={{ color: '#64748b' }}>
+            データを読み込み中...
+          </div>
+        )}
+
+        {!isLoading && (!races || races.length === 0) && (
+          <Card className="border-0" style={{ backgroundColor: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.2)' }}>
+            <CardContent className="py-12 text-center">
+              <p className="text-lg mb-2" style={{ color: '#e2e8f0' }}>
+                現在、予想可能なレースはありません
+              </p>
+              <p className="text-sm" style={{ color: '#64748b' }}>
+                出走表が公式発表され次第、AI解析予想を掲載します。
+              </p>
+              <Badge className="mt-4" variant="outline" style={{ borderColor: 'rgba(201,168,76,0.4)', color: '#c9a84c' }}>
+                未発表
+              </Badge>
+            </CardContent>
+          </Card>
+        )}
+
+        {races && races.length > 0 && (
+          <div className="space-y-6">
+            {Object.entries(
+              races.reduce((acc: Record<string, typeof races>, race) => {
+                const date = race.raceDate;
+                if (!acc[date]) acc[date] = [];
+                acc[date].push(race);
+                return acc;
+              }, {})
+            ).map(([date, dayRaces]) => (
+              <div key={date}>
+                <h2 className="text-lg font-semibold mb-3" style={{ color: '#e2e8f0' }}>
+                  {new Date(date + 'T00:00:00+09:00').toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })}
+                </h2>
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {dayRaces.map((race) => (
+                    <Card key={race.raceId} className="border-0 transition-all duration-150 hover:scale-[1.01] cursor-pointer"
+                      style={{ backgroundColor: 'rgba(201,168,76,0.04)', border: '1px solid rgba(201,168,76,0.15)' }}>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline" style={{ borderColor: 'rgba(201,168,76,0.4)', color: '#c9a84c', fontSize: '10px' }}>
+                            {race.venueName} {race.raceNumber}R
+                          </Badge>
+                          {race.grade && (
+                            <Badge style={{
+                              backgroundColor: race.grade.includes('G1') ? '#EF4444' : race.grade.includes('G2') ? '#3B82F6' : '#10B981',
+                              color: '#fff', fontSize: '10px'
+                            }}>
+                              {race.grade}
+                            </Badge>
+                          )}
+                        </div>
+                        <CardTitle className="text-sm" style={{ color: '#e2e8f0' }}>
+                          {race.raceName}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex gap-3 text-xs" style={{ color: '#64748b' }}>
+                          {race.surface && <span>{race.surface === 'turf' ? '芝' : race.surface === 'dirt' ? 'ダート' : '障害'}</span>}
+                          {race.distance && <span>{race.distance}m</span>}
+                          {race.postTime && <span>{race.postTime}発走</span>}
+                          {race.headCount && <span>{race.headCount}頭</span>}
+                        </div>
+                        <div className="mt-3">
+                          {race.status === 'upcoming' ? (
+                            <Badge variant="outline" style={{ borderColor: 'rgba(100,116,139,0.4)', color: '#64748b', fontSize: '10px' }}>
+                              出走表未発表
+                            </Badge>
+                          ) : race.status === 'entries_confirmed' ? (
+                            <Badge variant="outline" style={{ borderColor: 'rgba(59,130,246,0.4)', color: '#3B82F6', fontSize: '10px' }}>
+                              出走確定・予想準備中
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" style={{ borderColor: 'rgba(16,185,129,0.4)', color: '#10B981', fontSize: '10px' }}>
+                              結果確定
+                            </Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

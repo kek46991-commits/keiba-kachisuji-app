@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /auth-error
+
+Sitemap: https://kachisujiweb-mr32htbm.manus.space/api/sitemap.xml
