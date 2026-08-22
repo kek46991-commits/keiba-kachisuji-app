@@ -25,6 +25,11 @@ describe("formationDisplay", () => {
     expect(formatBetSelectionForDisplay("穴軸カバー: 6 - 6,5,3（3点）")).toBe("穴軸カバー: 6 - 5,3（3点）");
   });
 
+  it("馬連・ワイドの組合せ列挙はそのまま保つ", () => {
+    expect(formatBetSelectionForDisplay("4-5,2-5,3-5")).toBe("4-5,2-5,3-5");
+    expect(formatBetSelectionForDisplay("穴軸カバー: 2 - 5,4,3（3点）")).toBe("穴軸カバー: 2 - 5,4,3（3点）");
+  });
+
   it("解析できない文字列と空値は元の表示を保つ", () => {
     expect(formatBetSelectionForDisplay("見送り")).toBe("見送り");
     expect(formatBetSelectionForDisplay("対象外")).toBe("対象外");

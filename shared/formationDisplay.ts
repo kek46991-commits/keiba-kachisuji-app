@@ -74,10 +74,11 @@ export function formatBetSelectionForDisplay(selection: string | null | undefine
   }
 
   const axisPattern = selection.match(/^(.*?)(\d+)\s*-\s*([\d,\s]+?)\s*((?:[（(].*)?)$/);
-  if (axisPattern) {
+  if (axisPattern && !/\d\s*-/.test(axisPattern[1]!)) {
+    // 「4-5,2-5,3-5」のような組合せ列挙は軸表記ではないため、上の除外条件で対象外にする。
     const axis = Number(axisPattern[2]);
     const partners = parseNumbers(axisPattern[3]);
-    if (Number.isInteger(axis) && partners.length > 0) {
+    if (Number.isInteger(axis) && partners.includes(axis)) {
       return `${axisPattern[1]}${formatAxisSelection(axis, partners)}${axisPattern[4]}`;
     }
   }
