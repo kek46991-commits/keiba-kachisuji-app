@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Link } from "wouter";
 import { HistoryBackButton } from "@/components/HistoryBackButton";
+import { formatBetSelectionForDisplay } from "@shared/formationDisplay";
 
 const ALL = "all";
 const MISSING = "__missing__";
@@ -197,7 +198,7 @@ export default function PredictionHistoryPage() {
                               <span className="text-[10px] font-bold" style={{ color: longshot ? "#d8b4fe" : "#e4c875" }}>{ticketSet.label}</span>
                               <span className="text-[9px]" style={{ color: ticketSet.isHit === true ? "#6ee7b7" : ticketSet.isHit === false ? "#fda4af" : "#94a3b8" }}>{ticketSet.isHit === true ? "的中" : ticketSet.isHit === false ? "不的中" : "未精算"}</span>
                             </div>
-                            {mainTicket ? <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-slate-400">{mainTicket.label}: {mainTicket.selection}</p> : <p className="mt-1 text-[10px] text-slate-500">{longshot ? "当時の穴馬買い目は保存されていません" : "買い目詳細未記録"}</p>}
+                            {mainTicket ? <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-slate-400">{mainTicket.label}: {formatBetSelectionForDisplay(mainTicket.selection)}</p> : <p className="mt-1 text-[10px] text-slate-500">{longshot ? "当時の穴馬買い目は保存されていません" : "買い目詳細未記録"}</p>}
                             <p className="mt-1 text-[9px] text-slate-500">投資 {ticketSet.investAmount !== null ? `¥${ticketSet.investAmount.toLocaleString()}` : "—"} / 配当 {ticketSet.returnAmount !== null ? `¥${ticketSet.returnAmount.toLocaleString()}` : "—"}</p>
                           </div>
                         );

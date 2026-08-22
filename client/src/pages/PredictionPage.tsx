@@ -8,6 +8,8 @@ import { HistoryBackButton } from "@/components/HistoryBackButton";
 import { OfficialTrigamiStatus, type TicketFormation } from "@/components/OfficialTrigamiStatus";
 import { EvExplanationTooltip } from "@/components/EvExplanationTooltip";
 import { buildSavedScoreReferenceTicket, type DisplayTicket } from "@/lib/referenceTicket";
+import { formatTicketTextsForDisplay } from "@/lib/ticketDisplay";
+import { formatBetSelectionForDisplay } from "@shared/formationDisplay";
 import { publicOddsPublicationNotice, publicOddsPublicationState } from "@/lib/publicOddsPublication";
 import { buildPendingRaceExplanation } from "@/lib/pendingRaceExplanation";
 
@@ -436,7 +438,7 @@ function PredictionResultView({ data, anaUmaData, raceContext, onRerun, isRunnin
     return <NoPredictionView {...raceContext} onRun={onRerun} isRunning={Boolean(isRunning)} />;
   }
 
-  const recommendation = data.recommendation as {
+  const recommendation = formatTicketTextsForDisplay(data.recommendation as {
     trifecta: string;
     trio: string;
     trifectaCount: number;
@@ -448,8 +450,8 @@ function PredictionResultView({ data, anaUmaData, raceContext, onRerun, isRunnin
     referenceOnly?: boolean;
     referenceNotice?: string;
     reasoning: string[];
-  } | null;
-  const longshotRecommendation = data.longshotRecommendation as typeof recommendation;
+  } | null);
+  const longshotRecommendation = formatTicketTextsForDisplay(data.longshotRecommendation as typeof recommendation);
   const raceAnalysis = data.raceAnalysis as null | {
     volatilityLabel: string;
     volatilityReason: string;
@@ -837,19 +839,19 @@ function JraAnaUmaDetailSection({ data }: { data: any }) {
             <div className="grid gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(239,68,68,0.15)", color: "#ef4444" }}>3連単</span>
-                <span className="text-xs text-gray-300 font-mono">{data.anaBets.trifecta}</span>
+                <span className="text-xs text-gray-300 font-mono">{formatBetSelectionForDisplay(data.anaBets.trifecta)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(59,130,246,0.15)", color: "#3b82f6" }}>3連複</span>
-                <span className="text-xs text-gray-300 font-mono">{data.anaBets.trio}</span>
+                <span className="text-xs text-gray-300 font-mono">{formatBetSelectionForDisplay(data.anaBets.trio)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(34,197,94,0.15)", color: "#22c55e" }}>馬連</span>
-                <span className="text-xs text-gray-300 font-mono">{data.anaBets.quinella}</span>
+                <span className="text-xs text-gray-300 font-mono">{formatBetSelectionForDisplay(data.anaBets.quinella)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(168,85,247,0.15)", color: "#a855f7" }}>ワイド</span>
-                <span className="text-xs text-gray-300 font-mono">{data.anaBets.wide}</span>
+                <span className="text-xs text-gray-300 font-mono">{formatBetSelectionForDisplay(data.anaBets.wide)}</span>
               </div>
             </div>
             {data.anaBets.reasoning && data.anaBets.reasoning.length > 0 && (

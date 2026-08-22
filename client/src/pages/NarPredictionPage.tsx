@@ -7,6 +7,8 @@ import { HistoryBackButton } from "@/components/HistoryBackButton";
 import { OfficialTrigamiStatus } from "@/components/OfficialTrigamiStatus";
 import { EvExplanationTooltip } from "@/components/EvExplanationTooltip";
 import { buildSavedScoreReferenceTicket, type DisplayTicket } from "@/lib/referenceTicket";
+import { formatTicketTextsForDisplay } from "@/lib/ticketDisplay";
+import { formatBetSelectionForDisplay } from "@shared/formationDisplay";
 
 /**
  * 地方競馬（NAR）予想ページ
@@ -377,8 +379,8 @@ function NarRacePredictionView({
     try { return JSON.parse(raw) as DisplayTicket; } catch { return null; }
   };
   const savedTicketSets = existingPrediction?.ticketSets as Array<{ strategy: "score" | "longshot"; ticketData: string }> | undefined;
-  const savedScoreTicket = buildSavedScoreReferenceTicket(parseTicket(savedTicketSets?.find(ticket => ticket.strategy === "score")?.ticketData ?? existingPrediction?.prediction?.recommendedBets), existingPrediction?.prediction);
-  const savedLongshotTicket = parseTicket(savedTicketSets?.find(ticket => ticket.strategy === "longshot")?.ticketData);
+  const savedScoreTicket = formatTicketTextsForDisplay(buildSavedScoreReferenceTicket(parseTicket(savedTicketSets?.find(ticket => ticket.strategy === "score")?.ticketData ?? existingPrediction?.prediction?.recommendedBets), existingPrediction?.prediction));
+  const savedLongshotTicket = formatTicketTextsForDisplay(parseTicket(savedTicketSets?.find(ticket => ticket.strategy === "longshot")?.ticketData));
 
   const visibleResults = useMemo(() => {
     const raw = (runPrediction.data?.results ?? []) as Array<any>;
@@ -843,12 +845,12 @@ function NarRacePredictionView({
                 <div className="grid gap-3">
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-bold px-2 py-0.5 rounded w-16 text-center" style={{ backgroundColor: "rgba(239,68,68,0.15)", color: "#ef4444" }}>3連単</span>
-                    <span className="text-sm text-gray-300 font-mono flex-1">{runPrediction.data.recommendation.trifecta}</span>
+                    <span className="text-sm text-gray-300 font-mono flex-1">{formatBetSelectionForDisplay(runPrediction.data.recommendation.trifecta)}</span>
                     <span className="text-[10px] text-gray-500">{runPrediction.data.recommendation.trifectaCount}点</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-bold px-2 py-0.5 rounded w-16 text-center" style={{ backgroundColor: "rgba(59,130,246,0.15)", color: "#3b82f6" }}>3連複</span>
-                    <span className="text-sm text-gray-300 font-mono flex-1">{runPrediction.data.recommendation.trio}</span>
+                    <span className="text-sm text-gray-300 font-mono flex-1">{formatBetSelectionForDisplay(runPrediction.data.recommendation.trio)}</span>
                     <span className="text-[10px] text-gray-500">{runPrediction.data.recommendation.trioCount}点</span>
                   </div>
                 </div>
@@ -880,8 +882,8 @@ function NarRacePredictionView({
                 <p className="mb-3 text-[11px] text-gray-400">穴推奨馬を1着軸に置きつつ、スコア上位馬を2・3着候補から除外しない構成です。予想・回収は保証されません。</p>
                 <p className="mb-3 flex items-center gap-1.5 rounded-lg px-3 py-2 text-[11px] text-amber-100" style={{ backgroundColor: "rgba(245,158,11,0.12)", border: "1px solid rgba(251,191,36,0.22)" }}><Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-300" />公式オッズではなく、能力スコアから導いた予想オッズによる推定です。</p>
                 <div className="grid gap-3">
-                  <div className="flex items-center gap-3"><span className="text-xs font-bold px-2 py-0.5 rounded w-16 text-center" style={{ backgroundColor: "rgba(244,63,94,0.15)", color: "#fb7185" }}>3連単</span><span className="text-sm text-gray-300 font-mono flex-1">{runPrediction.data.longshotRecommendation.trifecta}</span><span className="text-[10px] text-gray-500">{runPrediction.data.longshotRecommendation.trifectaCount}点</span></div>
-                  <div className="flex items-center gap-3"><span className="text-xs font-bold px-2 py-0.5 rounded w-16 text-center" style={{ backgroundColor: "rgba(168,85,247,0.15)", color: "#c084fc" }}>3連複</span><span className="text-sm text-gray-300 font-mono flex-1">{runPrediction.data.longshotRecommendation.trio}</span><span className="text-[10px] text-gray-500">{runPrediction.data.longshotRecommendation.trioCount}点</span></div>
+                  <div className="flex items-center gap-3"><span className="text-xs font-bold px-2 py-0.5 rounded w-16 text-center" style={{ backgroundColor: "rgba(244,63,94,0.15)", color: "#fb7185" }}>3連単</span><span className="text-sm text-gray-300 font-mono flex-1">{formatBetSelectionForDisplay(runPrediction.data.longshotRecommendation.trifecta)}</span><span className="text-[10px] text-gray-500">{runPrediction.data.longshotRecommendation.trifectaCount}点</span></div>
+                  <div className="flex items-center gap-3"><span className="text-xs font-bold px-2 py-0.5 rounded w-16 text-center" style={{ backgroundColor: "rgba(168,85,247,0.15)", color: "#c084fc" }}>3連複</span><span className="text-sm text-gray-300 font-mono flex-1">{formatBetSelectionForDisplay(runPrediction.data.longshotRecommendation.trio)}</span><span className="text-[10px] text-gray-500">{runPrediction.data.longshotRecommendation.trioCount}点</span></div>
                 </div>
                 {runPrediction.data.longshotRecommendation.formationCaution && <p className="mt-3 rounded px-2.5 py-2 text-[11px] text-amber-100" style={{ backgroundColor: "rgba(245,158,11,0.12)" }}>{runPrediction.data.longshotRecommendation.formationCaution}</p>}
                 <div className="mt-2"><OfficialTrigamiStatus raceId={runPrediction.data.raceId} formation={runPrediction.data.longshotRecommendation.formation} totalBets={runPrediction.data.longshotRecommendation.totalBets} /></div>
@@ -1072,19 +1074,19 @@ function AnaUmaDetailSection({ data, hideMarketOdds = false }: { data: any; hide
             <div className="grid gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(239,68,68,0.15)", color: "#ef4444" }}>3連単</span>
-                <span className="text-xs text-gray-300 font-mono">{data.anaBets.trifecta}</span>
+                <span className="text-xs text-gray-300 font-mono">{formatBetSelectionForDisplay(data.anaBets.trifecta)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(59,130,246,0.15)", color: "#3b82f6" }}>3連複</span>
-                <span className="text-xs text-gray-300 font-mono">{data.anaBets.trio}</span>
+                <span className="text-xs text-gray-300 font-mono">{formatBetSelectionForDisplay(data.anaBets.trio)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(34,197,94,0.15)", color: "#22c55e" }}>馬連</span>
-                <span className="text-xs text-gray-300 font-mono">{data.anaBets.quinella}</span>
+                <span className="text-xs text-gray-300 font-mono">{formatBetSelectionForDisplay(data.anaBets.quinella)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(168,85,247,0.15)", color: "#a855f7" }}>ワイド</span>
-                <span className="text-xs text-gray-300 font-mono">{data.anaBets.wide}</span>
+                <span className="text-xs text-gray-300 font-mono">{formatBetSelectionForDisplay(data.anaBets.wide)}</span>
               </div>
             </div>
             {data.anaBets.reasoning && data.anaBets.reasoning.length > 0 && (

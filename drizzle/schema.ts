@@ -530,6 +530,8 @@ export const syntheticPredictionRuns = mysqlTable("synthetic_prediction_runs", {
   runId: varchar("run_id", { length: 64 }).notNull().unique(),
   label: varchar("label", { length: 128 }).notNull(),
   isSynthetic: boolean("is_synthetic").default(true).notNull(),
+  /** 出走表マスターと紐付けるレースキー（未設定なら馬名の置換を行わない） */
+  raceKey: varchar("race_key", { length: 64 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
@@ -561,6 +563,30 @@ export const syntheticPredictionOutputs = mysqlTable("synthetic_prediction_outpu
 }, (table) => [index("idx_synthetic_prediction_outputs_run").on(table.runId)]);
 export type SyntheticPredictionOutput = typeof syntheticPredictionOutputs.$inferSelect;
 export type InsertPredictionTicketSet = typeof predictionTicketSets.$inferInsert;
+
+// ==========================================
+// 出走表マスター（レースごとの馬番と本物の馬名の対応）
+// ==========================================
+export const raceEntryMaster = mysqlTable("race_entry_master", {
+  id: int("id").autoincrement().primaryKey(),
+  /** レース識別子（例: 20260822-中京-9R） */
+  raceKey: varchar("race_key", { length: 64 }).notNull(),
+  /** レース名（表示用） */
+  raceName: varchar("race_name", { length: 128 }),
+  horseNumber: int("horse_number").notNull(),
+  /** 本物の馬名 */
+  horseName: varchar("horse_name", { length: 64 }).notNull(),
+  jockey: varchar("jockey", { length: 64 }),
+  popularity: int("popularity"),
+  odds: float("odds"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("uq_race_entry_master_race_horse").on(table.raceKey, table.horseNumber),
+  index("idx_race_entry_master_race").on(table.raceKey),
+]);
+export type RaceEntryMaster = typeof raceEntryMaster.$inferSelect;
+export type InsertRaceEntryMaster = typeof raceEntryMaster.$inferInsert;
 
 // ==========================================
 // 馬マスター（図鑑用）
