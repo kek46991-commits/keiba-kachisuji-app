@@ -9,6 +9,7 @@ import { EvExplanationTooltip } from "@/components/EvExplanationTooltip";
 import { buildSavedScoreReferenceTicket, type DisplayTicket } from "@/lib/referenceTicket";
 import { formatTicketTextsForDisplay } from "@/lib/ticketDisplay";
 import { formatBetSelectionForDisplay } from "@shared/formationDisplay";
+import { RaceSettlementCard } from "@/components/RaceSettlementCard";
 
 /**
  * 地方競馬（NAR）予想ページ
@@ -540,7 +541,7 @@ function NarRacePredictionView({
                                   {entry.horseNumber}
                                 </span>
                               </td>
-                              <td className="px-2 py-1.5 text-white font-medium">{entry.horseName}</td>
+                              <td className="px-2 py-1.5 text-white font-medium">{entry.displayName ?? entry.horseName}</td>
                               <td className="px-2 py-1.5 text-gray-400">{entry.jockey || "-"}</td>
                             </tr>
                           );
@@ -553,6 +554,8 @@ function NarRacePredictionView({
                 </p>
               </div>
             )}
+
+            <RaceSettlementCard raceId={raceId} />
 
             {/* 穴狙い詳細分析セクション */}
             {anaUmaData && (

@@ -2,6 +2,7 @@ import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import { AnalysisMetricTooltip } from "@/components/AnalysisMetricTooltip";
 import { DataQualityPanel } from "@/components/DataQualityPanel";
+import { PerformanceSummaryPanel } from "@/components/PerformanceSummaryPanel";
 
 /**
  * 総合予想ダッシュボード
@@ -200,6 +201,8 @@ export default function PredictionDashboardPage() {
           <h1 className="text-3xl font-bold text-white mb-2">🎯 総合予想ダッシュボード</h1>
           <p className="text-gray-400 text-sm">AI・予想屋・調教師の3視点分析 × Shen AI体調診断</p>
         </div>
+
+        <PerformanceSummaryPanel />
 
         <DataQualityPanel />
 

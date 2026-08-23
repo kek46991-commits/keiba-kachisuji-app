@@ -12,6 +12,7 @@ import { formatTicketTextsForDisplay } from "@/lib/ticketDisplay";
 import { formatBetSelectionForDisplay } from "@shared/formationDisplay";
 import { publicOddsPublicationNotice, publicOddsPublicationState } from "@/lib/publicOddsPublication";
 import { buildPendingRaceExplanation } from "@/lib/pendingRaceExplanation";
+import { RaceSettlementCard } from "@/components/RaceSettlementCard";
 
 /**
  * 予想ページ
@@ -284,6 +285,11 @@ function RacePredictionView({ date, venue, raceNumber }: { date: string; venue: 
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6">
+        {raceId && (
+          <div className="mb-4">
+            <RaceSettlementCard raceId={raceId} />
+          </div>
+        )}
         {loadingExisting || runPrediction.isPending ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#00e5ff" }} />

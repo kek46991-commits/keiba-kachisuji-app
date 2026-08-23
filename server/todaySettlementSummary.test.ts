@@ -18,6 +18,7 @@ describe("summarizeTodaySettlements", () => {
       investmentAmount: 500,
       returnAmount: 1200,
       profitAmount: 700,
+      recoveryRate: 240,
     });
   });
 });

@@ -1,3 +1,4 @@
+import { calculateRecoveryRate } from "../shared/settlementDisplay";
 import { hasAuditableRecordedBets } from "./ticketPerformance";
 
 export type TodaySettlementPrediction = {
@@ -15,6 +16,7 @@ export type TodaySettlementSummary = {
   investmentAmount: number;
   returnAmount: number;
   profitAmount: number;
+  recoveryRate: number | null;
 };
 
 /** 同一レースの最新かつ実測可能な予想だけから、当日成績を集計する。 */
@@ -35,5 +37,6 @@ export function summarizeTodaySettlements(rows: TodaySettlementPrediction[]): To
     investmentAmount,
     returnAmount,
     profitAmount: returnAmount - investmentAmount,
+    recoveryRate: calculateRecoveryRate(investmentAmount, returnAmount),
   };
 }

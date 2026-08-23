@@ -27,6 +27,7 @@ import PredictionDashboardPage from "./pages/PredictionDashboardPage";
 import TicketPerformancePage from "./pages/TicketPerformancePage";
 import PredictionHistoryPage from "./pages/PredictionHistoryPage";
 import SyntheticPredictionLabPage from "./pages/SyntheticPredictionLabPage";
+import TodaysPredictions from "./pages/TodaysPredictions";
 
 function Router() {
   return (
@@ -46,6 +47,7 @@ function Router() {
       <Route path={"/horses"} component={HorseEncyclopediaPage} />
       <Route path={"/jockeys"} component={JockeyListPage} />
       <Route path={"/dashboard"} component={PredictionDashboardPage} />
+      <Route path={"/todays-predictions"} component={TodaysPredictions} />
       <Route path={"/prediction-history"} component={PredictionHistoryPage} />
       <Route path={"/analytics/ticket-performance"} component={TicketPerformancePage} />
       <Route path={"/admin/news"} component={AdminNewsPage} />

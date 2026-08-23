@@ -155,6 +155,27 @@ export function calculatePredictionSettlement(rawBets: string | null, officialPa
   return { state: "settled" as const, isHit: returnAmount > 0, returnAmount };
 }
 
+/**
+ * 着順確定済みレースのうち、まだ精算されていない予想を公式払戻で精算して永続化する。
+ * 成績集計（回収率・日別収支）は predictions.isHit / returnAmount を参照するため、
+ * 集計前にこの処理を通して中央・地方の両データを同じ経路で確定させる。
+ */
+export async function settlePendingConfirmedRaces(db: Db, limit = 50): Promise<string[]> {
+  const pending = await db
+    .selectDistinct({ raceId: predictions.raceId })
+    .from(predictions)
+    .innerJoin(races, eq(races.raceId, predictions.raceId))
+    .where(and(eq(races.status, "results_confirmed"), isNull(predictions.isHit)))
+    .limit(limit);
+
+  const settledRaceIds: string[] = [];
+  for (const row of pending) {
+    const result = await reconcileRaceResult(db, row.raceId);
+    if (result.state === "settled" && result.settledPredictions > 0) settledRaceIds.push(row.raceId);
+  }
+  return settledRaceIds;
+}
+
 /** 公式の着順上位3頭と払戻が揃った場合のみ、レースと未精算予想を確定する。 */
 export async function reconcileRaceResult(db: Db, raceId: string): Promise<RaceSettlementResult> {
   const [resultEntries, officialPayouts, pendingPredictions, pendingTicketSets] = await Promise.all([

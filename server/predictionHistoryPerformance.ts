@@ -1,3 +1,4 @@
+import { calculateRecoveryRate } from "../shared/settlementDisplay";
 import { hasAuditableRecordedBets } from "./ticketPerformance";
 
 export type HistoryPerformanceRow = {
@@ -51,7 +52,21 @@ export function aggregatePredictionHistoryPerformance(rows: HistoryPerformanceRo
   };
 }
 
-/** 日単位で統合した、選択条件に対する累積収支・累積回収率の推移。 */
+export type TimelinePoint = {
+  date: string;
+  cumulativeProfit: number;
+  cumulativeRoi: number | null;
+  cumulativeInvest: number;
+  cumulativeReturn: number;
+  raceCount: number;
+  hitCount: number;
+  dailyInvest: number;
+  dailyReturn: number;
+  dailyProfit: number;
+  dailyRoi: number | null;
+};
+
+/** 日単位の投資・回収・回収率と、累積収支・累積回収率の推移。 */
 export function buildPredictionHistoryTimeline(rows: HistoryPerformanceRow[]) {
   const settled = getLatestSettledRows(rows);
   const auditable = settled
@@ -60,17 +75,28 @@ export function buildPredictionHistoryTimeline(rows: HistoryPerformanceRow[]) {
 
   let cumulativeInvest = 0;
   let cumulativeReturn = 0;
-  const points = new Map<string, { date: string; cumulativeProfit: number; cumulativeRoi: number | null; cumulativeInvest: number; cumulativeReturn: number }>();
+  const points = new Map<string, TimelinePoint>();
   for (const row of auditable) {
-    cumulativeInvest += Number(row.investAmount ?? 0);
-    cumulativeReturn += Number(row.returnAmount ?? 0);
+    const invest = Number(row.investAmount ?? 0);
+    const returned = Number(row.returnAmount ?? 0);
+    cumulativeInvest += invest;
+    cumulativeReturn += returned;
     const date = toJstDateKey(row.predictedAt);
+    const previous = points.get(date);
+    const dailyInvest = (previous?.dailyInvest ?? 0) + invest;
+    const dailyReturn = (previous?.dailyReturn ?? 0) + returned;
     points.set(date, {
       date,
       cumulativeProfit: cumulativeReturn - cumulativeInvest,
-      cumulativeRoi: cumulativeInvest > 0 ? Math.round((cumulativeReturn / cumulativeInvest) * 1000) / 10 : null,
+      cumulativeRoi: calculateRecoveryRate(cumulativeInvest, cumulativeReturn),
       cumulativeInvest,
       cumulativeReturn,
+      raceCount: (previous?.raceCount ?? 0) + 1,
+      hitCount: (previous?.hitCount ?? 0) + (row.isHit ? 1 : 0),
+      dailyInvest,
+      dailyReturn,
+      dailyProfit: dailyReturn - dailyInvest,
+      dailyRoi: calculateRecoveryRate(dailyInvest, dailyReturn),
     });
   }
 

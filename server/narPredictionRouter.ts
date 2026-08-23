@@ -15,6 +15,8 @@ import { analyzeRaceDiagnostics } from "./raceAnalysisDiagnostics";
 import { calculateThreeViewAnalyses } from "./dashboardRouter";
 import { buildAnaBettingRecommendationForRace } from "./anaUmaRouter";
 import { savePredictionTicketSets } from "./predictionTicketSets";
+import { getHorseNameMap } from "./raceEntryMaster";
+import { withResolvedHorseNames } from "../shared/horseNameMapping";
 
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 const NAR_BASE = "https://nar.netkeiba.com";
@@ -1363,10 +1365,12 @@ export const narPredictionRouter = router({
         }, entryList[0].updatedAt);
       }
 
+      const nameMap = await getHorseNameMap(db, input.raceId);
+
       return {
         prediction,
         ticketSets,
-        entries: entryList,
+        entries: withResolvedHorseNames(entryList, nameMap),
         entriesUpdatedAt,
       };
     }),

@@ -10,6 +10,10 @@ import { aggregateBetTypePerformance } from "./betTypePerformance";
 import { buildRaceDetailReconciliation } from "./raceDetailReconciliation";
 import { readTicketSelections, ticketStrategyLabels, type TicketStrategy } from "./predictionTicketSets";
 import { getRaceActionStatus } from "./raceActionStatus";
+import { getHorseNameMap } from "./raceEntryMaster";
+import { withResolvedHorseNames } from "../shared/horseNameMapping";
+import { summarizeRaceSettlements } from "./raceSettlementSummary";
+import { settlePendingConfirmedRaces } from "./resultSettlement";
 
 export const raceDataRouter = router({
   // 今週末のレース一覧を取得
@@ -72,6 +76,8 @@ export const raceDataRouter = router({
         .from(payouts)
         .where(eq(payouts.raceId, input.raceId));
 
+      const nameMap = await getHorseNameMap(db, input.raceId);
+
       const racePredictions = await db
         .select()
         .from(predictions)
@@ -128,7 +134,7 @@ export const raceDataRouter = router({
           startTime: race.postTime,
           resultsConfirmed: race.status === "results_confirmed",
         }),
-        entries: raceEntries,
+        entries: withResolvedHorseNames(raceEntries, nameMap),
         payouts: racePayouts,
         prediction: latestPrediction,
         reconciliation: buildRaceDetailReconciliation({
@@ -140,7 +146,8 @@ export const raceDataRouter = router({
               combination: payout.combination,
               payout: payout.payout,
             })),
-          entries: raceEntries.map(entry => ({ horseNumber: entry.horseNumber, finishPosition: entry.finishPosition })),
+          entries: raceEntries.map(entry => ({ horseNumber: entry.horseNumber, horseName: entry.horseName, finishPosition: entry.finishPosition })),
+          nameMap,
         }),
         strategyReconciliations: strategyTicketSources.map(ticketSet => ({
           strategy: ticketSet.strategy,
@@ -160,10 +167,21 @@ export const raceDataRouter = router({
                 combination: payout.combination,
                 payout: payout.payout,
               })),
-            entries: raceEntries.map(entry => ({ horseNumber: entry.horseNumber, finishPosition: entry.finishPosition })),
+            entries: raceEntries.map(entry => ({ horseNumber: entry.horseNumber, horseName: entry.horseName, finishPosition: entry.finishPosition })),
+            nameMap,
           }),
         })),
       };
+    }),
+
+  // レース一覧向けの結果照合・回収率サマリー（中央・地方共通）
+  getRaceSettlements: publicProcedure
+    .input(z.object({ raceIds: z.array(z.string()).max(200) }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db || input.raceIds.length === 0) return [];
+      await settlePendingConfirmedRaces(db);
+      return summarizeRaceSettlements(db, input.raceIds);
     }),
 
   // 予想履歴を取得
@@ -277,6 +295,8 @@ export const raceDataRouter = router({
       if (input.trackConditionMissing) conditions.push(isNull(races.trackCondition));
       else if (input.trackCondition) conditions.push(eq(races.trackCondition, input.trackCondition));
 
+      await settlePendingConfirmedRaces(db);
+
       const settled = await db
         .select({
           id: predictions.id,
@@ -308,6 +328,8 @@ export const raceDataRouter = router({
       else if (input.distance) conditions.push(eq(races.distance, input.distance));
       if (input.trackConditionMissing) conditions.push(isNull(races.trackCondition));
       else if (input.trackCondition) conditions.push(eq(races.trackCondition, input.trackCondition));
+
+      await settlePendingConfirmedRaces(db);
 
       const settled = await db
         .select({

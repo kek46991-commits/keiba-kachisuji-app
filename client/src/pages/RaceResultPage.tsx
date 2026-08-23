@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { Trophy, ArrowLeft, BadgeCheck, CircleDollarSign, FileClock, ListChecks } from "lucide-react";
 import { HistoryBackButton } from "@/components/HistoryBackButton";
 import { formatBetSelectionForDisplay } from "@shared/formationDisplay";
+import { formatRecoveryRate, formatSignedYen, hitStatusLabel } from "@shared/settlementDisplay";
 
 export default function RaceResultPage() {
   const searchStr = useSearch();
@@ -138,7 +139,7 @@ export default function RaceResultPage() {
                             </td>
                             <td className="px-2 py-1.5">{entry.gateNumber || "—"}</td>
                             <td className="px-2 py-1.5">{entry.horseNumber}</td>
-                            <td className="px-2 py-1.5 font-medium max-w-[120px] truncate">{entry.horseName}</td>
+                            <td className="px-2 py-1.5 font-medium max-w-[120px] truncate">{entry.displayName}</td>
                             <td className="px-2 py-1.5 max-w-[80px] truncate" style={{ color: "#94a3b8" }}>{entry.jockey || "—"}</td>
                             <td className="px-2 py-1.5 text-right">{entry.odds ? entry.odds.toFixed(1) : "—"}</td>
                             <td className="px-2 py-1.5 text-right">{entry.popularity || "—"}</td>
@@ -301,14 +302,16 @@ export default function RaceResultPage() {
                         {reconciliation.topThree.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             <span className="text-[10px]" style={{ color: "#94a3b8" }}>実際の着順</span>
-                            {reconciliation.topThree.map(result => <span key={`${strategySet.strategy}-${result.position}-${result.horseNumber}`} className="border px-2 py-1 text-[10px] font-bold" style={{ borderColor: "rgba(255,255,255,0.16)", backgroundColor: "rgba(255,255,255,0.03)", color: "#e4c875" }}>{result.position}着：{result.horseNumber}番</span>)}
+                            {reconciliation.topThree.map(result => <span key={`${strategySet.strategy}-${result.position}-${result.horseNumber}`} className="border px-2 py-1 text-[10px] font-bold" style={{ borderColor: "rgba(255,255,255,0.16)", backgroundColor: "rgba(255,255,255,0.03)", color: "#e4c875" }}>{result.position}着：{result.horseNumber}番 {result.horseName}</span>)}
                           </div>
                         )}
                         {reconciliation.investAmount !== null && (
                           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                             <div className="rounded p-2" style={{ backgroundColor: "rgba(255,255,255,0.025)" }}><div className="text-[9px]" style={{ color: "#94a3b8" }}>投資額</div><div className="mt-1 text-xs font-bold" style={{ color: "#e2e8f0" }}>¥{reconciliation.investAmount.toLocaleString()}</div></div>
                             <div className="rounded p-2" style={{ backgroundColor: "rgba(16,185,129,0.05)" }}><div className="text-[9px]" style={{ color: "#94a3b8" }}>公式払戻</div><div className="mt-1 text-xs font-bold" style={{ color: reconciliation.returnAmount && reconciliation.returnAmount > 0 ? "#6ee7b7" : "#e2e8f0" }}>{reconciliation.returnAmount === null ? "未精算" : `¥${reconciliation.returnAmount.toLocaleString()}`}</div></div>
-                            <div className="rounded p-2" style={{ backgroundColor: reconciliation.profitAmount !== null && reconciliation.profitAmount >= 0 ? "rgba(16,185,129,0.05)" : "rgba(244,63,94,0.04)" }}><div className="text-[9px]" style={{ color: "#94a3b8" }}>収支</div><div className="mt-1 text-xs font-bold" style={{ color: reconciliation.profitAmount === null ? "#a8a5a0" : reconciliation.profitAmount >= 0 ? "#6ee7b7" : "#fda4af" }}>{reconciliation.profitAmount === null ? "—" : `${reconciliation.profitAmount >= 0 ? "+" : "−"}¥${Math.abs(reconciliation.profitAmount).toLocaleString()}`}</div></div>
+                            <div className="rounded p-2" style={{ backgroundColor: reconciliation.profitAmount !== null && reconciliation.profitAmount >= 0 ? "rgba(16,185,129,0.05)" : "rgba(244,63,94,0.04)" }}><div className="text-[9px]" style={{ color: "#94a3b8" }}>収支</div><div className="mt-1 text-xs font-bold" style={{ color: reconciliation.profitAmount === null ? "#a8a5a0" : reconciliation.profitAmount >= 0 ? "#6ee7b7" : "#fda4af" }}>{reconciliation.profitAmount === null ? "—" : formatSignedYen(reconciliation.profitAmount)}</div></div>
+                            <div className="rounded p-2" style={{ backgroundColor: "rgba(114,214,255,0.05)" }}><div className="text-[9px]" style={{ color: "#94a3b8" }}>回収率</div><div className="mt-1 text-xs font-bold" style={{ color: reconciliation.recoveryRate !== null && reconciliation.recoveryRate >= 100 ? "#6ee7b7" : "#e2e8f0" }}>{formatRecoveryRate(reconciliation.recoveryRate)}</div></div>
+                            <div className="rounded p-2" style={{ backgroundColor: "rgba(255,255,255,0.025)" }}><div className="text-[9px]" style={{ color: "#94a3b8" }}>判定</div><div className="mt-1 text-xs font-bold" style={{ color: reconciliation.hitStatus === "hit" ? "#6ee7b7" : reconciliation.hitStatus === "miss" ? "#fda4af" : "#f4d58b" }}>{hitStatusLabel(reconciliation.isHit)}</div></div>
                           </div>
                         )}
                         {reconciliation.tickets.length > 0 ? (
@@ -346,7 +349,7 @@ export default function RaceResultPage() {
                     <div className="mt-3 flex flex-wrap gap-2">
                       <span className="text-[10px]" style={{ color: "#94a3b8" }}>公式上位3頭</span>
                       {detail.reconciliation.topThree.map(result => (
-                        <span key={`${result.position}-${result.horseNumber}`} className="border px-2 py-1 text-[10px] font-bold" style={{ borderColor: "rgba(201,168,76,0.28)", backgroundColor: "rgba(201,168,76,0.06)", color: "#e4c875" }}>{result.position}着：{result.horseNumber}番</span>
+                        <span key={`${result.position}-${result.horseNumber}`} className="border px-2 py-1 text-[10px] font-bold" style={{ borderColor: "rgba(201,168,76,0.28)", backgroundColor: "rgba(201,168,76,0.06)", color: "#e4c875" }}>{result.position}着：{result.horseNumber}番 {result.horseName}</span>
                       ))}
                     </div>
                   )}
@@ -355,7 +358,9 @@ export default function RaceResultPage() {
                     <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                       <div className="p-2 rounded" style={{ backgroundColor: "rgba(255,255,255,0.025)" }}><div className="text-[9px]" style={{ color: "#94a3b8" }}>投資額</div><div className="mt-1 text-xs font-bold" style={{ color: "#e2e8f0" }}>¥{detail.reconciliation.investAmount.toLocaleString()}</div></div>
                       <div className="p-2 rounded" style={{ backgroundColor: "rgba(16,185,129,0.05)" }}><div className="text-[9px]" style={{ color: "#94a3b8" }}>公式照合後の回収</div><div className="mt-1 text-xs font-bold" style={{ color: detail.reconciliation.returnAmount && detail.reconciliation.returnAmount > 0 ? "#6ee7b7" : "#e2e8f0" }}>{detail.reconciliation.returnAmount === null ? "未精算" : `¥${detail.reconciliation.returnAmount.toLocaleString()}`}</div></div>
-                      <div className="p-2 rounded" style={{ backgroundColor: detail.reconciliation.profitAmount !== null && detail.reconciliation.profitAmount >= 0 ? "rgba(16,185,129,0.05)" : "rgba(244,63,94,0.04)" }}><div className="text-[9px]" style={{ color: "#94a3b8" }}>収支</div><div className="mt-1 text-xs font-bold" style={{ color: detail.reconciliation.profitAmount === null ? "#a8a5a0" : detail.reconciliation.profitAmount >= 0 ? "#6ee7b7" : "#fda4af" }}>{detail.reconciliation.profitAmount === null ? "—" : `${detail.reconciliation.profitAmount >= 0 ? "+" : "−"}¥${Math.abs(detail.reconciliation.profitAmount).toLocaleString()}`}</div></div>
+                      <div className="p-2 rounded" style={{ backgroundColor: detail.reconciliation.profitAmount !== null && detail.reconciliation.profitAmount >= 0 ? "rgba(16,185,129,0.05)" : "rgba(244,63,94,0.04)" }}><div className="text-[9px]" style={{ color: "#94a3b8" }}>収支</div><div className="mt-1 text-xs font-bold" style={{ color: detail.reconciliation.profitAmount === null ? "#a8a5a0" : detail.reconciliation.profitAmount >= 0 ? "#6ee7b7" : "#fda4af" }}>{detail.reconciliation.profitAmount === null ? "—" : formatSignedYen(detail.reconciliation.profitAmount)}</div></div>
+                      <div className="p-2 rounded" style={{ backgroundColor: "rgba(114,214,255,0.05)" }}><div className="text-[9px]" style={{ color: "#94a3b8" }}>回収率</div><div className="mt-1 text-xs font-bold" style={{ color: detail.reconciliation.recoveryRate !== null && detail.reconciliation.recoveryRate >= 100 ? "#6ee7b7" : "#e2e8f0" }}>{formatRecoveryRate(detail.reconciliation.recoveryRate)}</div></div>
+                      <div className="p-2 rounded" style={{ backgroundColor: "rgba(255,255,255,0.025)" }}><div className="text-[9px]" style={{ color: "#94a3b8" }}>判定</div><div className="mt-1 text-xs font-bold" style={{ color: detail.reconciliation.hitStatus === "hit" ? "#6ee7b7" : detail.reconciliation.hitStatus === "miss" ? "#fda4af" : "#f4d58b" }}>{hitStatusLabel(detail.reconciliation.isHit)}</div></div>
                     </div>
                   )}
 

@@ -6,6 +6,7 @@ import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Too
 import { Link } from "wouter";
 import { HistoryBackButton } from "@/components/HistoryBackButton";
 import { formatBetSelectionForDisplay } from "@shared/formationDisplay";
+import { calculateRecoveryRate, formatRecoveryRate, formatYen, hitStatusLabels } from "@shared/settlementDisplay";
 
 const ALL = "all";
 const MISSING = "__missing__";
@@ -116,6 +117,35 @@ export default function PredictionHistoryPage() {
               <div><LineChartIcon className="mx-auto h-6 w-6 text-[#8d7846]" /><p className="mt-2 text-sm font-medium text-[#d8c896]">推移グラフを作成できる実測データはまだありません</p><p className="mt-1 text-[11px] text-slate-500">確定済みかつ買い目点数が保存された現行形式の予想から表示します。</p></div>
             </div>
           )}
+          {timeline && timeline.points.length > 0 && (
+            <div className="mt-5 overflow-x-auto">
+              <div className="mb-2 text-xs font-bold text-[#e9dab1]">日別の総投資額・総回収額・回収率</div>
+              <table className="w-full text-[11px] text-slate-300">
+                <thead>
+                  <tr className="text-[#a89366]">
+                    <th className="px-2 py-1 text-left font-medium">日付</th>
+                    <th className="px-2 py-1 text-right font-medium">的中</th>
+                    <th className="px-2 py-1 text-right font-medium">総投資額</th>
+                    <th className="px-2 py-1 text-right font-medium">総回収額</th>
+                    <th className="px-2 py-1 text-right font-medium">回収率</th>
+                    <th className="px-2 py-1 text-right font-medium">累積回収率</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...timeline.points].reverse().map(point => (
+                    <tr key={point.date} className="border-t border-white/5">
+                      <td className="px-2 py-1">{point.date}</td>
+                      <td className="px-2 py-1 text-right">{point.hitCount}/{point.raceCount}</td>
+                      <td className="px-2 py-1 text-right">{formatYen(point.dailyInvest)}</td>
+                      <td className="px-2 py-1 text-right">{formatYen(point.dailyReturn)}</td>
+                      <td className="px-2 py-1 text-right" style={{ color: point.dailyRoi !== null && point.dailyRoi >= 100 ? "#6ee7b7" : undefined }}>{formatRecoveryRate(point.dailyRoi)}</td>
+                      <td className="px-2 py-1 text-right text-slate-500">{formatRecoveryRate(point.cumulativeRoi)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           {timeline && timeline.excludedLegacyCount > 0 && <p className="mt-3 text-[10px] text-[#8f7b51]">点数未記録の旧形式 {timeline.excludedLegacyCount}件は、推移グラフの集計対象外です。</p>}
         </section>
 
@@ -163,9 +193,9 @@ export default function PredictionHistoryPage() {
                 const isUnsettled = !isHit && !isMiss && race?.status === "results_confirmed";
                 const isOfficialResultMissing = !isHit && !isMiss && !isUnsettled && item.raceActionStatus === "missing_result";
                 const visualStatus = isHit
-                  ? { label: "的中", detail: "払戻を反映済み", icon: CircleCheck, card: "border-emerald-400/35 bg-[linear-gradient(120deg,rgba(16,185,129,0.13),rgba(13,13,11,0.95)_54%)] hover:border-emerald-300/55", badge: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300", rail: "bg-emerald-300" }
+                  ? { label: hitStatusLabels.hit, detail: "払戻を反映済み", icon: CircleCheck, card: "border-emerald-400/35 bg-[linear-gradient(120deg,rgba(16,185,129,0.13),rgba(13,13,11,0.95)_54%)] hover:border-emerald-300/55", badge: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300", rail: "bg-emerald-300" }
                   : isMiss
-                    ? { label: "不的中", detail: "結果を反映済み", icon: CircleX, card: "border-rose-400/30 bg-[linear-gradient(120deg,rgba(244,63,94,0.11),rgba(13,13,11,0.95)_54%)] hover:border-rose-300/55", badge: "border-rose-400/25 bg-rose-400/10 text-rose-300", rail: "bg-rose-300" }
+                    ? { label: hitStatusLabels.miss, detail: "結果を反映済み", icon: CircleX, card: "border-rose-400/30 bg-[linear-gradient(120deg,rgba(244,63,94,0.11),rgba(13,13,11,0.95)_54%)] hover:border-rose-300/55", badge: "border-rose-400/25 bg-rose-400/10 text-rose-300", rail: "bg-rose-300" }
                     : isUnsettled
                       ? { label: "買い目未精算", detail: "公式結果は反映済み", icon: Clock3, card: "border-amber-300/25 bg-[linear-gradient(120deg,rgba(245,158,11,0.10),rgba(13,13,11,0.95)_54%)] hover:border-amber-200/45", badge: "border-amber-300/30 bg-amber-300/10 text-amber-200", rail: "bg-amber-300" }
                       : isOfficialResultMissing
@@ -205,7 +235,7 @@ export default function PredictionHistoryPage() {
                       })}
                     </div>
                     <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3 text-xs">
-                      <span className="text-slate-500">{visualStatus.detail} · 投資 {item.investAmount !== null ? `¥${item.investAmount.toLocaleString()}` : "—"} / 回収 {item.returnAmount !== null ? `¥${item.returnAmount.toLocaleString()}` : "—"}</span>
+                      <span className="text-slate-500">{visualStatus.detail} · 投資 {formatYen(item.investAmount)} / 回収 {formatYen(item.returnAmount)} · 回収率 {formatRecoveryRate(calculateRecoveryRate(item.investAmount, item.returnAmount))}</span>
                       {resultHref ? <Link href={resultHref} className="font-bold text-[#d9bd6e]">結果を見る →</Link> : <span className="text-slate-600">詳細未登録</span>}
                     </div>
                   </article>

@@ -28,8 +28,8 @@ describe("prediction history performance", () => {
     ]);
 
     expect(timeline.points).toEqual([
-      { date: "2026-08-01", cumulativeProfit: -300, cumulativeRoi: 0, cumulativeInvest: 300, cumulativeReturn: 0 },
-      { date: "2026-08-02", cumulativeProfit: 600, cumulativeRoi: 200, cumulativeInvest: 600, cumulativeReturn: 1200 },
+      { date: "2026-08-01", cumulativeProfit: -300, cumulativeRoi: 0, cumulativeInvest: 300, cumulativeReturn: 0, raceCount: 1, hitCount: 0, dailyInvest: 300, dailyReturn: 0, dailyProfit: -300, dailyRoi: 0 },
+      { date: "2026-08-02", cumulativeProfit: 600, cumulativeRoi: 200, cumulativeInvest: 600, cumulativeReturn: 1200, raceCount: 1, hitCount: 1, dailyInvest: 300, dailyReturn: 1200, dailyProfit: 900, dailyRoi: 400 },
     ]);
     expect(timeline).toMatchObject({ total: 2, excludedLegacyCount: 1 });
   });

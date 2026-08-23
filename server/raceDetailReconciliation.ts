@@ -1,3 +1,6 @@
+import type { HorseNameMap } from "../shared/horseNameMapping";
+import { buildTopThree } from "../shared/raceResultSummary";
+import { buildSettlementFigures, resolveHitStatus } from "../shared/settlementDisplay";
 import { calculatePredictionSettlementByType } from "./resultSettlement";
 
 type SupportedBetType = "trifecta" | "trio" | "quinella" | "exacta" | "wide";
@@ -17,6 +20,7 @@ export type DetailPredictionForReconciliation = {
 
 export type DetailEntryForReconciliation = {
   horseNumber: number;
+  horseName: string;
   finishPosition: number | null;
 };
 
@@ -49,15 +53,14 @@ export function buildRaceDetailReconciliation({
   prediction,
   officialPayouts,
   entries,
+  nameMap,
 }: {
   prediction: DetailPredictionForReconciliation | null;
   officialPayouts: OfficialPayoutForDetail[];
   entries: DetailEntryForReconciliation[];
+  nameMap?: HorseNameMap;
 }) {
-  const topThree = entries
-    .filter(entry => entry.finishPosition !== null && entry.finishPosition >= 1 && entry.finishPosition <= 3)
-    .sort((left, right) => (left.finishPosition ?? 99) - (right.finishPosition ?? 99))
-    .map(entry => ({ position: entry.finishPosition!, horseNumber: entry.horseNumber }));
+  const topThree = buildTopThree(entries, nameMap);
 
   if (!prediction) {
     return {
@@ -66,9 +69,11 @@ export function buildRaceDetailReconciliation({
       stateDetail: "このレースには保存済みのAI予想がありません。",
       topThree,
       tickets: [],
+      hitStatus: resolveHitStatus(null),
       investAmount: null,
       returnAmount: null,
       profitAmount: null,
+      recoveryRate: null,
     };
   }
 
@@ -86,8 +91,9 @@ export function buildRaceDetailReconciliation({
     : calculated.state === "pending_payouts"
       ? "pending_payouts"
       : "pending_ticket_data";
+  const isHit = calculated.state === "settled" ? (resolvedReturn ?? 0) > 0 : prediction.isHit;
   const stateCopy = {
-    settled: { stateLabel: prediction.isHit === true ? "的中・精算済み" : "不的中・精算済み", stateDetail: "保存済み買い目と公式払戻を照合済みです。" },
+    settled: { stateLabel: isHit === true ? "的中・精算済み" : "不的中・精算済み", stateDetail: "保存済み買い目と公式払戻を照合済みです。" },
     pending_payouts: { stateLabel: "払戻取込待ち", stateDetail: "予想買い目は保存されていますが、必要な公式払戻が未取込です。" },
     pending_ticket_data: { stateLabel: "買い目データ未精算", stateDetail: "買い目点数または記録形式が不足しているため、精算対象外です。" },
   }[state];
@@ -105,8 +111,8 @@ export function buildRaceDetailReconciliation({
         returnAmount: settlement?.returnAmount ?? null,
       };
     }),
-    investAmount,
-    returnAmount: resolvedReturn,
-    profitAmount: investAmount !== null && resolvedReturn !== null ? resolvedReturn - investAmount : null,
+    isHit,
+    hitStatus: resolveHitStatus(isHit),
+    ...buildSettlementFigures(investAmount, resolvedReturn),
   };
 }

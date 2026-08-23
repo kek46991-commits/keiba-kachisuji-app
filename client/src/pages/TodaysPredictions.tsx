@@ -2,9 +2,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { trpc } from '@/lib/trpc';
 import Navbar from '@/components/Navbar';
+import { formatRecoveryRate, formatYen, hitStatusLabel } from '@shared/settlementDisplay';
+import { useMemo } from 'react';
 
 export default function TodaysPredictions() {
   const { data: races, isLoading } = trpc.raceData.getThisWeekend.useQuery();
+  const raceIds = useMemo(() => (races ?? []).map(race => race.raceId), [races]);
+  const { data: settlements } = trpc.raceData.getRaceSettlements.useQuery(
+    { raceIds },
+    { enabled: raceIds.length > 0 },
+  );
+  const settlementByRace = useMemo(
+    () => new Map((settlements ?? []).map(settlement => [settlement.raceId, settlement])),
+    [settlements],
+  );
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#0A1128' }}>
@@ -51,10 +62,12 @@ export default function TodaysPredictions() {
             ).map(([date, dayRaces]) => (
               <div key={date}>
                 <h2 className="text-lg font-semibold mb-3" style={{ color: '#e2e8f0' }}>
-                  {new Date(date + 'T00:00:00+09:00').toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })}
+                  {new Date(date + 'T00:00:00+09:00').toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short', timeZone: 'Asia/Tokyo' })}
                 </h2>
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  {dayRaces.map((race) => (
+                  {dayRaces.map((race) => {
+                    const settlement = settlementByRace.get(race.raceId);
+                    return (
                     <Card key={race.raceId} className="border-0 transition-all duration-150 hover:scale-[1.01] cursor-pointer"
                       style={{ backgroundColor: 'rgba(201,168,76,0.04)', border: '1px solid rgba(201,168,76,0.15)' }}>
                       <CardHeader className="pb-2">
@@ -97,9 +110,29 @@ export default function TodaysPredictions() {
                             </Badge>
                           )}
                         </div>
+                        {settlement && settlement.topThree.length > 0 && (
+                          <div className="mt-3 rounded-lg px-2.5 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,168,76,0.16)' }}>
+                            <div className="text-[10px] mb-1" style={{ color: '#94a3b8' }}>レース結果（1〜3着）</div>
+                            <div className="flex flex-wrap gap-1">
+                              {settlement.topThree.map(result => (
+                                <span key={`${result.position}-${result.horseNumber}`} className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(201,168,76,0.08)', color: '#e4c875' }}>
+                                  {result.position}着 {result.horseNumber}番 {result.horseName}
+                                </span>
+                              ))}
+                            </div>
+                            {settlement.hasPrediction && (
+                              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px]" style={{ color: '#94a3b8' }}>
+                                <span style={{ color: settlement.hitStatus === 'hit' ? '#6ee7b7' : settlement.hitStatus === 'miss' ? '#fda4af' : '#f4d58b' }}>{hitStatusLabel(settlement.isHit)}</span>
+                                <span>回収 {formatYen(settlement.returnAmount)}</span>
+                                <span style={{ color: settlement.recoveryRate !== null && settlement.recoveryRate >= 100 ? '#6ee7b7' : '#94a3b8' }}>回収率 {formatRecoveryRate(settlement.recoveryRate)}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
