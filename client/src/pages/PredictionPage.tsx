@@ -899,7 +899,7 @@ function ExistingPredictionView({ data, onRerun, isRunning, anaUmaData }: { data
       {entriesUpdatedAt && (
         <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
           <Calendar className="w-3 h-3" />
-          <span>データ最終更新: {new Date(entriesUpdatedAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+          <span>データ最終更新: {new Date(entriesUpdatedAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tokyo" })}</span>
         </div>
       )}
 

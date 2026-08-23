@@ -507,7 +507,7 @@ function NarRacePredictionView({
                   <h4 className="text-xs font-bold text-white">保存済み出馬表</h4>
                   <span className="text-[10px] text-gray-500 ml-auto">
                     {existingPrediction.entriesUpdatedAt
-                      ? `最終更新: ${new Date(existingPrediction.entriesUpdatedAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}`
+                      ? `最終更新: ${new Date(existingPrediction.entriesUpdatedAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tokyo" })}`
                       : "取得済みデータ"}
                   </span>
                 </div>

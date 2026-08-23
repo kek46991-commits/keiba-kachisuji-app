@@ -9,7 +9,7 @@ import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 const SERIES_COLORS = ["#22d3ee", "#fbbf24", "#34d399", "#f472b6", "#a78bfa", "#fb923c"];
 
 function formatDateTime(value: Date | string) {
-  return new Date(value).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(value).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tokyo" });
 }
 
 export default function OddsHistoryPage() {

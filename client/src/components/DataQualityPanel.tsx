@@ -13,7 +13,7 @@ function formatUpdatedAt(value: Date | null | undefined) {
   if (!value) return "更新時刻なし";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "更新時刻なし";
-  return date.toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tokyo" });
 }
 
 function rateTone(rate: number) {
