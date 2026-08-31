@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import Stripe from "stripe";
 import { eq } from "drizzle-orm";
 import { publicProcedure, router } from "../_core/trpc";
@@ -42,6 +43,15 @@ function isSecureRequest(req: { protocol: string; headers: Record<string, unknow
   return list.some(value => String(value).trim().toLowerCase() === "https");
 }
 
+/** Stripeの生エラー（APIキー断片を含む英文）を利用者へ露出させない。 */
+function paymentError(error: unknown): TRPCError {
+  console.error("[accessPass] stripe error:", error);
+  return new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: "決済処理を開始できませんでした。時間をおいて再度お試しください。",
+  });
+}
+
 export const accessPassRouter = router({
   /** 販売プラン一覧（購入ページの表示用）。 */
   getPlans: publicProcedure.query(() =>
@@ -68,31 +78,38 @@ export const accessPassRouter = router({
   /** アカウント登録不要の都度払いCheckout（期限付きアクセスパス購入）。 */
   createCheckout: publicProcedure.input(planInput).mutation(async ({ ctx, input }) => {
     if (ENV.stripeSecretKey === "") {
-      throw new Error("決済が未設定です（STRIPE_SECRET_KEY）。");
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "ただ今オンライン決済を準備中です。恐れ入りますが後ほどお試しください。",
+      });
     }
 
     const detail = ACCESS_PASS_PLANS[input.plan];
     const origin = ctx.req.headers.origin ?? `${ctx.req.protocol}://${ctx.req.headers.host}`;
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      line_items: [
-        {
-          price_data: {
-            currency: "jpy",
-            product_data: {
-              name: `競馬でGO！ ${detail.label}`,
-              description: `購入から${detail.days}日間、AI予想・的中判定・回収率の全機能が閲覧できます。`,
+    const session = await stripe.checkout.sessions
+      .create({
+        mode: "payment",
+        line_items: [
+          {
+            price_data: {
+              currency: "jpy",
+              product_data: {
+                name: `競馬でGO！ ${detail.label}`,
+                description: `購入から${detail.days}日間、AI予想・的中判定・回収率の全機能が閲覧できます。`,
+              },
+              unit_amount: detail.amount,
             },
-            unit_amount: detail.amount,
+            quantity: 1,
           },
-          quantity: 1,
-        },
-      ],
-      metadata: { type: "access_pass", plan: input.plan },
-      success_url: `${origin}/access-pass?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/access-pass?canceled=1`,
-    });
+        ],
+        metadata: { type: "access_pass", plan: input.plan },
+        success_url: `${origin}/access-pass?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/access-pass?canceled=1`,
+      })
+      .catch(error => {
+        throw paymentError(error);
+      });
 
     return { url: session.url };
   }),
@@ -107,7 +124,9 @@ export const accessPassRouter = router({
       const db = await getDb();
       if (!db) return { success: false as const, message: "DB接続エラー" };
 
-      const session = await stripe.checkout.sessions.retrieve(input.sessionId);
+      const session = await stripe.checkout.sessions.retrieve(input.sessionId).catch(error => {
+        throw paymentError(error);
+      });
       if (session.payment_status !== "paid") {
         return { success: false as const, message: "決済が完了していません" };
       }

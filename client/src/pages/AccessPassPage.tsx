@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useSearch } from "wouter";
+import { Link, useSearch } from "wouter";
 import { motion } from "framer-motion";
 import { Key, Lock, ShieldCheck, Ticket } from "lucide-react";
 import Navbar from "@/components/Navbar";
@@ -13,7 +13,6 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
  */
 export default function AccessPassPage() {
   const searchString = useSearch();
-  const [, navigate] = useLocation();
   const params = useMemo(() => new URLSearchParams(searchString), [searchString]);
   const sessionId = params.get("session_id");
   const from = params.get("from");
@@ -54,8 +53,8 @@ export default function AccessPassPage() {
         return;
       }
       setMessage(null);
-      await utils.accessPass.getAccess.invalidate();
-      navigate(from && from.startsWith("/") ? from : "/todays-predictions");
+      // Cookieを含めて全クエリを取り直すため、遷移はフルリロードで行う
+      window.location.assign(from && from.startsWith("/") ? from : "/todays-predictions");
     },
     onError: error => setMessage(error.message),
   });
