@@ -72,6 +72,32 @@ heading unless the browser/container TZ is Asia/Tokyo.
 `predictions.isHit`/`returnAmount`, load `/dashboard` (or `/prediction-history`) in the browser,
 then re-query the table — the values should be repopulated from the official payouts.
 
+## Premium gating (access pass) – how to test
+- Guarded routes (`client/src/App.tsx`): `/predictions` `/nar-predictions` `/dashboard`
+  `/todays-predictions` `/prediction-history` are wrapped in `<PremiumRoute>`; unpurchased visitors are
+  replaced to `/access-pass?from=<encoded path>`. `/`, `/access-pass`, `/race-result` stay public.
+- Access state comes from `subscription.getStatus` OR `accessPass.getAccess`
+  (`client/src/contexts/SubscriptionContext.tsx`). The pass is stored in the **httpOnly cookie
+  `keiba_access_key`** (`server/access/accessPass.ts`), so an "unpurchased" browser state is created by
+  deleting cookies for localhost (chrome://settings/content/all?searchSubpage=localhost) – there is no
+  sign-out button in the UI (`accessPass.signOut` exists server-side but is not wired to a button).
+- Redeeming a key: `/access-pass` → 「アクセスキーをお持ちの方」 input → 「キーで解放」.
+  Invalid key ⇒ red banner 「アクセスキーが見つかりません。」; expired ⇒ 「このアクセスキーは有効期限が切れています。」.
+  Check the input value in the DOM before clicking – fast `type` actions have dropped the last character.
+- Seed/inspect passes directly: table is `access_passes` (snake_case!), `key_hash = sha256(normalized key)`
+  where normalization upper-cases and re-groups into `KG-XXXXX-...`. Quick check:
+  `node -e "console.log(require('crypto').createHash('sha256').update('KG-...').digest('hex'))"`.
+- With a dummy `STRIPE_SECRET_KEY`, 「購入して解放する」 shows the raw Stripe error
+  「Invalid API Key provided: sk_test_*ummy」 in the error banner (no crash) – expected in local testing.
+- Known quirk: after a successful redeem the page may stay on `/access-pass` instead of navigating to the
+  `from` page; use the 「今日の予想を見る →」 link in the green access banner instead.
+
+## Home page live summary
+`client/src/pages/Home.tsx` renders `HeroLiveSummary` (通算回収率/的中率/総回収額/収支 + 直近レースの実名着順)
+and `LatestPredictionsSection` (最新レース一覧 + 判定/回収率). Both are public (no pass needed) and read
+`raceData.getPredictionHistoryPerformance` / `getLatestRaces` / `getRaceSettlements`, so they go empty if
+MySQL is down – check the API before blaming the components.
+
 ## Handy API probes
 ```bash
 curl -s 'http://localhost:3000/api/trpc/raceData.getRaceSettlements?input=%7B%22json%22%3A%7B%22raceIds%22%3A%5B%2220260822CHUKYO09%22%5D%7D%7D'
