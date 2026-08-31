@@ -33,6 +33,14 @@ JRA（中央）・NAR（地方）の両方に対応した競馬予想・成績�
 ### 5. 日付・時刻表示
 - レース日・更新時刻はすべて JST（`Asia/Tokyo`）固定で整形し、閲覧者のタイムゾーンによる日付ズレを防止
 
+### 6. 有料会員制（サブスクリプション + 期限付きアクセスパス）
+- 有料ページ（`/todays-predictions`, `/predictions`, `/nar-predictions`, `/dashboard`, `/prediction-history`）は未購入だと `/access-pass` へリダイレクト（`client/src/components/PremiumRoute.tsx`）
+- サーバー側でも `premiumProcedure` により有料APIを保護。クライアント改変ではデータを取得できない（`server/access/premiumAccess.ts`）
+- 有料判定は 2 系統: ①ログインユーザーの Stripe サブスクリプション（active / trialing）②アカウント不要の期限付きアクセスパス（1日パス ¥480 / 30日パス ¥1,980）
+- アクセスパスは Stripe Checkout（都度払い）で購入。決済完了時に Webhook と成功画面のクレーム処理の双方が同一キーを決定論的に導出するため、二重発行されない（`server/access/issueAccessPass.ts`）
+- DB にはキーの SHA-256 ハッシュのみを保存し、生キーは購入者への表示と HttpOnly Cookie にのみ保持（`drizzle/0019_access_passes.sql`）
+- 期限切れ・失効済みキーは拒否。別端末では `/access-pass` のキー入力欄で解放できる
+
 ## 技術構成
 
 | レイヤー | 技術 |
@@ -40,8 +48,8 @@ JRA（中央）・NAR（地方）の両方に対応した競馬予想・成績�
 | フロントエンド | React 19, Vite, TypeScript, Tailwind CSS, Radix UI, React Query, wouter |
 | API | Express, tRPC 11, Zod |
 | データベース | MySQL, Drizzle ORM（マイグレーションは `drizzle/`） |
-| 決済 | Stripe |
-| テスト | Vitest（143テスト） |
+| 決済 | Stripe（サブスクリプション + 都度払いアクセスパス） |
+| テスト | Vitest（149テスト） |
 | ビルド | Vite（クライアント）+ esbuild（サーバー） |
 
 ## ディレクトリ構成
@@ -91,8 +99,21 @@ pnpm build   # 本番ビルド
 
 ## 環境変数
 
-| 変数 | 用途 |
-| --- | --- |
-| `DATABASE_URL` | MySQL接続文字列（未設定時はDB非依存の空表示にフォールバック） |
-| `STRIPE_SECRET_KEY` | Stripe連携（サブスクリプション） |
-| `NODE_ENV` / `PORT` | 実行モードと待ち受けポート |
+| 変数 | 必須 | 用途・設定値 |
+| --- | --- | --- |
+| `DATABASE_URL` | 必須 | MySQL接続文字列 `mysql://user:pass@host:3306/dbname`。未設定時はDB非依存の空表示にフォールバック |
+| `JWT_SECRET` | 必須 | セッションCookieの署名鍵。アクセスキーの決定論的導出にも使用（`openssl rand -hex 32`） |
+| `STRIPE_SECRET_KEY` | 必須 | Stripeのシークレットキー（本番は `sk_live_...`、テストは `sk_test_...`） |
+| `STRIPE_WEBHOOK_SECRET` | 必須 | Stripeダッシュボードで `https://<本番ドメイン>/api/stripe/webhook` を登録して得られる `whsec_...` |
+| `VITE_APP_ID` | 任意 | アプリ識別子（OAuth・アナリティクス用） |
+| `OAUTH_SERVER_URL` | 任意 | ログイン機能を使う場合のOAuthサーバURL。未設定でもアクセスパス経路は動作 |
+| `OWNER_OPEN_ID` | 任意 | 管理者ユーザーのOpenID（管理画面用） |
+| `BUILT_IN_FORGE_API_URL` / `BUILT_IN_FORGE_API_KEY` | 任意 | Manus由来の外部API連携 |
+| `NODE_ENV` / `PORT` | 必須 | 実行モード（`production`）と待ち受けポート（多くのPaaSは自動注入） |
+
+本番デプロイ時の手順:
+
+1. Express常駐サーバー構成のため Railway / Render（+ マネージドMySQL）を推奨
+2. 上記環境変数を設定し `pnpm build` → `node dist/index.js` で起動
+3. `DATABASE_URL` を指定して `pnpm db:push`（マイグレーション適用）
+4. Stripeダッシュボードで Webhook エンドポイント `https://<本番ドメイン>/api/stripe/webhook` を登録し `checkout.session.completed` を購読

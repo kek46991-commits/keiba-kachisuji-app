@@ -28,6 +28,8 @@ import TicketPerformancePage from "./pages/TicketPerformancePage";
 import PredictionHistoryPage from "./pages/PredictionHistoryPage";
 import SyntheticPredictionLabPage from "./pages/SyntheticPredictionLabPage";
 import TodaysPredictions from "./pages/TodaysPredictions";
+import AccessPassPage from "./pages/AccessPassPage";
+import { PremiumRoute } from "./components/PremiumRoute";
 
 function Router() {
   return (
@@ -36,19 +38,30 @@ function Router() {
       <Route path={"/blog"} component={BlogPage} />
       <Route path={"/blog/:slug"} component={BlogPage} />
       <Route path={"/live"} component={LivePage} />
-      <Route path={"/predictions"} component={PredictionPage} />
+      <Route path={"/predictions"}>
+        <PremiumRoute component={PredictionPage} />
+      </Route>
+      <Route path={"/access-pass"} component={AccessPassPage} />
       <Route path={"/pricing"} component={PricingPage} />
       <Route path={"/subscription/success"} component={SubscriptionSuccess} />
       <Route path={"/subscription/cancel"} component={SubscriptionCancel} />
       <Route path={"/auth-error"} component={AuthError} />
       <Route path={"/calendar"} component={RaceCalendarPage} />
       <Route path={"/race-result"} component={RaceResultPage} />
-      <Route path={"/nar-predictions"} component={NarPredictionPage} />
+      <Route path={"/nar-predictions"}>
+        <PremiumRoute component={NarPredictionPage} />
+      </Route>
       <Route path={"/horses"} component={HorseEncyclopediaPage} />
       <Route path={"/jockeys"} component={JockeyListPage} />
-      <Route path={"/dashboard"} component={PredictionDashboardPage} />
-      <Route path={"/todays-predictions"} component={TodaysPredictions} />
-      <Route path={"/prediction-history"} component={PredictionHistoryPage} />
+      <Route path={"/dashboard"}>
+        <PremiumRoute component={PredictionDashboardPage} />
+      </Route>
+      <Route path={"/todays-predictions"}>
+        <PremiumRoute component={TodaysPredictions} />
+      </Route>
+      <Route path={"/prediction-history"}>
+        <PremiumRoute component={PredictionHistoryPage} />
+      </Route>
       <Route path={"/analytics/ticket-performance"} component={TicketPerformancePage} />
       <Route path={"/admin/news"} component={AdminNewsPage} />
       <Route path={"/admin/csv-upload"} component={AdminCsvUpload} />

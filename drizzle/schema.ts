@@ -744,3 +744,25 @@ export const paddockPatterns = mysqlTable("paddock_patterns", {
 });
 export type PaddockPattern = typeof paddockPatterns.$inferSelect;
 export type InsertPaddockPattern = typeof paddockPatterns.$inferInsert;
+
+// ==========================================
+// 期限付きアクセスパス（アカウント登録不要の有料アクセス）
+// キー本体は保存せず SHA-256 ハッシュのみを保持する。
+// ==========================================
+export const accessPasses = mysqlTable("access_passes", {
+  id: int("id").primaryKey().autoincrement(),
+  keyHash: varchar("key_hash", { length: 64 }).notNull().unique(),
+  plan: varchar("plan", { length: 32 }).notNull(),
+  provider: varchar("provider", { length: 32 }).notNull(),
+  providerRef: varchar("provider_ref", { length: 255 }),
+  email: varchar("email", { length: 320 }),
+  amount: int("amount"),
+  currency: varchar("currency", { length: 8 }),
+  issuedAt: timestamp("issued_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  revokedAt: timestamp("revoked_at"),
+}, table => [
+  uniqueIndex("uq_access_passes_provider_ref").on(table.provider, table.providerRef),
+]);
+export type AccessPass = typeof accessPasses.$inferSelect;
+export type InsertAccessPass = typeof accessPasses.$inferInsert;

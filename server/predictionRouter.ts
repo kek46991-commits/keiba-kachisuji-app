@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 import { publicProcedure, router } from "./_core/trpc";
+import { premiumProcedure } from "./access/premiumAccess";
 import { getDb } from "./db";
 import { races, entries, predictions, predictionTicketSets, venues, jockeyMaster, raceSchedules } from "../drizzle/schema";
 import { eq, and, gte, lte, asc, desc, sql, inArray } from "drizzle-orm";
@@ -667,7 +668,7 @@ export const predictionRouter = router({
   /**
    * 指定レースの予想を実行
    */
-  runPrediction: publicProcedure
+  runPrediction: premiumProcedure
     .input(z.object({
       raceId: z.string().optional(),
       date: z.string().optional(),
@@ -974,7 +975,7 @@ export const predictionRouter = router({
   /**
    * 指定日・会場・レース番号で既存の予想結果を取得
    */
-  getExistingPrediction: publicProcedure
+  getExistingPrediction: premiumProcedure
     .input(z.object({
       date: z.string(),
       venue: z.string(),

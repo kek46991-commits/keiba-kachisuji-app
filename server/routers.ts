@@ -19,6 +19,7 @@ import { jraVanUploadRouter } from "./jraVanUploadRouter";
 import { heroAlertRouter } from "./heroAlertRouter";
 import { authorizedDataSourceRouter } from "./authorizedDataSourceRouter";
 import { syntheticPredictionRouter } from "./syntheticPredictionRouter";
+import { accessPassRouter } from "./access/accessPassRouter";
 
 export const appRouter = router({
   system: systemRouter,
@@ -33,6 +34,7 @@ export const appRouter = router({
   blog: blogRouter,
   weather: weatherRouter,
   subscription: subscriptionRouter,
+  accessPass: accessPassRouter,
   newsletter: newsletterRouter,
   raceData: raceDataRouter,
   news: newsRouter,

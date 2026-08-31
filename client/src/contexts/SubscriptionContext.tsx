@@ -4,6 +4,9 @@ import { trpc } from "@/lib/trpc";
 interface SubscriptionContextType {
   status: "none" | "trialing" | "active" | "canceled" | "past_due" | "expired";
   isPremium: boolean;
+  /** 有料アクセスの根拠（サブスクリプション / 期限付きアクセスパス）。 */
+  accessSource: "subscription" | "access_pass" | "none";
+  accessExpiresAt: string | null;
   daysLeft: number | null;
   trialEndsAt: string | null;
   isLoading: boolean;
@@ -14,6 +17,8 @@ interface SubscriptionContextType {
 const SubscriptionContext = createContext<SubscriptionContextType>({
   status: "none",
   isPremium: false,
+  accessSource: "none",
+  accessExpiresAt: null,
   daysLeft: null,
   trialEndsAt: null,
   isLoading: true,
@@ -24,6 +29,11 @@ const SubscriptionContext = createContext<SubscriptionContextType>({
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { data, isLoading } = trpc.subscription.getStatus.useQuery(undefined, {
     staleTime: 60_000, // 1分キャッシュ
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: access, isLoading: isAccessLoading } = trpc.accessPass.getAccess.useQuery(undefined, {
+    staleTime: 60_000,
     refetchOnWindowFocus: true,
   });
 
@@ -44,10 +54,12 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const value: SubscriptionContextType = {
     status: data?.status ?? "none",
-    isPremium: data?.isPremium ?? false,
+    isPremium: (data?.isPremium ?? false) || (access?.isPremium ?? false),
+    accessSource: access?.source ?? "none",
+    accessExpiresAt: access?.expiresAt ?? null,
     daysLeft: data?.daysLeft ?? null,
     trialEndsAt: data?.trialEndsAt ?? null,
-    isLoading,
+    isLoading: isLoading || isAccessLoading,
     startTrial: () => startTrialMutation.mutate(),
     openCheckout: () => checkoutMutation.mutate(),
   };

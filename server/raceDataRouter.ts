@@ -34,6 +34,40 @@ export const raceDataRouter = router({
     return result;
   }),
 
+  /**
+   * トップページ用のレース一覧。今日〜7日後のレースを優先し、
+   * 該当が無い場合は直近開催分（中央・地方問わず）へフォールバックする。
+   */
+  getLatestRaces: publicProcedure
+    .input(z.object({ limit: z.number().int().min(1).max(24) }).optional())
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      const limit = input?.limit ?? 12;
+      const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
+      const nextWeek = new Date(Date.now() + 7 * 86400000).toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
+
+      const upcoming = await db
+        .select()
+        .from(races)
+        .where(and(gte(races.raceDate, today), lte(races.raceDate, nextWeek)))
+        .orderBy(races.raceDate, races.raceNumber)
+        .limit(limit);
+
+      if (upcoming.length > 0) return upcoming;
+
+      const recent = await db
+        .select()
+        .from(races)
+        .orderBy(desc(races.raceDate), races.raceNumber)
+        .limit(limit);
+
+      return recent.sort(
+        (left, right) => left.raceDate.localeCompare(right.raceDate) || left.raceNumber - right.raceNumber,
+      );
+    }),
+
   // 特定日のレース一覧を取得
   getByDate: publicProcedure
     .input(z.object({ date: z.string() }))

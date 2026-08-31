@@ -4,6 +4,8 @@ import { ENV } from "../_core/env";
 import { getDb } from "../db";
 import { subscriptions } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { issueAccessPassForPayment } from "../access/issueAccessPass";
+import { isAccessPassPlan } from "../access/accessPass";
 
 const stripe = new Stripe(ENV.stripeSecretKey);
 
@@ -117,6 +119,23 @@ export function registerStripeWebhook(app: Express) {
 
           case "checkout.session.completed": {
             const session = event.data.object as Stripe.Checkout.Session;
+
+            // 期限付きアクセスパス（都度払い・アカウント不要）の購入
+            if (session.metadata?.type === "access_pass") {
+              const plan = session.metadata?.plan ?? "";
+              if (session.payment_status === "paid" && isAccessPassPlan(plan)) {
+                await issueAccessPassForPayment({
+                  provider: "stripe",
+                  providerRef: session.id,
+                  plan,
+                  email: session.customer_details?.email ?? null,
+                  amount: session.amount_total,
+                  currency: session.currency,
+                });
+              }
+              break;
+            }
+
             const userId = session.client_reference_id;
             const customerId = session.customer as string;
             const subscriptionId = session.subscription as string;

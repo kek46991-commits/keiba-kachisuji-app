@@ -9,6 +9,8 @@ import { Link } from "wouter";
 import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight, Calendar, Trophy, MapPin, Clock, Zap, Eye, ExternalLink, Sparkles, Target, BookOpen, UserRound, NotebookText, MonitorPlay, AlertTriangle, TrendingDown, History } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { HeroLiveSummary } from "@/components/HeroLiveSummary";
+import { LatestPredictionsSection } from "@/components/LatestPredictionsSection";
 
 /** NAR競馬場コード（keiba.go.jp） */
 const NAR_VENUE_CODES: Record<string, string> = {
@@ -199,6 +201,7 @@ function HeroSection() {
               レースカレンダーへ
             </Link>
           </div>
+          <HeroLiveSummary />
         </motion.div>
         <motion.div
           className="luxury-hero-visual"
@@ -225,6 +228,31 @@ function HeroSection() {
 }
 
 // ==========================================
+// 最新予想・結果照合セクション（DB直結）
+// ==========================================
+function LatestRacePredictionsSection() {
+  return (
+    <section id="latest-predictions" className="luxury-section py-12 px-4">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-8">
+          <span
+            className="inline-block text-xs font-bold tracking-widest px-3 py-1 rounded-full mb-3"
+            style={{ backgroundColor: "rgba(0,229,255,0.1)", color: "#00e5ff", border: "1px solid rgba(0,229,255,0.3)" }}
+          >
+            LATEST PREDICTIONS
+          </span>
+          <h2 className="text-xl font-bold" style={{ color: "#ffffff" }}>最新の予想と結果照合</h2>
+          <p className="mt-2 text-sm" style={{ color: "#94a3b8" }}>
+            中央・地方の最新レースと、公式結果に基づく的中判定・回収率をそのまま表示しています。
+          </p>
+        </div>
+        <LatestPredictionsSection limit={12} />
+      </div>
+    </section>
+  );
+}
+
+// ==========================================
 // 今週のレース一覧セクション
 // ==========================================
 function ThisWeekRacesSection() {
@@ -244,22 +272,9 @@ function ThisWeekRacesSection() {
   }
 
   if (!races || races.length === 0) {
-    return (
-      <section className="luxury-section py-12 px-4">
-        <div className="max-w-5xl mx-auto text-center">
-          <span
-            className="inline-block text-xs font-bold tracking-widest px-3 py-1 rounded-full mb-3"
-            style={{ backgroundColor: "rgba(0,229,255,0.1)", color: "#00e5ff", border: "1px solid rgba(0,229,255,0.3)" }}
-          >
-            THIS WEEK
-          </span>
-          <h2 className="text-xl font-bold mb-2" style={{ color: "#ffffff" }}>今週のレース</h2>
-          <p className="text-sm" style={{ color: "#64748b" }}>
-            今週のレースデータは未発表です。公式発表後に更新されます。
-          </p>
-        </div>
-      </section>
-    );
+    // 今週分が未登録の場合は上部の「最新の予想と結果照合」セクションが直近データを表示するため、
+    // 静的な未発表テキストは表示しない。
+    return null;
   }
 
   // 日付ごとにグループ化
@@ -1123,6 +1138,7 @@ export default function Home() {
       <Navbar />
       <HeroSection />
       <AnaUmaAlertSection />
+      <LatestRacePredictionsSection />
       <HomeCalendarSection />
       <ThisWeekRacesSection />
       <HitRateSection />

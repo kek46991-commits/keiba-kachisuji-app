@@ -422,6 +422,83 @@
   line-height: 1.9;
 }
 
+.hero-live-summary {
+  position: relative;
+  z-index: 2;
+  margin-top: 1.6rem;
+  display: grid;
+  gap: 0.6rem;
+  max-width: 34rem;
+}
+
+.hero-live-summary__figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.hero-live-summary__figure {
+  border: 1px solid rgba(239, 201, 106, 0.28);
+  background: rgba(12, 9, 4, 0.55);
+  padding: 0.5rem 0.4rem;
+  text-align: center;
+}
+
+.hero-live-summary__figure span {
+  display: block;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  color: rgba(255, 246, 225, 0.6);
+}
+
+.hero-live-summary__figure strong {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.9rem;
+  color: var(--gold-light);
+}
+
+.hero-live-summary__race {
+  border: 1px solid rgba(239, 201, 106, 0.2);
+  background: rgba(12, 9, 4, 0.45);
+  padding: 0.5rem 0.6rem;
+  text-align: left;
+}
+
+.hero-live-summary__race-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 0.68rem;
+  color: rgba(255, 246, 225, 0.68);
+}
+
+.hero-live-summary__horses {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  color: var(--gold-light);
+}
+
+.hero-live-summary__horses span {
+  border: 1px solid rgba(239, 201, 106, 0.22);
+  padding: 0.1rem 0.35rem;
+}
+
+@media (max-width: 900px) {
+  .hero-live-summary {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-live-summary__figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .luxury-hero-visual {
   position: relative;
   min-height: 420px;
