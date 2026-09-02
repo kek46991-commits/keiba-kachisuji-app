@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: keiba-kachisuji-web
+    runtime: node
+    plan: free
+    region: singapore
+    branch: devin/1787386562-keiba-kachisuji-web
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build && pnpm exec drizzle-kit migrate
+    startCommand: pnpm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: VITE_APP_ID
+        value: keiba-kachisuji-web
+      # 以下は Render のダッシュボードで値を設定する（リポジトリには保存しない）
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
