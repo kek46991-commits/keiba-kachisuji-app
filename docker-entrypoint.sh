@@ -38,6 +38,7 @@ if [ "$BUNDLED_DB" = "1" ]; then
   echo "[entrypoint] seeding demo data"
   pnpm exec tsx local_seed.ts || echo "[entrypoint] local_seed skipped"
   pnpm exec tsx local_result_seed.ts || echo "[entrypoint] local_result_seed skipped"
+  pnpm exec tsx demo_access_pass_seed.ts || echo "[entrypoint] demo_access_pass_seed skipped"
 fi
 
 exec node dist/index.js
