@@ -1,13 +1,11 @@
 import { z } from "zod";
-import Stripe from "stripe";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { ENV } from "../_core/env";
 import { getDb } from "../db";
 import { subscriptions } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { PRODUCTS } from "./products";
-
-const stripe = new Stripe(ENV.stripeSecretKey);
+import { getStripe } from "./client";
 
 export const subscriptionRouter = router({
   // サブスクリプション状態を取得
@@ -98,7 +96,7 @@ export const subscriptionRouter = router({
     let customerId = sub?.stripeCustomerId;
 
     if (!customerId) {
-      const customer = await stripe.customers.create({
+      const customer = await getStripe().customers.create({
         email: user.email ?? undefined,
         name: user.name ?? undefined,
         metadata: { userId: user.id.toString() },
@@ -115,7 +113,7 @@ export const subscriptionRouter = router({
 
     // Checkout Session作成（カード + PayPay対応）
     // トライアルはローカルDBで管理するため、Stripe側のtrial_period_daysは設定しない
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
       payment_method_types: ["card"] as any,
@@ -159,7 +157,7 @@ export const subscriptionRouter = router({
 
       try {
         // Stripe APIでCheckoutセッションを確認
-        const session = await stripe.checkout.sessions.retrieve(input.sessionId);
+        const session = await getStripe().checkout.sessions.retrieve(input.sessionId);
 
         if (session.payment_status !== "paid" || session.status !== "complete") {
           return { success: false, isPremium: false };
@@ -220,7 +218,7 @@ export const subscriptionRouter = router({
     }
 
     // Stripeでキャンセル（期間終了時に停止）
-    await stripe.subscriptions.update(sub.stripeSubscriptionId, {
+    await getStripe().subscriptions.update(sub.stripeSubscriptionId, {
       cancel_at_period_end: true,
     });
 

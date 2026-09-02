@@ -99,11 +99,11 @@ Stripe Webhook は `https://<本番ドメイン>/api/stripe/webhook` を登録�
 
 Express常駐サーバー＋MySQL構成のため、静的ホスティング（Vercel/Netlifyの静的公開）では動作しません。無料枠で公開する場合は Render（Web Service / Free）＋ MySQL互換の無料DB（TiDB Cloud Serverless など）を使います。
 
-1. 無料MySQLを作成し接続文字列を取得する（TiDB Cloud Serverless はTLS必須のため `?ssl={"minVersion":"TLSv1.2"}` を付与）:
+1. Render で「New +」→「Blueprint」からこのリポジトリを選ぶと、ルートの `render.yaml`（`runtime: docker`）が読み込まれる。
+2. データを永続させる場合は無料MySQLを作成し `DATABASE_URL` を設定する（TiDB Cloud Serverless はTLS必須のため `?ssl={"minVersion":"TLSv1.2"}` を付与）:
    `mysql://<user>:<pass>@<host>:4000/keiba?ssl={"minVersion":"TLSv1.2"}`
-2. Render で「New +」→「Blueprint」からこのリポジトリを選ぶと、ルートの `render.yaml` が読み込まれる。
-3. `DATABASE_URL` / `JWT_SECRET` / `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` をRenderのダッシュボードで設定する（`render.yaml` では `sync: false` にしており値はリポジトリに保存しない）。
-4. デプロイ時に `pnpm build` と `drizzle-kit migrate` が実行され、`https://<service>.onrender.com` が発行される。
-5. デモデータを入れる場合は Render Shell もしくはローカルから `pnpm tsx local_seed.ts && pnpm tsx local_result_seed.ts` を実行する。
+   `DATABASE_URL` を空のままにすると、コンテナ同梱の MariaDB とデモシードで起動する（外部DB不要だが、再起動でデータは消えるためデモ用途）。
+3. `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` はRenderのダッシュボードで設定する（`render.yaml` では `sync: false` にしており値はリポジトリに保存しない）。未設定でもサーバーは起動し、決済導線のみ無効になる。`JWT_SECRET` はRenderが自動生成する。
+4. デプロイ時に `pnpm build` と `drizzle-kit push`（`drizzle/schema.ts` を正としてスキーマ反映）が実行され、`https://<service>.onrender.com` が発行される。
 
 無料プランは一定時間アクセスがないとスリープし、次のアクセスで数十秒かかる点に注意してください。

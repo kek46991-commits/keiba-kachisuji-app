@@ -6,8 +6,7 @@ import { subscriptions } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { issueAccessPassForPayment } from "../access/issueAccessPass";
 import { isAccessPassPlan } from "../access/accessPass";
-
-const stripe = new Stripe(ENV.stripeSecretKey);
+import { getStripe } from "./client";
 
 export function registerStripeWebhook(app: Express) {
   app.post(
@@ -25,7 +24,7 @@ export function registerStripeWebhook(app: Express) {
             ? Buffer.from(req.body)
             : Buffer.from(JSON.stringify(req.body));
 
-        event = stripe.webhooks.constructEvent(rawBody, sig, ENV.stripeWebhookSecret);
+        event = getStripe().webhooks.constructEvent(rawBody, sig, ENV.stripeWebhookSecret);
       } catch (err: any) {
         console.error("[Webhook] Signature verification failed:", err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);

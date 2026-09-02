@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import Stripe from "stripe";
 import { eq } from "drizzle-orm";
 import { publicProcedure, router } from "../_core/trpc";
 import { ENV } from "../_core/env";
@@ -15,8 +14,7 @@ import {
 } from "./accessPass";
 import { issueAccessPassForPayment } from "./issueAccessPass";
 import { resolvePremiumAccess } from "./premiumAccess";
-
-const stripe = new Stripe(ENV.stripeSecretKey);
+import { getStripe } from "../stripe/client";
 
 const planInput = z.object({ plan: z.enum(["day", "month"]) });
 
@@ -87,7 +85,7 @@ export const accessPassRouter = router({
     const detail = ACCESS_PASS_PLANS[input.plan];
     const origin = ctx.req.headers.origin ?? `${ctx.req.protocol}://${ctx.req.headers.host}`;
 
-    const session = await stripe.checkout.sessions
+    const session = await getStripe().checkout.sessions
       .create({
         mode: "payment",
         line_items: [
@@ -124,7 +122,7 @@ export const accessPassRouter = router({
       const db = await getDb();
       if (!db) return { success: false as const, message: "DB接続エラー" };
 
-      const session = await stripe.checkout.sessions.retrieve(input.sessionId).catch(error => {
+      const session = await getStripe().checkout.sessions.retrieve(input.sessionId).catch(error => {
         throw paymentError(error);
       });
       if (session.payment_status !== "paid") {
