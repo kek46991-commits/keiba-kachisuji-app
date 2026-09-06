@@ -1,5 +1,10 @@
-import type { Express } from "express";
+import type { Express, Response } from "express";
 import { ENV } from "./env";
+import { storagePlaceholderSvg } from "./storagePlaceholder";
+
+function sendPlaceholder(res: Response, key: string) {
+  res.status(200).type("image/svg+xml").set("Cache-Control", "public, max-age=300").send(storagePlaceholderSvg(key));
+}
 
 export function registerStorageProxy(app: Express) {
   app.get("/manus-storage/*", async (req, res) => {
@@ -10,7 +15,7 @@ export function registerStorageProxy(app: Express) {
     }
 
     if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-      res.status(500).send("Storage proxy not configured");
+      sendPlaceholder(res, key);
       return;
     }
 
@@ -28,13 +33,13 @@ export function registerStorageProxy(app: Express) {
       if (!forgeResp.ok) {
         const body = await forgeResp.text().catch(() => "");
         console.error(`[StorageProxy] forge error: ${forgeResp.status} ${body}`);
-        res.status(502).send("Storage backend error");
+        sendPlaceholder(res, key);
         return;
       }
 
       const { url } = (await forgeResp.json()) as { url: string };
       if (!url) {
-        res.status(502).send("Empty signed URL from backend");
+        sendPlaceholder(res, key);
         return;
       }
 
@@ -42,7 +47,7 @@ export function registerStorageProxy(app: Express) {
       res.redirect(307, url);
     } catch (err) {
       console.error("[StorageProxy] failed:", err);
-      res.status(502).send("Storage proxy error");
+      sendPlaceholder(res, key);
     }
   });
 }

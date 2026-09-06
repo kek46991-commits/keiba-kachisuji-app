@@ -11,7 +11,7 @@ import { buildRaceDetailReconciliation } from "./raceDetailReconciliation";
 import { readTicketSelections, ticketStrategyLabels, type TicketStrategy } from "./predictionTicketSets";
 import { getRaceActionStatus } from "./raceActionStatus";
 import { getHorseNameMap } from "./raceEntryMaster";
-import { withResolvedHorseNames } from "../shared/horseNameMapping";
+import { restoreHorseNamesInText, withResolvedHorseNames } from "../shared/horseNameMapping";
 import { summarizeRaceSettlements } from "./raceSettlementSummary";
 import { settlePendingConfirmedRaces } from "./resultSettlement";
 
@@ -119,7 +119,15 @@ export const raceDataRouter = router({
         .orderBy(desc(predictions.predictedAt), desc(predictions.id))
         .limit(1);
 
-      const latestPrediction = racePredictions[0] ?? null;
+      const rawPrediction = racePredictions[0] ?? null;
+      const latestPrediction = rawPrediction
+        ? {
+            ...rawPrediction,
+            reasoning: rawPrediction.reasoning
+              ? restoreHorseNamesInText(rawPrediction.reasoning, raceEntries, nameMap)
+              : rawPrediction.reasoning,
+          }
+        : null;
       const storedTicketSets = latestPrediction
         ? await db
             .select()

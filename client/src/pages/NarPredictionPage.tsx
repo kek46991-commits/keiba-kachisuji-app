@@ -1000,10 +1000,14 @@ function AnaUmaDetailSection({ data, hideMarketOdds = false }: { data: any; hide
         {data.courseStats && (
           <div className="rounded-lg p-3" style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
             <p className="text-xs text-gray-400 mb-2">コース・距離: <span className="text-white font-medium">{data.courseLabel}</span></p>
-            <p className="text-xs text-gray-400">
-              コース過去統計（波乱度）: 単勝6.0倍以上の穴馬が3着以内に入り込む確率は{" "}
-              <span className="text-orange-300 font-bold">約{data.courseStats.longshotRate}%（約{data.courseStats.longshotFrequency}レースに1回）</span>
-            </p>
+            {typeof data.courseStats.longshotRate === "number" ? (
+              <p className="text-xs text-gray-400">
+                コース過去統計（波乱度）: 単勝6.0倍以上の穴馬が3着以内に入り込む確率は{" "}
+                <span className="text-orange-300 font-bold">約{data.courseStats.longshotRate}%（約{data.courseStats.longshotFrequency}レースに1回）</span>
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500">コース過去統計（波乱度）: データ集計中</p>
+            )}
             {data.trackDiagnosis && (
               <p className="text-xs text-gray-400 mt-1">天候・馬場診断: <span className="text-cyan-300">{data.trackDiagnosis}</span></p>
             )}

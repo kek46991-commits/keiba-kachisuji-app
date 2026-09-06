@@ -238,17 +238,17 @@ export default function RaceResultPage() {
                     <div className="text-center p-2 rounded" style={{ backgroundColor: "rgba(255,165,0,0.08)" }}>
                       <div className="text-[9px]" style={{ color: "#94a3b8" }}>◎本命</div>
                       <div className="text-sm font-bold" style={{ color: "#ffa500" }}>{detail.prediction.honmei}番</div>
-                      <div className="text-[10px] mt-1" style={{ color: "#94a3b8" }}>実着順：{detail.entries.find(entry => entry.horseNumber === detail.prediction.honmei)?.finishPosition ?? "—"}着</div>
+                      <div className="text-[10px] mt-1" style={{ color: "#94a3b8" }}>実着順：{detail.entries.find(entry => entry.horseNumber === detail.prediction?.honmei)?.finishPosition ?? "—"}着</div>
                     </div>
                     <div className="text-center p-2 rounded" style={{ backgroundColor: "rgba(0,229,255,0.05)" }}>
                       <div className="text-[9px]" style={{ color: "#94a3b8" }}>○対抗</div>
                       <div className="text-sm font-bold" style={{ color: "#00e5ff" }}>{detail.prediction.taikou}番</div>
-                      <div className="text-[10px] mt-1" style={{ color: "#94a3b8" }}>実着順：{detail.entries.find(entry => entry.horseNumber === detail.prediction.taikou)?.finishPosition ?? "—"}着</div>
+                      <div className="text-[10px] mt-1" style={{ color: "#94a3b8" }}>実着順：{detail.entries.find(entry => entry.horseNumber === detail.prediction?.taikou)?.finishPosition ?? "—"}着</div>
                     </div>
                     <div className="text-center p-2 rounded" style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
                       <div className="text-[9px]" style={{ color: "#94a3b8" }}>▲単穴</div>
                       <div className="text-sm font-bold" style={{ color: "#e2e8f0" }}>{detail.prediction.tanana}番</div>
-                      <div className="text-[10px] mt-1" style={{ color: "#94a3b8" }}>実着順：{detail.entries.find(entry => entry.horseNumber === detail.prediction.tanana)?.finishPosition ?? "—"}着</div>
+                      <div className="text-[10px] mt-1" style={{ color: "#94a3b8" }}>実着順：{detail.entries.find(entry => entry.horseNumber === detail.prediction?.tanana)?.finishPosition ?? "—"}着</div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-[11px]">

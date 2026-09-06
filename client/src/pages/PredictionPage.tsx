@@ -768,10 +768,14 @@ function JraAnaUmaDetailSection({ data }: { data: any }) {
         {data.courseStats && (
           <div className="rounded-lg p-3" style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
             <p className="text-xs text-gray-400 mb-2">コース・距離: <span className="text-white font-medium">{data.courseLabel}</span></p>
-            <p className="text-xs text-gray-400">
-              コース過去統計（波乱度）: 単勝6.0倍以上の穴馬が3着以内に入り込む確率は{" "}
-              <span className="font-bold" style={{ color: "#00e5ff" }}>約{data.courseStats.longshotRate}%（約{data.courseStats.longshotFrequency}レースに1回）</span>
-            </p>
+            {typeof data.courseStats.longshotRate === "number" ? (
+              <p className="text-xs text-gray-400">
+                コース過去統計（波乱度）: 単勝6.0倍以上の穴馬が3着以内に入り込む確率は{" "}
+                <span className="font-bold" style={{ color: "#00e5ff" }}>約{data.courseStats.longshotRate}%（約{data.courseStats.longshotFrequency}レースに1回）</span>
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500">コース過去統計（波乱度）: データ集計中</p>
+            )}
             {data.trackDiagnosis && (
               <p className="text-xs text-gray-400 mt-1">天候・馬場診断: <span style={{ color: "#22c55e" }}>{data.trackDiagnosis}</span></p>
             )}
@@ -879,7 +883,7 @@ function JraAnaUmaDetailSection({ data }: { data: any }) {
 // ==========================================
 function ExistingPredictionView({ data, onRerun, isRunning, anaUmaData }: { data: any; onRerun: () => void; isRunning: boolean; anaUmaData?: any }) {
   const prediction = data.prediction;
-  const entryList = data.entries as Array<{ horseNumber: number; horseName: string; jockey: string | null; odds: number | null }>;
+  const entryList = data.entries as Array<{ horseNumber: number; horseName: string; displayName?: string; jockey: string | null; odds: number | null }>;
   const entriesUpdatedAt = data.entriesUpdatedAt;
   const parseTicket = (raw: string | null | undefined) => {
     if (!raw) return null;
@@ -928,7 +932,7 @@ function ExistingPredictionView({ data, onRerun, isRunning, anaUmaData }: { data
           ].map(({ label, entry }) => (
             <div key={label} className="p-2 rounded-lg text-center" style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
               <p className="text-[10px] text-gray-500 mb-1">{label}</p>
-              <p className="text-xs font-bold text-white">{entry?.horseName ?? "—"}</p>
+              <p className="text-xs font-bold text-white">{entry ? entry.displayName ?? entry.horseName : "—"}</p>
               <p className="text-[10px] text-gray-400">{entry ? `${entry.horseNumber}番` : ""}</p>
             </div>
           ))}
