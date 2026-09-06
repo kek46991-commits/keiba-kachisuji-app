@@ -34,11 +34,16 @@ fi
 echo "[entrypoint] applying schema"
 pnpm exec drizzle-kit push --force
 
-if [ "$BUNDLED_DB" = "1" ]; then
-  echo "[entrypoint] seeding demo data"
+# デモデータの投入は明示的に SEED_DEMO_DATA=1 を指定した場合のみ。
+# 本番はアプリ内スケジューラが JRA/NAR の実データを取得する。
+if [ "$SEED_DEMO_DATA" = "1" ]; then
+  echo "[entrypoint] seeding demo data (SEED_DEMO_DATA=1)"
   pnpm exec tsx local_seed.ts || echo "[entrypoint] local_seed skipped"
   pnpm exec tsx local_result_seed.ts || echo "[entrypoint] local_result_seed skipped"
   pnpm exec tsx demo_access_pass_seed.ts || echo "[entrypoint] demo_access_pass_seed skipped"
+else
+  echo "[entrypoint] removing leftover demo rows"
+  pnpm exec tsx purge_demo_data.ts || echo "[entrypoint] purge_demo_data skipped"
 fi
 
 exec node dist/index.js

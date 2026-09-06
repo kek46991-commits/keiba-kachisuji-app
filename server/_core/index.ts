@@ -12,9 +12,10 @@ import { serveStatic, setupVite } from "./vite";
 import { fetchNewsHandler } from "../scheduled/fetchNews";
 import { fetchJraScheduleHandler } from "../scheduled/fetchJraSchedule";
 import { fetchNarScheduleHandler } from "../scheduled/fetchNarSchedule";
-import { fetchNarRacesHandler } from "../scheduled/fetchNarRaces";
 import { fetchNarOddsHandler } from "../scheduled/fetchNarOdds";
 import { generateRacePredictionsHandler } from "../scheduled/generateRacePredictions";
+import { ingestRaceCardsHandler, ingestRaceResultsHandler, ingestionStatusHandler, runIngestionHandler } from "../scraping/ingestionRoutes";
+import { startIngestionScheduler } from "../scraping/ingestionScheduler";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -54,9 +55,14 @@ async function startServer() {
   app.post("/api/scheduled/fetchNews", fetchNewsHandler);
   app.post("/api/scheduled/fetchJraSchedule", fetchJraScheduleHandler);
   app.post("/api/scheduled/fetchNarSchedule", fetchNarScheduleHandler);
-  app.post("/api/scheduled/fetchNarRaces", fetchNarRacesHandler);
   app.post("/api/scheduled/fetchNarOdds", fetchNarOddsHandler);
   app.post("/api/scheduled/generateRacePredictions", generateRacePredictionsHandler);
+
+  // 本番データ取込（レースカード・結果・払戻）
+  app.post("/api/scheduled/ingestRaceCards", ingestRaceCardsHandler);
+  app.post("/api/scheduled/ingestRaceResults", ingestRaceResultsHandler);
+  app.post("/api/scheduled/ingestAll", runIngestionHandler);
+  app.get("/api/scheduled/ingestionStatus", ingestionStatusHandler);
 
   // tRPC API
   app.use(
@@ -82,6 +88,7 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    startIngestionScheduler();
   });
 }
 
