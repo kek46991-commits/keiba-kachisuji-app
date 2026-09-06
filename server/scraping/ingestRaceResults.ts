@@ -7,6 +7,7 @@ import { and, eq, gte, inArray, lte, ne } from "drizzle-orm";
 import { getDb } from "../db";
 import { entries, payouts, races } from "../../drizzle/schema";
 import { settlePendingConfirmedRaces } from "../resultSettlement";
+import { backfillPredictionsForConfirmedRaces } from "../predictionBackfill";
 import { upsertRaceEntryMaster } from "../raceEntryMaster";
 import { describeScrapeError, fetchHtml } from "./netkeibaHttp";
 import { parsePayouts, parseResultRows } from "./netkeibaParsers";
@@ -18,6 +19,7 @@ export type IngestRaceResultsResult = {
   pending: number;
   payoutsSaved: number;
   settledPredictions: number;
+  backfilledPredictions: number;
   errors: IngestIssue[];
 };
 
@@ -26,7 +28,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** 直近（既定で過去3日〜当日）の未確定レースについて結果と払戻を取り込む。 */
 export async function ingestRaceResults(options: { days?: number; limit?: number; raceIds?: string[] } = {}): Promise<IngestRaceResultsResult> {
-  const result: IngestRaceResultsResult = { targets: 0, confirmed: 0, pending: 0, payoutsSaved: 0, settledPredictions: 0, errors: [] };
+  const result: IngestRaceResultsResult = { targets: 0, confirmed: 0, pending: 0, payoutsSaved: 0, settledPredictions: 0, backfilledPredictions: 0, errors: [] };
   const db = await getDb();
   if (!db) {
     result.errors.push({ scope: "db", detail: "データベースに接続できません" });
@@ -117,7 +119,10 @@ export async function ingestRaceResults(options: { days?: number; limit?: number
   }
 
   if (result.confirmed > 0) {
-    const settled = await settlePendingConfirmedRaces(db, 100);
+    // 予想が未保存の確定レースへ決定論的スコアリングで予想を補完し、成績集計の対象にする。
+    const backfilled = await backfillPredictionsForConfirmedRaces(db, 200);
+    result.backfilledPredictions = backfilled.created;
+    const settled = await settlePendingConfirmedRaces(db, 300);
     result.settledPredictions = settled.length;
   }
 
