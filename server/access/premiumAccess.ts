@@ -2,24 +2,28 @@ import { and, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { accessPasses, subscriptions } from "../../drizzle/schema";
 import { getDb } from "../db";
+import { ENV } from "../_core/env";
 import { publicProcedure } from "../_core/trpc";
 import type { TrpcContext } from "../_core/context";
 import { hashAccessKey, isAccessPassValid, readAccessKeyFromRequest } from "./accessPass";
 
 export type PremiumAccess = {
   isPremium: boolean;
-  source: "subscription" | "access_pass" | "none";
+  source: "free" | "subscription" | "access_pass" | "none";
   status: "active" | "trialing" | "canceled" | "past_due" | "expired" | "none";
   expiresAt: Date | null;
 };
 
 const noAccess: PremiumAccess = { isPremium: false, source: "none", status: "none", expiresAt: null };
+const freeAccess: PremiumAccess = { isPremium: true, source: "free", status: "active", expiresAt: null };
 
 /**
  * 有料アクセスの判定。ログインユーザーのサブスクリプション、
  * またはアカウント不要の期限付きアクセスパスのどちらかで解放する。
  */
 export async function resolvePremiumAccess(ctx: TrpcContext): Promise<PremiumAccess> {
+  if (!ENV.requirePremium) return freeAccess;
+
   const db = await getDb();
   if (!db) return noAccess;
 

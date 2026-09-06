@@ -65,6 +65,7 @@ export default function AccessPassPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
+  const isFreeForAll = accessSource === "free";
   const expiresLabel = accessExpiresAt
     ? new Date(accessExpiresAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })
     : null;
@@ -72,8 +73,12 @@ export default function AccessPassPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#0A1128" }}>
       <PageHead
-        title="アクセスパス購入"
-        description="競馬でGO！の有料予想は、期限付きアクセスパスの購入またはプレミアムプランで解放できます。"
+        title={isFreeForAll ? "全機能無料公開中" : "アクセスパス購入"}
+        description={
+          isFreeForAll
+            ? "競馬でGO！のAI予想・買い目・的中判定・回収率は、登録不要で誰でも無料でご利用いただけます。"
+            : "競馬でGO！の有料予想は、期限付きアクセスパスの購入またはプレミアムプランで解放できます。"
+        }
         path="/access-pass"
       />
       <Navbar />
@@ -81,14 +86,16 @@ export default function AccessPassPage() {
       <div className="max-w-3xl mx-auto px-4 py-10">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center gap-2 mb-2" style={{ color: "#00E5FF" }}>
-            <Lock className="w-4 h-4" />
-            <span className="text-xs font-bold tracking-widest">PREMIUM ACCESS</span>
+            {isFreeForAll ? <ShieldCheck className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+            <span className="text-xs font-bold tracking-widest">{isFreeForAll ? "FREE ACCESS" : "PREMIUM ACCESS"}</span>
           </div>
           <h1 className="text-2xl font-bold mb-2" style={{ color: "#ffffff" }}>
-            有料予想へのアクセス
+            {isFreeForAll ? "全機能を無料公開中" : "有料予想へのアクセス"}
           </h1>
           <p className="text-sm mb-8" style={{ color: "rgba(255,255,255,0.66)" }}>
-            AI予想・買い目・的中判定・回収率の詳細は有料コンテンツです。アカウント登録不要の期限付きアクセスパス、または月額プレミアムプランで解放できます。
+            {isFreeForAll
+              ? "AI予想・買い目・的中判定・回収率のすべてを、アカウント登録もアクセスキーもなしでご覧いただけます。"
+              : "AI予想・買い目・的中判定・回収率の詳細は有料コンテンツです。アカウント登録不要の期限付きアクセスパス、または月額プレミアムプランで解放できます。"}
           </p>
 
           {isPremium && (
@@ -99,7 +106,9 @@ export default function AccessPassPage() {
               <ShieldCheck className="w-5 h-5 mt-0.5" style={{ color: "#00E5FF" }} />
               <div>
                 <p className="text-sm font-bold" style={{ color: "#ffffff" }}>
-                  現在アクセス可能です（{accessSource === "access_pass" ? "アクセスパス" : "プレミアムプラン"}）
+                  {isFreeForAll
+                    ? "すべてのコンテンツを無料でご覧いただけます"
+                    : `現在アクセス可能です（${accessSource === "access_pass" ? "アクセスパス" : "プレミアムプラン"}）`}
                 </p>
                 {expiresLabel && (
                   <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.6)" }}>
@@ -145,7 +154,7 @@ export default function AccessPassPage() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-            {(plans ?? []).map(plan => (
+            {(isFreeForAll ? [] : plans ?? []).map(plan => (
               <div
                 key={plan.plan}
                 className="rounded-xl p-5"
@@ -175,7 +184,11 @@ export default function AccessPassPage() {
 
           <div
             className="rounded-xl p-5 mb-8"
-            style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)" }}
+            style={{
+              backgroundColor: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              display: isFreeForAll ? "none" : undefined,
+            }}
           >
             <div className="flex items-center gap-2 mb-3" style={{ color: "#ffffff" }}>
               <Key className="w-4 h-4" />
@@ -200,13 +213,19 @@ export default function AccessPassPage() {
             </div>
           </div>
 
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
-            月額プレミアムプラン（初回10日間無料）をご希望の方は{" "}
-            <Link href="/pricing" style={{ color: "#00E5FF" }}>
-              料金プラン
-            </Link>{" "}
-            からご登録ください。
-          </p>
+          {isFreeForAll ? (
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+              現在は購入もアクセスキーの入力も不要です。上のリンクからすべての予想・成績データをご覧いただけます。
+            </p>
+          ) : (
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+              月額プレミアムプラン（初回10日間無料）をご希望の方は{" "}
+              <Link href="/pricing" style={{ color: "#00E5FF" }}>
+                料金プラン
+              </Link>{" "}
+              からご登録ください。
+            </p>
+          )}
         </motion.div>
       </div>
     </div>

@@ -36,7 +36,11 @@ AI解析による予想の提案に加え、公式レース結果との自動照
 ### 5. 日付・時刻表示
 * レース日・更新時刻はすべて JST（Asia/Tokyo）固定で整形し、見る人のタイムゾーンによる日付ズレを防ぐ
 
-### 6. 有料会員制（サブスクリプション + 期限付きアクセスパス）
+### 6. アクセス制御（既定は全機能無料公開）
+* 既定（`REQUIRE_PREMIUM` 未設定）では全ページ・全APIを誰でも無料で閲覧できる。アカウント登録もアクセスキーも不要（`server/_core/env.ts`）
+* `REQUIRE_PREMIUM=1` を設定した場合のみ、以下の有料ゲートが有効になる
+
+#### 有料モード（`REQUIRE_PREMIUM=1`）
 * 有料ページ（`/todays-predictions`、`/predictions`、`/nar-predictions`、`/dashboard`、`/prediction-history`）は未購入だと `/access-pass` へリダイレクト（`client/src/components/PremiumRoute.tsx`）
 * サーバー側でも `premiumProcedure` により有料APIを保護。クライアント変更ではデータを取得できない（`server/access/premiumAccess.ts`）
 * 有料判定は2系統：①ログインユーザーのストライプサブスクリプション（アクティブ/トライアル中） ②アカウント不要の期限付きアクセスパス（1日パス ¥480 / 30日パス ¥1,980）

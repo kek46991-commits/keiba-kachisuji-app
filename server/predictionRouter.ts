@@ -16,6 +16,8 @@ import { buildScoreFirstFormation, selectValueCandidates } from "./valueBetting"
 import { buildAnaBettingRecommendationForRace } from "./anaUmaRouter";
 import { analyzeRaceDiagnostics } from "./raceAnalysisDiagnostics";
 import { getPredictionAvailability } from "./predictionAvailability";
+import { getHorseNameMap } from "./raceEntryMaster";
+import { restoreHorseNamesInText, withResolvedHorseNames } from "../shared/horseNameMapping";
 
 // 出馬表・オッズは、DBへ取り込まれた公式データまたは許諾済みデータだけを使う。
 // 個人契約データや第三者サイトのHTMLを公開予想処理から取得しない。
@@ -1018,11 +1020,18 @@ export const predictionRouter = router({
         }, entryRows[0].updatedAt);
       }
 
+      const nameMap = await getHorseNameMap(db, race.raceId);
+
       return {
         race,
-        prediction,
+        prediction: {
+          ...prediction,
+          reasoning: prediction.reasoning
+            ? restoreHorseNamesInText(prediction.reasoning, entryRows, nameMap)
+            : prediction.reasoning,
+        },
         ticketSets,
-        entries: entryRows,
+        entries: withResolvedHorseNames(entryRows, nameMap),
         entriesUpdatedAt,
       };
     }),

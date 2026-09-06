@@ -4,8 +4,8 @@ import { trpc } from "@/lib/trpc";
 interface SubscriptionContextType {
   status: "none" | "trialing" | "active" | "canceled" | "past_due" | "expired";
   isPremium: boolean;
-  /** 有料アクセスの根拠（サブスクリプション / 期限付きアクセスパス）。 */
-  accessSource: "subscription" | "access_pass" | "none";
+  /** アクセスの根拠（無料公開 / サブスクリプション / 期限付きアクセスパス）。 */
+  accessSource: "free" | "subscription" | "access_pass" | "none";
   accessExpiresAt: string | null;
   daysLeft: number | null;
   trialEndsAt: string | null;
