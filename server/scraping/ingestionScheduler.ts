@@ -3,7 +3,7 @@
  * 起動直後と一定間隔でレースカード取得・結果取得を実行する。
  * DISABLE_DATA_INGESTION=1 で停止できる。
  */
-import { ingestRaceCards, type IngestRaceCardsResult } from "./ingestRaceCards";
+import { ingestRaceCards, jstDate, type IngestRaceCardsResult } from "./ingestRaceCards";
 import { ingestRaceResults, type IngestRaceResultsResult } from "./ingestRaceResults";
 
 export type IngestionRunLog = {
@@ -17,6 +17,16 @@ export type IngestionRunLog = {
 
 const CARD_INTERVAL_MS = 60 * 60 * 1000;
 const RESULT_INTERVAL_MS = 15 * 60 * 1000;
+/** 起動時は過去分も取り込み、成績集計（点数帯別回収率）が空にならないようにする。 */
+const BACKFILL_DAYS = Number(process.env.INGESTION_BACKFILL_DAYS ?? "7");
+
+function backfillDates(): string[] {
+  const dates: string[] = [];
+  for (let offset = -BACKFILL_DAYS; offset <= 1; offset += 1) {
+    dates.push(jstDate(offset));
+  }
+  return dates;
+}
 
 let running = false;
 let lastRun: IngestionRunLog | null = null;
@@ -41,12 +51,15 @@ export async function runIngestion(options: {
   running = true;
   const log: IngestionRunLog = { startedAt, finishedAt: startedAt, trigger: options.trigger, cards: [], results: null, error: null };
   try {
+    const dates = options.trigger === "startup" && BACKFILL_DAYS > 0 ? backfillDates() : undefined;
     if (options.cards ?? true) {
-      log.cards.push(await ingestRaceCards({ organizer: "JRA" }));
-      log.cards.push(await ingestRaceCards({ organizer: "NAR" }));
+      log.cards.push(await ingestRaceCards({ organizer: "JRA", dates }));
+      log.cards.push(await ingestRaceCards({ organizer: "NAR", dates }));
     }
     if (options.results ?? true) {
-      log.results = await ingestRaceResults({});
+      log.results = options.trigger === "startup" && BACKFILL_DAYS > 0
+        ? await ingestRaceResults({ days: BACKFILL_DAYS, limit: 400 })
+        : await ingestRaceResults({});
     }
   } catch (error) {
     log.error = String(error);
