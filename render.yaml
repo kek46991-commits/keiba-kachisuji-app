@@ -15,6 +15,9 @@ services:
         value: "10000"
       - key: VITE_APP_ID
         value: keiba-kachisuji-web
+      # 管理者として扱うログインメールアドレス（カンマ区切り）
+      - key: ADMIN_EMAILS
+        value: kek46991@gmail.com
       # 以下は Render のダッシュボードで値を設定する（リポジトリには保存しない）
       - key: JWT_SECRET
         generateValue: true

@@ -114,7 +114,8 @@ export default function RaceCalendarPage() {
   const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
   const [year, setYear] = useState(jstNow.getFullYear());
   const [month, setMonth] = useState(jstNow.getMonth() + 1);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const todayStr = `${jstNow.getFullYear()}-${String(jstNow.getMonth() + 1).padStart(2, "0")}-${String(jstNow.getDate()).padStart(2, "0")}`;
+  const [selectedDate, setSelectedDate] = useState<string | null>(todayStr);
   const [filter, setFilter] = useState<FilterMode>("all");
   const scheduleListRef = useRef<HTMLDivElement>(null);
   const venueRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -124,6 +125,26 @@ export default function RaceCalendarPage() {
     { date: selectedDate! },
     { enabled: !!selectedDate }
   );
+
+  // 本日の開催情報（常時表示）
+  const { data: todaySchedule } = trpc.schedule.getByDate.useQuery({ date: todayStr });
+
+  const todayVenues = useMemo(() => {
+    const jra = new Map<string, number>();
+    const nar = new Map<string, number>();
+    for (const r of todaySchedule ?? []) {
+      const target = (r as any).organizer === "NAR" ? nar : jra;
+      if (r.raceNumber === 0) {
+        if (!target.has(r.venue)) target.set(r.venue, 0);
+        continue;
+      }
+      target.set(r.venue, (target.get(r.venue) ?? 0) + 1);
+    }
+    return {
+      jra: Array.from(jra.entries()).map(([venue, count]) => ({ venue, count })),
+      nar: Array.from(nar.entries()).map(([venue, count]) => ({ venue, count })),
+    };
+  }, [todaySchedule]);
 
   // 穴狙い警報データ（選択日）
   const { data: dayAlerts } = trpc.anaUma.getDayAlerts.useQuery(
@@ -217,8 +238,6 @@ export default function RaceCalendarPage() {
     }
   };
 
-  const todayStr = `${jstNow.getFullYear()}-${String(jstNow.getMonth() + 1).padStart(2, "0")}-${String(jstNow.getDate()).padStart(2, "0")}`;
-
   return (
     <div className="luxury-home min-h-screen">
       <Navbar />
@@ -263,6 +282,58 @@ export default function RaceCalendarPage() {
           >
             NAR（地方）
           </button>
+        </div>
+
+        {/* 本日のレース情報 */}
+        <div className="luxury-card rounded-xl p-5 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <MapPin className="w-5 h-5 text-[#f5dc91]" />
+            <h3 className="text-base font-bold text-[#fff4d7]">
+              本日（{todayStr.split("-")[1]}/{todayStr.split("-")[2]}）の開催
+            </h3>
+          </div>
+          {todayVenues.jra.length === 0 && todayVenues.nar.length === 0 ? (
+            <p className="text-sm text-white/50">本日の開催データはまだ取得されていません</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 flex-wrap">
+                <span className="text-[11px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
+                  JRA（中央競馬）
+                </span>
+                {todayVenues.jra.length === 0 ? (
+                  <span className="text-xs text-white/40">開催なし</span>
+                ) : (
+                  todayVenues.jra.map(({ venue, count }) => (
+                    <button
+                      key={venue}
+                      onClick={() => { setSelectedDate(todayStr); setTimeout(() => handleVenueClick(venue), 300); }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all hover:brightness-125 ${jraVenueBadgeColor(venue)}`}
+                    >
+                      {venue}{count > 0 ? ` ${count}R` : ""}
+                    </button>
+                  ))
+                )}
+              </div>
+              <div className="flex items-start gap-2 flex-wrap">
+                <span className="text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
+                  NAR（地方競馬）
+                </span>
+                {todayVenues.nar.length === 0 ? (
+                  <span className="text-xs text-white/40">開催なし</span>
+                ) : (
+                  todayVenues.nar.map(({ venue, count }) => (
+                    <button
+                      key={venue}
+                      onClick={() => { setSelectedDate(todayStr); setTimeout(() => handleVenueClick(venue), 300); }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all hover:brightness-125 ${narVenueBadgeColor(venue)}`}
+                    >
+                      {venue}{count > 0 ? ` ${count}R` : ""}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* カレンダー */}
@@ -311,9 +382,9 @@ export default function RaceCalendarPage() {
                 return (
                   <div
                     key={day}
-                    onClick={() => hasRaces && handleDayClick(day)}
-                    className={`h-24 sm:h-20 rounded-lg p-1 transition-all ${
-                      hasRaces ? "cursor-pointer hover:bg-amber-300/10" : ""
+                    onClick={() => handleDayClick(day)}
+                    className={`h-24 sm:h-20 rounded-lg p-1 transition-all cursor-pointer hover:bg-amber-300/10 ${
+                      hasRaces ? "" : "opacity-70"
                     } ${isSelected ? "ring-2 ring-amber-200 bg-amber-300/15" : ""} ${
                       isToday ? "bg-amber-300/10 border border-amber-200/40" : ""
                     }`}
@@ -511,7 +582,7 @@ export default function RaceCalendarPage() {
                           <span className={`text-[10px] px-1.5 py-0.5 rounded ${
                             organizer === "NAR" ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300"
                           }`}>
-                            {organizer}
+                            {organizer === "NAR" ? "NAR（地方）" : "JRA（中央）"}
                           </span>
                           <span className="text-white/50 text-xs">{races!.length}レース</span>
                         </div>

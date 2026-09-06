@@ -83,7 +83,7 @@ const SIRE_LINE_AFFINITY: Record<string, { turf: number; dirt: number; sprint: n
 // スコアリング関数
 // ==========================================
 
-interface EntryData {
+export interface EntryData {
   horseNumber: number;
   horseName: string;
   jockey: string | null;
@@ -115,7 +115,7 @@ interface ScoreBreakdown {
   total: number;
 }
 
-interface PredictionResult {
+export interface PredictionResult {
   horseNumber: number;
   horseName: string;
   jockey: string | null;
@@ -130,7 +130,7 @@ interface PredictionResult {
   rating: string; // ◎○▲△☆
 }
 
-function calculateScore(
+export function calculateScore(
   entry: EntryData,
   raceInfo: { surface: string | null; distance: number | null; venueName: string; trackCondition: string | null; headCount: number | null },
   jockeyStats: Map<string, { winRate: number; placeRate: number; turfWinRate: number; dirtWinRate: number; heavyWinRate: number }>,
@@ -257,7 +257,7 @@ function calculateScore(
   };
 }
 
-function assignRatings(results: Array<{ score: number; horseNumber: number }>): Map<number, string> {
+export function assignRatings(results: Array<{ score: number; horseNumber: number }>): Map<number, string> {
   const sorted = [...results].sort((a, b) => b.score - a.score);
   const ratings = new Map<number, string>();
   if (sorted[0]) ratings.set(sorted[0].horseNumber, "◎");

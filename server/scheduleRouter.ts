@@ -61,6 +61,14 @@ export const scheduleRouter = router({
         canonicalRaces.map(race => [`${race.venueName}:${race.raceNumber}`, race])
       );
       const narRaces = canonicalRaces.filter(race => race.organizer === "NAR");
+      const scheduledJraKeys = new Set(
+        scheduleResult
+          .filter(schedule => schedule.organizer !== "NAR")
+          .map(schedule => `${schedule.venue}:${schedule.raceNumber}`)
+      );
+      const jraRacesOnlyInRaces = canonicalRaces.filter(
+        race => race.organizer === "JRA" && !scheduledJraKeys.has(`${race.venueName}:${race.raceNumber}`)
+      );
 
       const getActionStatus = (raceDate: string, startTime: string | null, canonical?: typeof races.$inferSelect) => {
         return getRaceActionStatus({
@@ -70,9 +78,9 @@ export const scheduleRouter = router({
         });
       };
 
-      // NAR個別レースデータをraceSchedules形式に変換して統合
-      const narRacesMapped = narRaces.map(r => ({
-        id: r.id + 100000, // IDが重複しないようにオフセット
+      // racesテーブルのレースをraceSchedules形式へ変換する
+      const toScheduleShape = (r: typeof races.$inferSelect, organizer: "JRA" | "NAR", idOffset: number) => ({
+        id: r.id + idOffset, // IDが重複しないようにオフセット
         raceDate: r.raceDate,
         venue: r.venueName,
         raceNumber: r.raceNumber,
@@ -85,12 +93,15 @@ export const scheduleRouter = router({
         horseCount: r.headCount,
         weather: r.weather,
         trackCondition: r.trackCondition,
-        organizer: "NAR" as const,
+        organizer,
         actionStatus: getActionStatus(r.raceDate, r.postTime, r),
         hasConfirmedResult: r.status === "results_confirmed",
         createdAt: r.createdAt,
         updatedAt: r.createdAt, // racesテーブルにupdatedAtがないためcreatedAtを使用
-      }));
+      });
+
+      const narRacesMapped = narRaces.map(r => toScheduleShape(r, "NAR", 100000));
+      const jraRacesMapped = jraRacesOnlyInRaces.map(r => toScheduleShape(r, "JRA", 200000));
 
       // raceSchedulesのNAR raceNumber=0（開催情報のみ）を除外し、
       // 代わりにracesテーブルの個別レースデータがある場合はそちらを使う
@@ -118,7 +129,7 @@ export const scheduleRouter = router({
       });
 
       // 統合して返す
-      const combined = [...schedulesWithAction, ...narRacesMapped];
+      const combined = [...schedulesWithAction, ...narRacesMapped, ...jraRacesMapped];
       combined.sort((a, b) => {
         if (a.venue < b.venue) return -1;
         if (a.venue > b.venue) return 1;
@@ -151,18 +162,18 @@ export const scheduleRouter = router({
         .orderBy(asc(raceSchedules.raceDate), asc(raceSchedules.venue), asc(raceSchedules.raceNumber));
 
       // racesテーブルからもNAR開催情報を取得
-      const narRacesInMonth = await db
+      const racesInMonth = await db
         .select({
           raceDate: races.raceDate,
           venueName: races.venueName,
           grade: races.grade,
           raceName: races.raceName,
+          organizer: races.organizer,
         })
         .from(races)
         .where(and(
           gte(races.raceDate, startDate),
           lte(races.raceDate, endDate),
-          eq(races.organizer, "NAR")
         ))
         .orderBy(asc(races.raceDate), asc(races.venueName));
 
@@ -190,17 +201,18 @@ export const scheduleRouter = router({
       }
 
       // racesテーブルのNARデータもカレンダーに反映
-      for (const nr of narRacesInMonth) {
+      for (const nr of racesInMonth) {
         if (!dayMap[nr.raceDate]) {
           dayMap[nr.raceDate] = { jraVenues: [], narVenues: [], gradeRaces: [] };
         }
         const dayData = dayMap[nr.raceDate]!;
-        if (!dayData.narVenues.includes(nr.venueName)) {
-          dayData.narVenues.push(nr.venueName);
+        const venueList = nr.organizer === "NAR" ? dayData.narVenues : dayData.jraVenues;
+        if (!venueList.includes(nr.venueName)) {
+          venueList.push(nr.venueName);
         }
         if (nr.grade && nr.grade.startsWith("G")) {
           if (!dayData.gradeRaces.some(g => g.name === nr.raceName)) {
-            dayData.gradeRaces.push({ name: nr.raceName, grade: nr.grade, venue: nr.venueName, organizer: "NAR" });
+            dayData.gradeRaces.push({ name: nr.raceName, grade: nr.grade, venue: nr.venueName, organizer: nr.organizer });
           }
         }
       }
