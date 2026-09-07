@@ -47,6 +47,7 @@ function Router() {
       <Route path={"/subscription/cancel"} component={SubscriptionCancel} />
       <Route path={"/auth-error"} component={AuthError} />
       <Route path={"/calendar"} component={RaceCalendarPage} />
+      <Route path={"/race-calendar"} component={RaceCalendarPage} />
       <Route path={"/race-result"} component={RaceResultPage} />
       <Route path={"/nar-predictions"}>
         <PremiumRoute component={NarPredictionPage} />

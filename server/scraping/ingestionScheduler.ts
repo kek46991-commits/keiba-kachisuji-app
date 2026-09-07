@@ -19,10 +19,12 @@ const CARD_INTERVAL_MS = 60 * 60 * 1000;
 const RESULT_INTERVAL_MS = 15 * 60 * 1000;
 /** 起動時は過去分も取り込み、成績集計（点数帯別回収率）が空にならないようにする。 */
 const BACKFILL_DAYS = Number(process.env.INGESTION_BACKFILL_DAYS ?? "7");
+/** 予想一覧が空にならないよう、今週末までのレースカードを先読みする。 */
+const FORWARD_DAYS = Number(process.env.INGESTION_FORWARD_DAYS ?? "7");
 
-function backfillDates(): string[] {
+function cardDates(fromOffset: number): string[] {
   const dates: string[] = [];
-  for (let offset = -BACKFILL_DAYS; offset <= 1; offset += 1) {
+  for (let offset = fromOffset; offset <= FORWARD_DAYS; offset += 1) {
     dates.push(jstDate(offset));
   }
   return dates;
@@ -51,7 +53,7 @@ export async function runIngestion(options: {
   running = true;
   const log: IngestionRunLog = { startedAt, finishedAt: startedAt, trigger: options.trigger, cards: [], results: null, error: null };
   try {
-    const dates = options.trigger === "startup" && BACKFILL_DAYS > 0 ? backfillDates() : undefined;
+    const dates = cardDates(options.trigger === "startup" ? -BACKFILL_DAYS : 0);
     if (options.cards ?? true) {
       log.cards.push(await ingestRaceCards({ organizer: "JRA", dates }));
       log.cards.push(await ingestRaceCards({ organizer: "NAR", dates }));

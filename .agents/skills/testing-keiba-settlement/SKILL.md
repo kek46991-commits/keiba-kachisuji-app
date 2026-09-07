@@ -98,10 +98,39 @@ and `LatestPredictionsSection` (最新レース一覧 + 判定/回収率). Both 
 `raceData.getPredictionHistoryPerformance` / `getLatestRaces` / `getRaceSettlements`, so they go empty if
 MySQL is down – check the API before blaming the components.
 
+## Public Render deployment (no local stack needed)
+Public URL: `https://keiba-kachisuji-web.onrender.com` (free plan: first load after idle takes ~30s,
+and the in-container DB may re-ingest for ~20min before data appears).
+- All pages are free by default now (`server/_core/env.ts` `requirePremium`, only gated when
+  `REQUIRE_PREMIUM=1`). If a page unexpectedly redirects to `/access-pass`, check that env var
+  before assuming a regression. When gating IS on, create an "unpurchased" browser via
+  `chrome://settings/content/all?searchSubpage=onrender` (delete cookies) and redeem the key from
+  `DEMO_ACCESS_KEY` in `/access-pass`.
+- **Route names differ from what tickets say.** Always confirm in `client/src/App.tsx`:
+  the calendar is `/calendar` (NOT `/race-calendar`, which 404s) and ticket-count ROI analytics is
+  `/analytics/ticket-performance`.
+- Typing Japanese into the Chrome address bar is unreliable; use **percent-encoded** URLs
+  (e.g. `/predictions?date=2026-09-05&venue=%E4%B8%AD%E5%B1%B1&race=9`) or click list/calendar links.
+- Chrome's Ctrl+F find bar also does not accept typed Japanese. To assert on Japanese text, use the
+  DOM instead, e.g. in the console:
+  `document.body.innerText.match(/馬[A-F]/g)` (dummy horse names) and `/約%/`, `/Invalid Date/`.
+- Calendar expectations: `/calendar` defaults to today in JST and shows 「本日（M/D）の開催」 grouped as
+  `JRA（中央競馬）` (emerald) / `NAR（地方競馬）` (amber), with 「開催なし」 for an empty group. Every date
+  cell is clickable; days without data show 「この日のレースデータはまだ取得されていません」.
+- Prediction *index* pages depend on the `race_schedules` table via `prediction.getUpcomingRaces`
+  (`server/predictionRouter.ts:566`, window = today..+7d), while the calendar uses the merged canonical
+  JRA+NAR data in `server/scheduleRouter.ts`. They can disagree: `/predictions` may show
+  「今週の予想可能なレースはありません」 even when the calendar lists races. Verify with
+  `curl -s '<base>/api/trpc/prediction.getUpcomingRaces?input=%7B%7D'` before calling it a UI bug, and
+  reach detail pages directly by encoded URL.
+
 ## Handy API probes
 ```bash
 curl -s 'http://localhost:3000/api/trpc/raceData.getRaceSettlements?input=%7B%22json%22%3A%7B%22raceIds%22%3A%5B%2220260822CHUKYO09%22%5D%7D%7D'
 curl -s 'http://localhost:3000/api/trpc/raceData.getPredictionHistoryPerformance?input=%7B%22json%22%3A%7B%22limit%22%3A100%2C%22offset%22%3A0%7D%7D'
+# public deploy: schedule + ticket-count ROI bands (both cookie-free GETs)
+curl -s 'https://keiba-kachisuji-web.onrender.com/api/trpc/schedule.getByDate?input=%7B%22json%22%3A%7B%22date%22%3A%222026-09-06%22%7D%7D'
+curl -s 'https://keiba-kachisuji-web.onrender.com/api/trpc/raceData.getTicketPointPerformance?input=%7B%22json%22%3A%7B%22days%22%3A90%7D%7D'
 ```
 `limit` is capped at 100 server-side; a client passing 200 gets `too_big` (400) and the panel renders
 its empty state. If a summary panel is silently empty, always check the browser console for tRPC
