@@ -633,9 +633,9 @@ export const predictionRouter = router({
       };
     });
 
-    // 公式CSVで取り込まれたJRAレースは、race_schedules未登録でも予想一覧へ表示する。
+    // 取り込み済みの中央・地方レースは、race_schedules未登録でも予想一覧へ表示する。
     const importedOnlyRaces = racesList
-      .filter(race => race.organizer === "JRA" && !scheduleKeys.has(`${race.raceDate}_${race.venueName}_${race.raceNumber}`))
+      .filter(race => race.raceNumber > 0 && !scheduleKeys.has(`${race.raceDate}_${race.venueName}_${race.raceNumber}`))
       .map(race => {
         const availability = getPredictionAvailability(entryCountByRaceId.get(race.raceId));
         return {
@@ -652,7 +652,7 @@ export const predictionRouter = router({
         horseCount: race.headCount,
         weather: race.weather,
         trackCondition: race.trackCondition,
-        organizer: "JRA" as const,
+        organizer: race.organizer === "NAR" ? ("NAR" as const) : ("JRA" as const),
         hasEntries: availability.canPredict,
         entryCount: availability.entryCount,
         predictionAvailability: availability,
