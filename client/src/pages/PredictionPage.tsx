@@ -127,6 +127,11 @@ function RaceListView() {
                 <div className="flex items-center gap-2 mb-3">
                   <MapPin className="w-4 h-4" style={{ color: "#c9a84c" }} />
                   <h2 className="text-base font-bold text-white">{venueName}</h2>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                    (venueRaces![0] as any)?.organizer === "NAR" ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300"
+                  }`}>
+                    {(venueRaces![0] as any)?.organizer === "NAR" ? "NAR（地方）" : "JRA（中央）"}
+                  </span>
                   <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: "rgba(201,168,76,0.15)", color: "#c9a84c" }}>
                     {venueRaces!.length}レース
                   </span>
@@ -204,7 +209,7 @@ function RaceListView() {
                     return (
                       <Link
                         key={cardKey}
-                        href={`/predictions?date=${race.raceDate}&venue=${encodeURIComponent(race.venue)}&race=${race.raceNumber}`}
+                        href={`${(race as any).organizer === "NAR" ? "/nar-predictions" : "/predictions"}?date=${race.raceDate}&venue=${encodeURIComponent(race.venue)}&race=${race.raceNumber}`}
                         aria-label={`${race.venue} ${race.raceNumber}R：${canPredict ? "予想を開く" : "出馬表データ待ちの詳細を開く"}`}
                         className="flex items-center justify-between p-3 rounded-lg transition-all hover:scale-[1.01] active:scale-[0.99]"
                         style={cardStyle}

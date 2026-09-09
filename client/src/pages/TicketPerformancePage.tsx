@@ -5,6 +5,7 @@ import { ArrowLeft, BarChart3, CircleAlert, Loader2, RefreshCw, Trophy, Wallet }
 import { trpc } from "@/lib/trpc";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { HistoryBackButton } from "@/components/HistoryBackButton";
+import { formatSignedYen, formatYen } from "@shared/settlementDisplay";
 
 const chartConfig = {
   roi: { label: "回収率", color: "#22d3ee" },
@@ -17,7 +18,7 @@ const periods = [
   { value: 3650, label: "全期間" },
 ];
 
-const yen = (value: number) => `¥${Math.round(value).toLocaleString("ja-JP")}`;
+const yen = (value: number) => formatYen(Math.round(value));
 
 export default function TicketPerformancePage() {
   const [days, setDays] = useState(365);
@@ -90,7 +91,7 @@ export default function TicketPerformancePage() {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[650px] text-left text-xs">
                   <thead className="bg-white/[0.03] text-slate-400"><tr><th className="px-4 py-3">総点数</th><th className="px-4 py-3">予想数</th><th className="px-4 py-3">的中率</th><th className="px-4 py-3">投資額</th><th className="px-4 py-3">払戻額</th><th className="px-4 py-3">回収率</th><th className="px-4 py-3">収支</th></tr></thead>
-                  <tbody>{data?.bands.map(row => <tr key={row.band} className="border-t border-white/5"><td className="px-4 py-3 font-bold text-slate-200">{row.band}点</td><td className="px-4 py-3 text-slate-300">{row.records}</td><td className="px-4 py-3 text-amber-200">{row.hitRate == null ? "—" : `${row.hitRate}%`}</td><td className="px-4 py-3 text-slate-300">{yen(row.totalInvest)}</td><td className="px-4 py-3 text-slate-300">{yen(row.totalReturn)}</td><td className="px-4 py-3 font-bold" style={{ color: row.roi == null ? "#64748b" : row.roi >= 100 ? "#34d399" : "#fda4af" }}>{row.roi == null ? "—" : `${row.roi}%`}</td><td className="px-4 py-3" style={{ color: row.profit >= 0 ? "#34d399" : "#fda4af" }}>{row.records === 0 ? "—" : yen(row.profit)}</td></tr>)}</tbody>
+                  <tbody>{data?.bands.map(row => <tr key={row.band} className="border-t border-white/5"><td className="px-4 py-3 font-bold text-slate-200">{row.band}点</td><td className="px-4 py-3 text-slate-300">{row.records}</td><td className="px-4 py-3 text-amber-200">{row.hitRate == null ? "—" : `${row.hitRate}%`}</td><td className="px-4 py-3 text-slate-300">{yen(row.totalInvest)}</td><td className="px-4 py-3 text-slate-300">{yen(row.totalReturn)}</td><td className="px-4 py-3 font-bold" style={{ color: row.roi == null ? "#64748b" : row.roi >= 100 ? "#34d399" : "#fda4af" }}>{row.roi == null ? "—" : `${row.roi}%`}</td><td className="px-4 py-3" style={{ color: row.profit >= 0 ? "#34d399" : "#fda4af" }}>{row.records === 0 ? "—" : formatSignedYen(Math.round(row.profit))}</td></tr>)}</tbody>
                 </table>
               </div>
             </section>
