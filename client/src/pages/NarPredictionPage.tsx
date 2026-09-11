@@ -542,7 +542,7 @@ function NarRacePredictionView({
                                 </span>
                               </td>
                               <td className="px-2 py-1.5 text-white font-medium">{entry.displayName ?? entry.horseName}</td>
-                              <td className="px-2 py-1.5 text-gray-400">{entry.jockey || "-"}</td>
+                              <td className="px-2 py-1.5 text-gray-400">{entry.jockey || "未定"}</td>
                             </tr>
                           );
                         })}
@@ -765,7 +765,7 @@ function NarRacePredictionView({
                           <td className="px-2 py-2 text-white font-medium">{result.horseName}</td>
                           <td className="px-1 py-2 text-center text-gray-400">{result.sex}{result.age}</td>
                           <td className="px-1 py-2 text-center text-gray-400">{result.weight}</td>
-                          <td className="px-1.5 py-2 text-gray-300">{result.jockey}</td>
+                          <td className="px-1.5 py-2 text-gray-300">{result.jockey || "未定"}</td>
                           <td className="px-1 py-2">
                             <div className="flex items-center gap-1">
                               <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>

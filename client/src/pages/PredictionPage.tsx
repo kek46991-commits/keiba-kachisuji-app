@@ -685,7 +685,7 @@ function PredictionResultView({ data, anaUmaData, raceContext, onRerun, isRunnin
                     </span>
                   </td>
                   <td className="px-2 py-2.5 text-white font-medium">{p.horseName}</td>
-                  <td className="px-2 py-2.5 text-gray-400">{p.jockey ?? "—"}</td>
+                  <td className="px-2 py-2.5 text-gray-400">{p.jockey || "未定"}</td>
                   <td className="px-2 py-2.5 text-right text-gray-300">{p.odds ? `${p.odds}倍` : "—"}</td>
                   <td className="px-2 py-2.5 text-right font-medium" style={{ color: "#67e8f9" }}>{p.winProbability.toFixed(1)}%</td>
                   <td className="px-2 py-2.5 text-right">
