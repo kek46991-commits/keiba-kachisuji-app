@@ -17,6 +17,8 @@ export type IngestionRunLog = {
 
 const CARD_INTERVAL_MS = 60 * 60 * 1000;
 const RESULT_INTERVAL_MS = 15 * 60 * 1000;
+/** 当日のオッズ・出走表は締切直前まで変動するため、短い間隔で取り直す。 */
+const TODAY_INTERVAL_MS = 20 * 60 * 1000;
 /** 起動時は過去分も取り込み、成績集計（点数帯別回収率）が空にならないようにする。 */
 const BACKFILL_DAYS = Number(process.env.INGESTION_BACKFILL_DAYS ?? "7");
 /** 予想一覧が空にならないよう、今週末までのレースカードを先読みする。 */
@@ -45,6 +47,8 @@ export async function runIngestion(options: {
   trigger: IngestionRunLog["trigger"];
   cards?: boolean;
   results?: boolean;
+  /** 当日分のみを取り込む（オッズ更新用） */
+  todayOnly?: boolean;
 }): Promise<IngestionRunLog> {
   const startedAt = new Date().toISOString();
   if (running) {
@@ -53,7 +57,7 @@ export async function runIngestion(options: {
   running = true;
   const log: IngestionRunLog = { startedAt, finishedAt: startedAt, trigger: options.trigger, cards: [], results: null, error: null };
   try {
-    const dates = cardDates(options.trigger === "startup" ? -BACKFILL_DAYS : 0);
+    const dates = options.todayOnly ? [jstDate(0)] : cardDates(options.trigger === "startup" ? -BACKFILL_DAYS : 0);
     if (options.cards ?? true) {
       log.cards.push(await ingestRaceCards({ organizer: "JRA", dates }));
       log.cards.push(await ingestRaceCards({ organizer: "NAR", dates }));
@@ -79,7 +83,7 @@ export function startIngestionScheduler() {
     console.log("[ingestionScheduler] DISABLE_DATA_INGESTION=1 のため自動取込を行いません");
     return;
   }
-  console.log("[ingestionScheduler] 自動取込を開始します（起動時 + カード60分毎 + 結果15分毎）");
+  console.log("[ingestionScheduler] 自動取込を開始します（起動時 + カード60分毎 + 当日オッズ20分毎 + 結果15分毎）");
   setTimeout(() => {
     void runIngestion({ trigger: "startup" });
   }, 5000);
@@ -89,4 +93,7 @@ export function startIngestionScheduler() {
   setInterval(() => {
     void runIngestion({ trigger: "interval", cards: false, results: true });
   }, RESULT_INTERVAL_MS).unref?.();
+  setInterval(() => {
+    void runIngestion({ trigger: "interval", cards: true, results: false, todayOnly: true });
+  }, TODAY_INTERVAL_MS).unref?.();
 }

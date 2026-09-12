@@ -11,6 +11,7 @@ import { ChevronLeft, ChevronRight, Calendar, Trophy, MapPin, Clock, Zap, Eye, E
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { HeroLiveSummary } from "@/components/HeroLiveSummary";
 import { LatestPredictionsSection } from "@/components/LatestPredictionsSection";
+import { formatRecoveryRate, formatSignedYen, formatYen, hitStatusLabel } from "@shared/settlementDisplay";
 
 /** NAR競馬場コード（keiba.go.jp） */
 const NAR_VENUE_CODES: Record<string, string> = {
@@ -247,6 +248,92 @@ function LatestRacePredictionsSection() {
           </p>
         </div>
         <LatestPredictionsSection limit={12} />
+      </div>
+    </section>
+  );
+}
+
+// ==========================================
+// 終了レース結果セクション（公式着順・的中判定・回収率）
+// ==========================================
+function FinishedRacesSection() {
+  const { data: finished, isLoading } = trpc.raceData.getRecentFinishedRaces.useQuery(
+    { limit: 8 },
+    { staleTime: 60_000, refetchInterval: 5 * 60_000, refetchIntervalInBackground: false },
+  );
+
+  if (isLoading || !finished || finished.length === 0) return null;
+
+  return (
+    <section id="finished-races" className="luxury-section py-12 px-4">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-8">
+          <span
+            className="inline-block text-xs font-bold tracking-widest px-3 py-1 rounded-full mb-3"
+            style={{ backgroundColor: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.3)" }}
+          >
+            FINISHED RACES
+          </span>
+          <h2 className="text-xl font-bold" style={{ color: "#ffffff" }}>終了レースの確定結果</h2>
+          <p className="mt-2 text-sm" style={{ color: "#94a3b8" }}>
+            公式の確定着順・払戻に基づく的中判定と回収率です（未取得の項目は「—」表示）。
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {finished.map(race => {
+            const settlement = race.settlement;
+            return (
+              <Link
+                key={race.raceId}
+                href={`/race-result?raceId=${encodeURIComponent(race.raceId)}`}
+                className="block p-4 rounded-lg transition-colors hover:bg-white/[0.06]"
+                style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
+              >
+                <div className="flex items-center gap-2 flex-wrap mb-2">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: race.organizer === "NAR" ? "rgba(245,158,11,0.15)" : "rgba(34,197,94,0.15)", color: race.organizer === "NAR" ? "#fbbf24" : "#4ade80" }}>
+                    {race.organizer === "NAR" ? "NAR（地方）" : "JRA（中央）"}
+                  </span>
+                  <span className="text-xs" style={{ color: "#94a3b8" }}>{race.raceDate}</span>
+                  <span className="text-xs font-medium text-white">{race.venueName} {race.raceNumber}R</span>
+                  <span className="text-xs truncate" style={{ color: "#94a3b8" }}>{race.raceName}</span>
+                  <span
+                    className="ml-auto text-[10px] px-1.5 py-0.5 rounded"
+                    style={{
+                      backgroundColor: settlement.hitStatus === "hit" ? "rgba(34,197,94,0.15)" : settlement.hitStatus === "miss" ? "rgba(148,163,184,0.12)" : "rgba(245,158,11,0.12)",
+                      color: settlement.hitStatus === "hit" ? "#22c55e" : settlement.hitStatus === "miss" ? "#94a3b8" : "#f59e0b",
+                    }}
+                  >
+                    {hitStatusLabel(settlement.isHit)}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] mb-2" style={{ color: "#cbd5e1" }}>
+                  {settlement.topThree.length === 0 ? (
+                    <span style={{ color: "#64748b" }}>着順データ未取得</span>
+                  ) : (
+                    settlement.topThree.map(horse => (
+                      <span key={horse.position}>
+                        <span style={{ color: "#64748b" }}>{horse.position}着</span> {horse.horseNumber} {horse.horseName}
+                      </span>
+                    ))
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px]" style={{ color: "#94a3b8" }}>
+                  <span>投資 {formatYen(settlement.investAmount)}</span>
+                  <span>回収 {formatYen(settlement.returnAmount)}</span>
+                  <span>収支 {formatSignedYen(settlement.profitAmount)}</span>
+                  <span style={{ color: (settlement.recoveryRate ?? 0) >= 100 ? "#22c55e" : "#94a3b8" }}>
+                    回収率 {formatRecoveryRate(settlement.recoveryRate)}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+        <div className="mt-6 text-center">
+          <Link href="/prediction-history" className="text-xs" style={{ color: "#00e5ff" }}>
+            過去の予想と結果をすべて見る →
+          </Link>
+        </div>
       </div>
     </section>
   );
@@ -1141,6 +1228,7 @@ export default function Home() {
       <LatestRacePredictionsSection />
       <HomeCalendarSection />
       <ThisWeekRacesSection />
+      <FinishedRacesSection />
       <HitRateSection />
       <NavigationCardsSection />
       <PickupNewsSection />

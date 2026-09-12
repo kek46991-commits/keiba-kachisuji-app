@@ -68,6 +68,42 @@ export const raceDataRouter = router({
       );
     }),
 
+  /** 終了（着順確定）済みレースを新しい順に返し、公式結果と的中判定・回収率を添える。 */
+  getRecentFinishedRaces: publicProcedure
+    .input(z.object({ limit: z.number().int().min(1).max(30) }).optional())
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      const limit = input?.limit ?? 8;
+      await settlePendingConfirmedRaces(db);
+
+      const finished = await db
+        .select({
+          raceId: races.raceId,
+          raceDate: races.raceDate,
+          raceNumber: races.raceNumber,
+          raceName: races.raceName,
+          venueName: races.venueName,
+          organizer: races.organizer,
+          postTime: races.postTime,
+        })
+        .from(races)
+        .where(eq(races.status, "results_confirmed"))
+        .orderBy(desc(races.raceDate), desc(races.postTime), desc(races.raceNumber))
+        .limit(limit);
+
+      if (finished.length === 0) return [];
+
+      const summaries = await summarizeRaceSettlements(db, finished.map(race => race.raceId));
+      const summaryByRace = new Map(summaries.map(summary => [summary.raceId, summary]));
+
+      return finished.flatMap(race => {
+        const summary = summaryByRace.get(race.raceId);
+        return summary ? [{ ...race, settlement: summary }] : [];
+      });
+    }),
+
   // 特定日のレース一覧を取得
   getByDate: publicProcedure
     .input(z.object({ date: z.string() }))
