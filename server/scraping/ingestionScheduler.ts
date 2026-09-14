@@ -5,14 +5,32 @@
  */
 import { ingestRaceCards, jstDate, type IngestRaceCardsResult } from "./ingestRaceCards";
 import { ingestRaceResults, type IngestRaceResultsResult } from "./ingestRaceResults";
+import { and, count, eq, gte } from "drizzle-orm";
+import { getDb } from "../db";
+import { races } from "../../drizzle/schema";
 
 export type IngestionRunLog = {
   startedAt: string;
   finishedAt: string;
   trigger: "startup" | "interval" | "manual";
+  /** 段階取込の識別子（起動時のみ設定） */
+  stage: StartupStage | null;
   cards: IngestRaceCardsResult[];
   results: IngestRaceResultsResult | null;
   error: string | null;
+};
+
+/**
+ * 起動時取込は「当日 → 直近結果 → 先読み → 過去」の順に分割して実行する。
+ * 最初の段階が数分で終わるため、全体の取込完了を待たずに当日の予想・結果が表示できる。
+ */
+export type StartupStage = "today_cards" | "recent_results" | "forward_cards" | "backfill_cards" | "backfill_results";
+
+export type StartupProgress = {
+  startedAt: string;
+  finishedAt: string | null;
+  currentStage: StartupStage | null;
+  completedStages: StartupStage[];
 };
 
 const CARD_INTERVAL_MS = 60 * 60 * 1000;
@@ -23,6 +41,8 @@ const TODAY_INTERVAL_MS = 20 * 60 * 1000;
 const BACKFILL_DAYS = Number(process.env.INGESTION_BACKFILL_DAYS ?? "7");
 /** 予想一覧が空にならないよう、今週末までのレースカードを先読みする。 */
 const FORWARD_DAYS = Number(process.env.INGESTION_FORWARD_DAYS ?? "7");
+/** 永続DB利用時は過去分が残っているので、この件数以上確定済みなら起動時の過去取込を省く。 */
+const BACKFILL_SKIP_THRESHOLD = Number(process.env.INGESTION_BACKFILL_SKIP_THRESHOLD ?? "50");
 
 function cardDates(fromOffset: number): string[] {
   const dates: string[] = [];
@@ -34,6 +54,11 @@ function cardDates(fromOffset: number): string[] {
 
 let running = false;
 let lastRun: IngestionRunLog | null = null;
+let startupProgress: StartupProgress | null = null;
+
+export function getStartupProgress(): StartupProgress | null {
+  return startupProgress;
+}
 
 export function getLastIngestionRun(): IngestionRunLog | null {
   return lastRun;
@@ -49,23 +74,27 @@ export async function runIngestion(options: {
   results?: boolean;
   /** 当日分のみを取り込む（オッズ更新用） */
   todayOnly?: boolean;
+  /** 取り込むレースカードの日付。未指定なら当日〜先読み分。 */
+  dates?: string[];
+  /** 結果取込の対象日数・件数上限 */
+  resultDays?: number;
+  resultLimit?: number;
+  stage?: StartupStage;
 }): Promise<IngestionRunLog> {
   const startedAt = new Date().toISOString();
   if (running) {
-    return { startedAt, finishedAt: new Date().toISOString(), trigger: options.trigger, cards: [], results: null, error: "別の取込処理が実行中です" };
+    return { startedAt, finishedAt: new Date().toISOString(), trigger: options.trigger, stage: options.stage ?? null, cards: [], results: null, error: "別の取込処理が実行中です" };
   }
   running = true;
-  const log: IngestionRunLog = { startedAt, finishedAt: startedAt, trigger: options.trigger, cards: [], results: null, error: null };
+  const log: IngestionRunLog = { startedAt, finishedAt: startedAt, trigger: options.trigger, stage: options.stage ?? null, cards: [], results: null, error: null };
   try {
-    const dates = options.todayOnly ? [jstDate(0)] : cardDates(options.trigger === "startup" ? -BACKFILL_DAYS : 0);
+    const dates = options.dates ?? (options.todayOnly ? [jstDate(0)] : cardDates(0));
     if (options.cards ?? true) {
       log.cards.push(await ingestRaceCards({ organizer: "JRA", dates }));
       log.cards.push(await ingestRaceCards({ organizer: "NAR", dates }));
     }
     if (options.results ?? true) {
-      log.results = options.trigger === "startup" && BACKFILL_DAYS > 0
-        ? await ingestRaceResults({ days: BACKFILL_DAYS, limit: 400 })
-        : await ingestRaceResults({});
+      log.results = await ingestRaceResults({ days: options.resultDays, limit: options.resultLimit });
     }
   } catch (error) {
     log.error = String(error);
@@ -78,14 +107,56 @@ export async function runIngestion(options: {
   return log;
 }
 
+/** 既に過去分の確定レースが十分に保存されているか（永続DBでの再起動判定）。 */
+async function hasPopulatedHistory(): Promise<boolean> {
+  try {
+    const db = await getDb();
+    if (!db) return false;
+    const [row] = await db
+      .select({ value: count() })
+      .from(races)
+      .where(and(gte(races.raceDate, jstDate(-BACKFILL_DAYS)), eq(races.status, "results_confirmed")));
+    return Number(row?.value ?? 0) >= BACKFILL_SKIP_THRESHOLD;
+  } catch (error) {
+    console.error("[ingestionScheduler] 過去データの件数確認に失敗しました:", error);
+    return false;
+  }
+}
+
+/** 起動時取込。当日分から順に段階実行し、各段階が終わるたびに画面へ反映される。 */
+export async function runStartupIngestion(): Promise<void> {
+  const today = jstDate(0);
+  const stages: Array<{ stage: StartupStage; run: () => Promise<IngestionRunLog> }> = [
+    { stage: "today_cards", run: () => runIngestion({ trigger: "startup", stage: "today_cards", cards: true, results: false, dates: [today] }) },
+    { stage: "recent_results", run: () => runIngestion({ trigger: "startup", stage: "recent_results", cards: false, results: true, resultDays: 3, resultLimit: 120 }) },
+    { stage: "forward_cards", run: () => runIngestion({ trigger: "startup", stage: "forward_cards", cards: true, results: false, dates: cardDates(1) }) },
+  ];
+  if (BACKFILL_DAYS > 0 && !(await hasPopulatedHistory())) {
+    const pastDates: string[] = [];
+    for (let offset = -BACKFILL_DAYS; offset <= -1; offset += 1) pastDates.push(jstDate(offset));
+    stages.push({ stage: "backfill_cards", run: () => runIngestion({ trigger: "startup", stage: "backfill_cards", cards: true, results: false, dates: pastDates }) });
+    stages.push({ stage: "backfill_results", run: () => runIngestion({ trigger: "startup", stage: "backfill_results", cards: false, results: true, resultDays: BACKFILL_DAYS, resultLimit: 400 }) });
+  }
+
+  startupProgress = { startedAt: new Date().toISOString(), finishedAt: null, currentStage: null, completedStages: [] };
+  for (const { stage, run } of stages) {
+    startupProgress = { ...startupProgress, currentStage: stage };
+    console.log(`[ingestionScheduler] 起動時取込 ${stage} を開始します`);
+    await run();
+    startupProgress = { ...startupProgress, currentStage: null, completedStages: [...startupProgress.completedStages, stage] };
+  }
+  startupProgress = { ...startupProgress, finishedAt: new Date().toISOString() };
+  console.log("[ingestionScheduler] 起動時取込がすべて完了しました");
+}
+
 export function startIngestionScheduler() {
   if (process.env.DISABLE_DATA_INGESTION === "1") {
     console.log("[ingestionScheduler] DISABLE_DATA_INGESTION=1 のため自動取込を行いません");
     return;
   }
-  console.log("[ingestionScheduler] 自動取込を開始します（起動時 + カード60分毎 + 当日オッズ20分毎 + 結果15分毎）");
+  console.log("[ingestionScheduler] 自動取込を開始します（起動時は当日分から段階実行 + カード60分毎 + 当日オッズ20分毎 + 結果15分毎）");
   setTimeout(() => {
-    void runIngestion({ trigger: "startup" });
+    void runStartupIngestion();
   }, 5000);
   setInterval(() => {
     void runIngestion({ trigger: "interval", cards: true, results: false });

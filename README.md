@@ -97,6 +97,9 @@ pnpm build && pnpm start   # 本番ビルド・起動
 | `VITE_APP_ID` | アプリ識別子 |
 | `OAUTH_SERVER_URL` / `OWNER_OPEN_ID` | ログイン連携を使う場合に設定 |
 | `BUILT_IN_FORGE_API_URL` / `BUILT_IN_FORGE_API_KEY` | AI解析APIを使う場合に設定 |
+| `INGESTION_BACKFILL_DAYS` / `INGESTION_FORWARD_DAYS` | 起動時に取り込む過去日数・先読み日数（既定7） |
+| `INGESTION_BACKFILL_SKIP_THRESHOLD` | 過去分がこの件数以上確定済みなら起動時の過去取込を省略（既定50） |
+| `DISABLE_DATA_INGESTION` | `1` で自動取込を停止 |
 | `NODE_ENV` / `PORT` | 実行モードと待受ポート（既定 3000） |
 
 Stripe Webhook は `https://<本番ドメイン>/api/stripe/webhook` を登録し、`checkout.session.completed` を購読してください。

@@ -5,7 +5,7 @@
 import type { Request, Response } from "express";
 import { ingestRaceCards, jstDate, type Organizer } from "./ingestRaceCards";
 import { ingestRaceResults } from "./ingestRaceResults";
-import { getLastIngestionRun, isIngestionRunning, runIngestion } from "./ingestionScheduler";
+import { getLastIngestionRun, getStartupProgress, isIngestionRunning, runIngestion } from "./ingestionScheduler";
 
 function parseOrganizers(value: unknown): Organizer[] {
   if (value === "JRA" || value === "NAR") return [value];
@@ -54,5 +54,5 @@ export async function runIngestionHandler(_req: Request, res: Response) {
 }
 
 export function ingestionStatusHandler(_req: Request, res: Response) {
-  return res.json({ running: isIngestionRunning(), lastRun: getLastIngestionRun() });
+  return res.json({ running: isIngestionRunning(), lastRun: getLastIngestionRun(), startup: getStartupProgress() });
 }
