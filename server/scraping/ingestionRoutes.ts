@@ -5,6 +5,7 @@
 import type { Request, Response } from "express";
 import { ingestRaceCards, jstDate, type Organizer } from "./ingestRaceCards";
 import { ingestRaceResults } from "./ingestRaceResults";
+import { ingestRaceOdds } from "./ingestRaceOdds";
 import { getLastIngestionRun, getStartupProgress, isIngestionRunning, runIngestion } from "./ingestionScheduler";
 
 function parseOrganizers(value: unknown): Organizer[] {
@@ -44,6 +45,18 @@ export async function ingestRaceResultsHandler(req: Request, res: Response) {
     return res.status(result.errors.length > 0 ? 207 : 200).json({ success: result.errors.length === 0, result });
   } catch (error) {
     console.error("[ingestRaceResults] 予期しないエラー:", error);
+    return res.status(500).json({ success: false, error: String(error) });
+  }
+}
+
+export async function ingestRaceOddsHandler(req: Request, res: Response) {
+  try {
+    const dates = parseDates(req.body?.dates ?? req.body?.date);
+    const raceIds = Array.isArray(req.body?.raceIds) ? (req.body.raceIds as unknown[]).filter((id): id is string => typeof id === "string") : undefined;
+    const result = await ingestRaceOdds({ dates, raceIds });
+    return res.status(result.errors.length > 0 ? 207 : 200).json({ success: result.errors.length === 0, result });
+  } catch (error) {
+    console.error("[ingestRaceOdds] 予期しないエラー:", error);
     return res.status(500).json({ success: false, error: String(error) });
   }
 }

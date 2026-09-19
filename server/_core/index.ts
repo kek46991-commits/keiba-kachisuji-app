@@ -14,7 +14,7 @@ import { fetchJraScheduleHandler } from "../scheduled/fetchJraSchedule";
 import { fetchNarScheduleHandler } from "../scheduled/fetchNarSchedule";
 import { fetchNarOddsHandler } from "../scheduled/fetchNarOdds";
 import { generateRacePredictionsHandler } from "../scheduled/generateRacePredictions";
-import { ingestRaceCardsHandler, ingestRaceResultsHandler, ingestionStatusHandler, runIngestionHandler } from "../scraping/ingestionRoutes";
+import { ingestRaceCardsHandler, ingestRaceOddsHandler, ingestRaceResultsHandler, ingestionStatusHandler, runIngestionHandler } from "../scraping/ingestionRoutes";
 import { startIngestionScheduler } from "../scraping/ingestionScheduler";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -61,6 +61,7 @@ async function startServer() {
   // 本番データ取込（レースカード・結果・払戻）
   app.post("/api/scheduled/ingestRaceCards", ingestRaceCardsHandler);
   app.post("/api/scheduled/ingestRaceResults", ingestRaceResultsHandler);
+  app.post("/api/scheduled/ingestRaceOdds", ingestRaceOddsHandler);
   app.post("/api/scheduled/ingestAll", runIngestionHandler);
   app.get("/api/scheduled/ingestionStatus", ingestionStatusHandler);
 

@@ -5,6 +5,7 @@
  */
 import { ingestRaceCards, jstDate, type IngestRaceCardsResult } from "./ingestRaceCards";
 import { ingestRaceResults, type IngestRaceResultsResult } from "./ingestRaceResults";
+import { ingestRaceOdds, type IngestRaceOddsResult } from "./ingestRaceOdds";
 import { and, count, eq, gte } from "drizzle-orm";
 import { getDb } from "../db";
 import { races } from "../../drizzle/schema";
@@ -16,6 +17,7 @@ export type IngestionRunLog = {
   /** 段階取込の識別子（起動時のみ設定） */
   stage: StartupStage | null;
   cards: IngestRaceCardsResult[];
+  odds: IngestRaceOddsResult | null;
   results: IngestRaceResultsResult | null;
   error: string | null;
 };
@@ -35,8 +37,10 @@ export type StartupProgress = {
 
 const CARD_INTERVAL_MS = 60 * 60 * 1000;
 const RESULT_INTERVAL_MS = 15 * 60 * 1000;
-/** 当日のオッズ・出走表は締切直前まで変動するため、短い間隔で取り直す。 */
+/** 当日の出走表は締切直前まで変動するため、短い間隔で取り直す。 */
 const TODAY_INTERVAL_MS = 20 * 60 * 1000;
+/** 単勝オッズは発走直前まで動くため、出走表より短い間隔で取り直す。 */
+const ODDS_INTERVAL_MS = 5 * 60 * 1000;
 /** 起動時は過去分も取り込み、成績集計（点数帯別回収率）が空にならないようにする。 */
 const BACKFILL_DAYS = Number(process.env.INGESTION_BACKFILL_DAYS ?? "7");
 /** 予想一覧が空にならないよう、今週末までのレースカードを先読みする。 */
@@ -71,6 +75,7 @@ export function isIngestionRunning(): boolean {
 export async function runIngestion(options: {
   trigger: IngestionRunLog["trigger"];
   cards?: boolean;
+  odds?: boolean;
   results?: boolean;
   /** 当日分のみを取り込む（オッズ更新用） */
   todayOnly?: boolean;
@@ -83,15 +88,18 @@ export async function runIngestion(options: {
 }): Promise<IngestionRunLog> {
   const startedAt = new Date().toISOString();
   if (running) {
-    return { startedAt, finishedAt: new Date().toISOString(), trigger: options.trigger, stage: options.stage ?? null, cards: [], results: null, error: "別の取込処理が実行中です" };
+    return { startedAt, finishedAt: new Date().toISOString(), trigger: options.trigger, stage: options.stage ?? null, cards: [], odds: null, results: null, error: "別の取込処理が実行中です" };
   }
   running = true;
-  const log: IngestionRunLog = { startedAt, finishedAt: startedAt, trigger: options.trigger, stage: options.stage ?? null, cards: [], results: null, error: null };
+  const log: IngestionRunLog = { startedAt, finishedAt: startedAt, trigger: options.trigger, stage: options.stage ?? null, cards: [], odds: null, results: null, error: null };
   try {
     const dates = options.dates ?? (options.todayOnly ? [jstDate(0)] : cardDates(0));
     if (options.cards ?? true) {
       log.cards.push(await ingestRaceCards({ organizer: "JRA", dates }));
       log.cards.push(await ingestRaceCards({ organizer: "NAR", dates }));
+    }
+    if (options.odds ?? false) {
+      log.odds = await ingestRaceOdds({ dates: [jstDate(0)] });
     }
     if (options.results ?? true) {
       log.results = await ingestRaceResults({ days: options.resultDays, limit: options.resultLimit });
@@ -127,7 +135,7 @@ async function hasPopulatedHistory(): Promise<boolean> {
 export async function runStartupIngestion(): Promise<void> {
   const today = jstDate(0);
   const stages: Array<{ stage: StartupStage; run: () => Promise<IngestionRunLog> }> = [
-    { stage: "today_cards", run: () => runIngestion({ trigger: "startup", stage: "today_cards", cards: true, results: false, dates: [today] }) },
+    { stage: "today_cards", run: () => runIngestion({ trigger: "startup", stage: "today_cards", cards: true, odds: true, results: false, dates: [today] }) },
     { stage: "recent_results", run: () => runIngestion({ trigger: "startup", stage: "recent_results", cards: false, results: true, resultDays: 3, resultLimit: 120 }) },
     { stage: "forward_cards", run: () => runIngestion({ trigger: "startup", stage: "forward_cards", cards: true, results: false, dates: cardDates(1) }) },
   ];
@@ -154,7 +162,7 @@ export function startIngestionScheduler() {
     console.log("[ingestionScheduler] DISABLE_DATA_INGESTION=1 のため自動取込を行いません");
     return;
   }
-  console.log("[ingestionScheduler] 自動取込を開始します（起動時は当日分から段階実行 + カード60分毎 + 当日オッズ20分毎 + 結果15分毎）");
+  console.log("[ingestionScheduler] 自動取込を開始します（起動時は当日分から段階実行 + カード60分毎 + 当日出走表20分毎 + 当日オッズ5分毎 + 結果15分毎）");
   setTimeout(() => {
     void runStartupIngestion();
   }, 5000);
@@ -165,6 +173,9 @@ export function startIngestionScheduler() {
     void runIngestion({ trigger: "interval", cards: false, results: true });
   }, RESULT_INTERVAL_MS).unref?.();
   setInterval(() => {
-    void runIngestion({ trigger: "interval", cards: true, results: false, todayOnly: true });
+    void runIngestion({ trigger: "interval", cards: true, odds: true, results: false, todayOnly: true });
   }, TODAY_INTERVAL_MS).unref?.();
+  setInterval(() => {
+    void runIngestion({ trigger: "interval", cards: false, odds: true, results: false });
+  }, ODDS_INTERVAL_MS).unref?.();
 }
