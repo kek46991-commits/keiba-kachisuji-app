@@ -667,7 +667,7 @@ function NarRacePredictionView({
                           <p className="text-sm font-bold text-white">{top.odds ? `${top.odds}倍` : "-"}</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-[10px] text-gray-400">能力スコア</p>
+                          <p className="text-[10px] text-gray-400">総合スコア</p>
                           <p className="text-sm font-bold" style={{ color: "#ffa500" }}>{Math.round(top.totalScore)}</p>
                         </div>
                         {top.threeView && (
@@ -731,7 +731,7 @@ function NarRacePredictionView({
                       <th className="px-1 py-2 text-center text-gray-500 font-medium w-10">性齢</th>
                       <th className="px-1 py-2 text-center text-gray-500 font-medium w-8">斤量</th>
                       <th className="px-1.5 py-2 text-left text-gray-500 font-medium">騎手</th>
-                      <th className="px-1 py-2 text-center text-gray-500 font-medium w-20">能力スコア</th>
+                      <th className="px-1 py-2 text-center text-gray-500 font-medium w-20">総合スコア</th>
                       <th className="px-1.5 py-2 text-right text-gray-500 font-medium">予想オッズ</th>
                       <th className="px-1.5 py-2 text-right text-gray-500 font-medium">勝率</th>
                       <th className="px-1.5 py-2 text-right text-gray-500 font-medium">EV</th>

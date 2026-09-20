@@ -14,6 +14,7 @@ import {
   type PredictionResult,
 } from "./predictionRouter";
 import { applyPredictionMetrics } from "./predictionMetrics";
+import { blendAbilityWithMarket } from "./probabilityModel";
 import { getPredictionAvailability } from "./predictionAvailability";
 import { savePredictionTicketSets } from "./predictionTicketSets";
 
@@ -93,20 +94,29 @@ export async function backfillPredictionsForConfirmedRaces(db: Db, limit = 200):
       last3f: e.last3f,
     }));
 
-    let scored: PredictionResult[] = raceEntries.map(entry => {
-      const breakdown = calculateScore(entry, {
-        surface: race.surface,
-        distance: race.distance,
-        venueName: race.venueName,
-        trackCondition: race.trackCondition,
-        headCount: race.headCount ?? raceEntries.length,
-      }, jockeyStats);
+    const breakdowns = raceEntries.map(entry => calculateScore(entry, {
+      surface: race.surface,
+      distance: race.distance,
+      venueName: race.venueName,
+      trackCondition: race.trackCondition,
+      headCount: race.headCount ?? raceEntries.length,
+    }, jockeyStats));
+    const blended = blendAbilityWithMarket(raceEntries.map((entry, index) => ({
+      horseNumber: entry.horseNumber,
+      abilityScore: breakdowns[index]!.abilityScore,
+      odds: entry.odds && entry.odds > 0 ? entry.odds : null,
+    })));
+
+    let scored: PredictionResult[] = raceEntries.map((entry, index) => {
+      const breakdown = breakdowns[index]!;
+      breakdown.marketSignalScore = blended[index]!.marketSignalScore;
+      breakdown.total = blended[index]!.score;
       return {
         horseNumber: entry.horseNumber,
         horseName: entry.horseName,
         jockey: entry.jockey,
         odds: null,
-        score: breakdown.abilityScore,
+        score: blended[index]!.score,
         winProbability: 0,
         expectedValue: null,
         breakdown,

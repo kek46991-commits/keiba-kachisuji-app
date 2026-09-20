@@ -10,6 +10,7 @@ import { races, entries, predictions, predictionTicketSets, venues, jockeyMaster
 import { eq, and, gte, lte, asc, desc, sql, inArray } from "drizzle-orm";
 import { getOddsMovementBonus } from "./oddsEngine";
 import { applyPredictionMetrics, computeExpectedValue } from "./predictionMetrics";
+import { blendAbilityWithMarket } from "./probabilityModel";
 import { getSavedStructuredPrediction } from "./structuredPredictionService";
 import { savePredictionTicketSets } from "./predictionTicketSets";
 import { buildScoreFirstFormation, describeFormation, describeFormationChoice, selectValueCandidates } from "./valueBetting";
@@ -842,7 +843,7 @@ export const predictionRouter = router({
       ));
 
       // スコアリング実行
-      let scoredEntries: PredictionResult[] = raceEntries.map((entry, index) => {
+      const breakdowns = raceEntries.map((entry, index) => {
         const breakdown = calculateScore(entry, {
           surface: raceInfo.surface,
           distance: raceInfo.distance,
@@ -851,15 +852,30 @@ export const predictionRouter = router({
           headCount: raceInfo.headCount ?? raceEntries.length,
         }, jockeyStats);
         breakdown.oddsMovementScore = oddsMovementScores[index] ?? 0;
-        breakdown.marketSignalScore = breakdown.oddsScore + breakdown.oddsMovementScore;
+        // 直前のオッズ急落は単発のオッズ値には現れない資金の動きなので能力側へ加える。
+        breakdown.abilityScore += breakdown.oddsMovementScore;
+        return breakdown;
+      });
+
+      // 公式オッズが揃っているレースでは市場の支持率を混合して並べ替える。
+      const blended = blendAbilityWithMarket(raceEntries.map((entry, index) => ({
+        horseNumber: entry.horseNumber,
+        abilityScore: breakdowns[index]!.abilityScore,
+        odds: entry.odds && entry.odds > 0 ? entry.odds : null,
+      })));
+
+      let scoredEntries: PredictionResult[] = raceEntries.map((entry, index) => {
+        const breakdown = breakdowns[index]!;
+        const blend = blended[index]!;
+        breakdown.marketSignalScore = blend.marketSignalScore;
+        breakdown.total = blend.score;
 
         return {
           horseNumber: entry.horseNumber,
           horseName: entry.horseName,
           jockey: entry.jockey,
           odds: entry.odds,
-          // 推定勝率・期待値は市場要因を混ぜない能力スコアから算出する。
-          score: breakdown.abilityScore,
+          score: blend.score,
           winProbability: 0,
           expectedValue: null,
           breakdown,

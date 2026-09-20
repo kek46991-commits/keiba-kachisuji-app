@@ -10,6 +10,7 @@ import { predictions, predictionTicketSets, races, entries } from "../drizzle/sc
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { getNARScoreEnhancement } from "./oddsEngine";
 import { applyPredictionMetrics, computeExpectedValue } from "./predictionMetrics";
+import { blendAbilityWithMarket } from "./probabilityModel";
 import { resolveValidatedNarRace } from "./narRaceValidation";
 import { buildScoreFirstFormation, describeFormation, describeFormationChoice, selectValueCandidates } from "./valueBetting";
 import { analyzeRaceDiagnostics } from "./raceAnalysisDiagnostics";
@@ -1182,7 +1183,8 @@ export const narPredictionRouter = router({
           breakdown.jockeySampleSize = enhancement.jockeySampleSize;
           breakdown.compatibilityRides = enhancement.compatibilityRides;
           // 能力評価は枠・騎手・馬場・展開など取得済みの適性データだけで算出し、オッズ由来の要素は市場参考値として分離する。
-          const totalScore = breakdown.base + breakdown.jockeyBonus + breakdown.gateScore + breakdown.trackConditionScore + breakdown.bloodlineScore + breakdown.weightScore + breakdown.ageScore + breakdown.paddockScore + breakdown.paceScore + breakdown.jockeyStatsScore + breakdown.compatibilityScore;
+          // 直前のオッズ急落は単発のオッズ値には現れない資金の動きなので能力側へ加える。
+          const totalScore = breakdown.base + breakdown.jockeyBonus + breakdown.gateScore + breakdown.trackConditionScore + breakdown.bloodlineScore + breakdown.weightScore + breakdown.ageScore + breakdown.paddockScore + breakdown.paceScore + breakdown.jockeyStatsScore + breakdown.compatibilityScore + breakdown.oddsMovementScore;
           breakdown.abilityScore = totalScore;
           breakdown.marketSignalScore = breakdown.oddsScore + breakdown.intervalScore + breakdown.classScore + breakdown.oddsMovementScore;
           return {
@@ -1239,6 +1241,21 @@ export const narPredictionRouter = router({
               strongPoints: analysis.threeView.overall.strongPoints,
               riskFactors: analysis.threeView.overall.riskFactors,
             },
+          };
+        });
+        // 公式オッズが揃っているレースでは市場の支持率を混合して最終順位を決める。
+        const narBlended = blendAbilityWithMarket(scored.map(result => ({
+          horseNumber: result.horseNumber,
+          abilityScore: result.totalScore,
+          odds: result.odds && result.odds > 0 ? result.odds : null,
+        })));
+        scored = scored.map((result, index) => {
+          const blend = narBlended[index]!;
+          return {
+            ...result,
+            totalScore: blend.score,
+            score: blend.score,
+            breakdown: { ...result.breakdown, abilityScore: result.totalScore, marketSignalScore: blend.marketSignalScore },
           };
         });
         scored = applyPredictionMetrics(scored);

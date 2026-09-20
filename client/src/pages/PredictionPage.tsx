@@ -659,7 +659,7 @@ function PredictionResultView({ data, anaUmaData, raceContext, onRerun, isRunnin
                 <th className="px-2 py-2 text-left text-gray-500 font-medium">騎手</th>
                 <th className="px-2 py-2 text-right text-gray-500 font-medium">予想オッズ</th>
                 <th className="px-2 py-2 text-right text-gray-500 font-medium">勝率</th>
-                <th className="px-2 py-2 text-right text-gray-500 font-medium">能力スコア</th>
+                <th className="px-2 py-2 text-right text-gray-500 font-medium">総合スコア</th>
                 <th className="px-2 py-2 text-right text-gray-500 font-medium">EV</th>
                 <th className="px-2 py-2 text-right text-gray-500 font-medium">市場参考</th>
               </tr>
