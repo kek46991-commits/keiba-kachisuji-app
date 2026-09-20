@@ -120,7 +120,7 @@ export type ScoreRankedHorse = { horseNumber: number; score?: number | null };
 
 const SCORE_GAP_FOR_SPLIT_FIRST = 4;
 /** 上位4頭のスコア差がこの範囲に収まるレースは軸が立たない混戦とみなす。 */
-const SCORE_SPREAD_FOR_BOX = 3;
+const SCORE_SPREAD_FOR_BOX = 5;
 const BOX_HORSE_COUNT = 4;
 
 function combinations(total: number, choose: number) {
