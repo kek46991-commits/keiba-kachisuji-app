@@ -56,7 +56,10 @@ export function countOrderedTrifecta(first: number[], second: number[], third: n
   return combinations.size;
 }
 
+export type FormationStrategy = "formation" | "box";
+
 export type CoverageFormation = {
+  strategy: FormationStrategy;
   axis: number;
   first: number[];
   second: number[];
@@ -98,6 +101,7 @@ function buildAxisFormation({
   const trioCount = normalizedTrioPartners.length >= 2 ? (normalizedTrioPartners.length * (normalizedTrioPartners.length - 1)) / 2 : 0;
   const targetReached = trifectaCount >= target.trifectaMin && trifectaCount <= target.trifectaMax && trioCount >= target.trioMin && trioCount <= target.trioMax;
   return {
+    strategy: "formation",
     axis,
     first: [axis],
     second: normalizedSecond,
@@ -115,6 +119,74 @@ function buildAxisFormation({
 export type ScoreRankedHorse = { horseNumber: number; score?: number | null };
 
 const SCORE_GAP_FOR_SPLIT_FIRST = 4;
+/** 上位4頭のスコア差がこの範囲に収まるレースは軸が立たない混戦とみなす。 */
+const SCORE_SPREAD_FOR_BOX = 3;
+const BOX_HORSE_COUNT = 4;
+
+function combinations(total: number, choose: number) {
+  if (total < choose) return 0;
+  let result = 1;
+  for (let index = 0; index < choose; index += 1) {
+    result = (result * (total - index)) / (index + 1);
+  }
+  return Math.round(result);
+}
+
+/**
+ * 軸が絞れない混戦向けの3連単ボックス。
+ * 上位N頭の全順列（N=4なら24点）と、同じN頭の3連複ボックスで取りこぼしを抑える。
+ */
+export function buildBoxFormation(horseNumbers: number[]): CoverageFormation | null {
+  const box = uniqueHorseNumbers(horseNumbers).slice(0, BOX_HORSE_COUNT);
+  if (box.length < 3) return null;
+  const trifectaCount = countOrderedTrifecta(box, box, box);
+  const trioCount = combinations(box.length, 3);
+  return {
+    strategy: "box",
+    axis: box[0]!,
+    first: box,
+    second: box,
+    third: box,
+    trioPartners: box,
+    trifectaCount,
+    trioCount,
+    targetReached: true,
+    caution: `上位${box.length}頭のスコアが拮抗した混戦のため、軸を固定せず3連単ボックス${trifectaCount}点で構成しています。`,
+    trigamiWarning: TRIGAMI_UNAVAILABLE,
+    scoreGap: null,
+  };
+}
+
+/** フォーメーション／ボックスの別に応じた買い目表記を作る。着順の内部表記は精算処理と共通。 */
+export function describeFormation(
+  formation: CoverageFormation,
+  options: { reference?: boolean } = {},
+): { trifecta: string; trio: string; strategyLabel: string } {
+  const isBox = formation.strategy === "box";
+  const strategyLabel = isBox ? "三連単ボックス" : "三連単フォーメーション";
+  const trifectaPrefix = options.reference
+    ? (isBox ? "参考ボックス" : "参考フォーメーション")
+    : (isBox ? "三連単ボックス" : "スコア順本線");
+  const trifecta = `${trifectaPrefix}: 1着${formation.first.join(",")} / 2着${formation.second.join(",")} / 3着${formation.third.join(",")}（${formation.trifectaCount}点）`;
+  const trioPrefix = options.reference ? "参考カバー" : (isBox ? "3連複ボックス" : "スコア順カバー");
+  const trio = formation.trioCount <= 0
+    ? "対象外"
+    : isBox
+      ? `${trioPrefix}: ${formation.trioPartners.join(",")}（ボックス・${formation.trioCount}点）`
+      : `${trioPrefix}: ${formation.first.length > 1 ? `1着候補${formation.first.join(",")}を含む ${formation.trioPartners.join(",")}` : `${formation.axis} - ${formation.trioPartners.join(",")}`}（${formation.first.length > 1 ? "分散カバー" : "1頭軸流し"}・${formation.trioCount}点）`;
+  return { trifecta, trio, strategyLabel };
+}
+
+/** 買い方（ボックス／フォーメーション）を選んだ理由を説明する。 */
+export function describeFormationChoice(formation: CoverageFormation, axisName: string): string {
+  if (formation.strategy === "box") {
+    return `上位${formation.first.length}頭（${formation.first.join("・")}）のスコアが拮抗した混戦のため、軸を固定せず三連単ボックス${formation.trifectaCount}点で取りこぼしを防止`;
+  }
+  if (formation.first.length > 1) {
+    return `能力1・2位の差が${formation.scoreGap}点のため、${formation.first.join("・")}を1着候補へ分散し、1位不発時をカバー`;
+  }
+  return `◎${axisName}（スコア1位）を1着軸に固定し、スコア2〜4位を2着、スコア2〜5位を3着候補に採用（回収率重視のフォーメーション）`;
+}
 
 function normalizeScoreRanked(input: Array<number | ScoreRankedHorse>) {
   const seen = new Set<number>();
@@ -141,6 +213,21 @@ export function buildScoreFirstFormation(scoreRankedInput: Array<number | ScoreR
     ? Math.max(0, Math.round((topScore - secondScore) * 10) / 10)
     : null;
 
+  const boxScores = rankedRows.slice(0, BOX_HORSE_COUNT).map(row => row.score);
+  const boxSpread = boxScores.length === BOX_HORSE_COUNT && boxScores.every(score => typeof score === "number")
+    ? Math.round(((boxScores[0] as number) - (boxScores[BOX_HORSE_COUNT - 1] as number)) * 10) / 10
+    : null;
+  if (boxSpread !== null && boxSpread >= 0 && boxSpread <= SCORE_SPREAD_FOR_BOX) {
+    const box = buildBoxFormation(ranked);
+    if (box) {
+      return {
+        ...box,
+        scoreGap,
+        caution: `上位${box.first.length}頭のスコア差が${boxSpread}点と拮抗した混戦のため、軸を固定せず3連単ボックス${box.trifectaCount}点で構成しています。`,
+      };
+    }
+  }
+
   if (scoreGap !== null && scoreGap <= SCORE_GAP_FOR_SPLIT_FIRST) {
     const first = ranked.slice(0, 2);
     const second = ranked.slice(0, 3);
@@ -150,6 +237,7 @@ export function buildScoreFirstFormation(scoreRankedInput: Array<number | ScoreR
     const trioCount = trioPartners.length >= 3 ? (trioPartners.length * (trioPartners.length - 1) * (trioPartners.length - 2)) / 6 : 0;
     const targetReached = trifectaCount <= 20 && trioCount <= 4;
     return {
+      strategy: "formation",
       axis: axis!,
       first,
       second,
@@ -223,6 +311,7 @@ export function buildCoverageFormation(candidates: Array<Pick<ValueCandidate, "h
   const targetReached = trifectaCount >= 12 && trifectaCount <= 20 && trioCount >= 3 && trioCount <= 6;
 
   return {
+    strategy: "formation",
     axis: axis!,
     first: [axis!],
     second,

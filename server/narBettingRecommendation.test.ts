@@ -24,8 +24,8 @@ describe("generateNarBettingRecommendation", () => {
   it("期待値プラス候補が3頭未満なら、購入推奨なしの参考フォーメーションを返す", () => {
     const bets = generateNarBettingRecommendation([result(1, 12, 20), result(2, 15, 5), result(3, 18, -3), result(4, 25, -5), result(5, 30, null)]);
     expect(bets.referenceOnly).toBe(true);
-    expect(bets.totalBets).toBe(16);
-    expect(bets.trifecta).toContain("参考フォーメーション");
+    expect(bets.totalBets).toBe(28);
+    expect(bets.trifecta).toContain("参考ボックス");
     expect(bets.referenceNotice).toContain("購入推奨なし");
   });
 
@@ -36,13 +36,28 @@ describe("generateNarBettingRecommendation", () => {
     );
 
     expect(bets.referenceOnly).toBeUndefined();
-    expect(bets).toMatchObject({ trifectaCount: 12, trioCount: 4, totalBets: 16 });
+    expect(bets).toMatchObject({ trifectaCount: 24, trioCount: 4, totalBets: 28 });
+    expect(bets.trifecta).toContain("三連単ボックス");
     expect(bets.reasoning.join(" ")).toContain("公式オッズ未取得");
   });
 
-  it("能力差が小さい候補5頭なら分散した3連単12点と3連複4点を作る", () => {
+  it("上位4頭のスコアが拮抗した混戦は3連単ボックス24点と3連複ボックス4点にする", () => {
     const bets = generateNarBettingRecommendation([result(1, 3, 30), result(2, 5, 24), result(3, 8, 18), result(4, 12, 12), result(5, 20, 6)]);
-    expect(bets).toMatchObject({ trifectaCount: 12, trioCount: 4, totalBets: 16 });
+    expect(bets).toMatchObject({ trifectaCount: 24, trioCount: 4, totalBets: 28 });
+    expect(bets.trifecta).toContain("1着1,2,3,4");
     expect(bets.riskWarning).toContain("組合せオッズが未取得");
+  });
+
+  it("上位のスコア差が大きいレースは軸固定のフォーメーションを維持する", () => {
+    const spread = (horseNumber: number, totalScore: number, expectedValue: number) => ({
+      ...result(horseNumber, 5, expectedValue),
+      totalScore,
+    });
+    const bets = generateNarBettingRecommendation([
+      spread(1, 90, 30), spread(2, 78, 24), spread(3, 70, 18), spread(4, 62, 12), spread(5, 55, 6),
+    ]);
+
+    expect(bets.trifecta).toContain("スコア順本線");
+    expect(bets).toMatchObject({ trifectaCount: 9, trioCount: 3 });
   });
 });

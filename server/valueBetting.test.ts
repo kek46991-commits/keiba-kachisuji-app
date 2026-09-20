@@ -59,6 +59,12 @@ describe("selectValueCandidates", () => {
     expect(formation).toMatchObject({ axis: 1, first: [1, 2], second: [1, 2, 3], third: [1, 2, 3, 4, 5], trifectaCount: 12, trioCount: 4, targetReached: true, scoreGap: 3 });
   });
 
+  it("上位4頭のスコア差が3点以内の混戦では3連単ボックス24点へ切り替える", () => {
+    const formation = buildScoreFirstFormation([{ horseNumber: 1, score: 90 }, { horseNumber: 2, score: 89 }, { horseNumber: 3, score: 88 }, { horseNumber: 4, score: 87.5 }, { horseNumber: 5, score: 80 }]);
+    expect(formation).toMatchObject({ strategy: "box", first: [1, 2, 3, 4], second: [1, 2, 3, 4], third: [1, 2, 3, 4], trifectaCount: 24, trioCount: 4 });
+    expect(formation?.caution).toContain("混戦");
+  });
+
   it("穴馬軸でも上位スコア馬を2・3着から排除せず3連単16点を作る", () => {
     const formation = buildLongshotAxisFormation({ axis: 8, scoreRankedHorseNumbers: [1, 2, 3, 4, 5], holePartnerHorseNumbers: [6, 7] });
     expect(formation).toMatchObject({ axis: 8, second: [1, 2, 3, 6], third: [1, 2, 3, 4, 6], trioPartners: [1, 2, 6], trifectaCount: 16, trioCount: 3, targetReached: true });

@@ -12,7 +12,7 @@ import { getOddsMovementBonus } from "./oddsEngine";
 import { applyPredictionMetrics, computeExpectedValue } from "./predictionMetrics";
 import { getSavedStructuredPrediction } from "./structuredPredictionService";
 import { savePredictionTicketSets } from "./predictionTicketSets";
-import { buildScoreFirstFormation, selectValueCandidates } from "./valueBetting";
+import { buildScoreFirstFormation, describeFormation, describeFormationChoice, selectValueCandidates } from "./valueBetting";
 import { buildAnaBettingRecommendationForRace } from "./anaUmaRouter";
 import { analyzeRaceDiagnostics } from "./raceAnalysisDiagnostics";
 import { getPredictionAvailability } from "./predictionAvailability";
@@ -416,11 +416,12 @@ export function generateBettingRecommendation(results: PredictionResult[], optio
     const formation = buildScoreFirstFormation(scoreRanked.map(candidate => ({ horseNumber: candidate.horseNumber, score: candidate.score })));
     if (!formation) return null;
     const axis = scoreRanked[0]!;
+    const described = describeFormation(formation, { reference: true });
     const totalBets = formation.trifectaCount + formation.trioCount;
-    const referenceNotice = "購入推奨なし：期待値または補助根拠が不足しているため、スコア順位だけを使った参考フォーメーションです。実際の購入・精算・実績集計の対象にはなりません。";
+    const referenceNotice = "購入推奨なし：期待値または補助根拠が不足しているため、スコア順位だけを使った参考買い目です。実際の購入・精算・実績集計の対象にはなりません。";
     return {
-      trifecta: `参考フォーメーション: 1着${formation.first.join(",")} / 2着${formation.second.join(",")} / 3着${formation.third.join(",")}（${formation.trifectaCount}点）`,
-      trio: formation.trioCount > 0 ? `参考カバー: ${formation.first.length > 1 ? `1着候補${formation.first.join(",")}を含む ${formation.trioPartners.join(",")}` : `${formation.axis} - ${formation.trioPartners.join(",")}`}（${formation.first.length > 1 ? "分散カバー" : "1頭軸流し"}・${formation.trioCount}点）` : "対象外",
+      trifecta: described.trifecta,
+      trio: described.trio,
       quinella: "対象外",
       wide: "対象外",
       trifectaCount: formation.trifectaCount,
@@ -435,7 +436,8 @@ export function generateBettingRecommendation(results: PredictionResult[], optio
       referenceNotice,
       reasoning: [
         `通常買い目は見送り：${reason}`,
-        `◎${axis.horseName}（スコア1位）を軸に、スコア上位だけで参考フォーメーションを表示`,
+        `選択方式: ${described.strategyLabel}（スコア上位のみで構成）`,
+        describeFormationChoice(formation, axis.horseName),
         referenceNotice,
       ],
     };
@@ -445,11 +447,12 @@ export function generateBettingRecommendation(results: PredictionResult[], optio
       const formation = buildScoreFirstFormation(scoreRanked.map(candidate => ({ horseNumber: candidate.horseNumber, score: candidate.score })));
       if (formation) {
         const axis = scoreRanked[0]!;
+        const described = describeFormation(formation);
         const sideBets = buildScoreFirstSideBets(formation);
         const totalBets = formation.trifectaCount + formation.trioCount + sideBets.quinellaCount + sideBets.wideCount;
         return {
-          trifecta: `スコア順本線: 1着${formation.first.join(",")} / 2着${formation.second.join(",")} / 3着${formation.third.join(",")}（${formation.trifectaCount}点）`,
-          trio: formation.trioCount > 0 ? `スコア順カバー: ${formation.first.length > 1 ? `1着候補${formation.first.join(",")}を含む ${formation.trioPartners.join(",")}` : `${formation.axis} - ${formation.trioPartners.join(",")}`}（${formation.first.length > 1 ? "分散カバー" : "1頭軸流し"}・${formation.trioCount}点）` : "対象外",
+          trifecta: described.trifecta,
+          trio: described.trio,
           quinella: sideBets.quinella,
           wide: sideBets.wide,
           trifectaCount: formation.trifectaCount,
@@ -461,8 +464,8 @@ export function generateBettingRecommendation(results: PredictionResult[], optio
           formationCaution: formation.caution ?? undefined,
           formation: { axis: formation.axis, first: formation.first, second: formation.second, third: formation.third, trioPartners: formation.trioPartners },
           reasoning: [
-            "公式オッズ未取得のため、能力スコア順位だけで通常フォーメーションを構成",
-            formation.first.length > 1 ? `能力1・2位の差が${formation.scoreGap}点のため、${formation.first.join("・")}を1着候補へ分散し、1位不発時をカバー` : `◎${axis.horseName}（スコア1位）を1着軸に固定し、スコア2〜4位を2着、スコア2〜5位を3着候補に採用`,
+            `公式オッズ未取得のため、能力スコア順位だけで${described.strategyLabel}を構成`,
+            describeFormationChoice(formation, axis.horseName),
             `3連単${formation.trifectaCount}点・3連複${formation.trioCount}点、合計${totalBets}点。予想オッズは市場実勢とは異なり、的中・収益を保証しません。`,
             ...(formation.caution ? [formation.caution] : []),
           ],
@@ -529,12 +532,13 @@ export function generateBettingRecommendation(results: PredictionResult[], optio
     };
   }
   const axis = candidates[0]!;
+  const described = describeFormation(formation);
   const sideBets = buildScoreFirstSideBets(formation);
   const totalBets = formation.trifectaCount + formation.trioCount + sideBets.quinellaCount + sideBets.wideCount;
 
   return {
-    trifecta: `スコア順本線: 1着${formation.first.join(",")} / 2着${formation.second.join(",")} / 3着${formation.third.join(",")}（${formation.trifectaCount}点）`,
-    trio: formation.trioCount > 0 ? `スコア順カバー: ${formation.first.length > 1 ? `1着候補${formation.first.join(",")}を含む ${formation.trioPartners.join(",")}` : `${formation.axis} - ${formation.trioPartners.join(",")}`}（${formation.first.length > 1 ? "分散カバー" : "1頭軸流し"}・${formation.trioCount}点）` : "対象外",
+    trifecta: described.trifecta,
+    trio: described.trio,
     quinella: sideBets.quinella,
     wide: sideBets.wide,
     trifectaCount: formation.trifectaCount,
@@ -547,7 +551,8 @@ export function generateBettingRecommendation(results: PredictionResult[], optio
     formation: { axis: formation.axis, first: formation.first, second: formation.second, third: formation.third, trioPartners: formation.trioPartners },
     reasoning: [
       selection.reason,
-      formation.first.length > 1 ? `能力1・2位の差が${formation.scoreGap}点のため、${formation.first.join("・")}を1着候補へ分散し、1位不発時をカバー` : `◎${axis.horseName}（スコア1位）を1着軸に固定し、スコア2〜4位を2着、スコア2〜5位を3着候補に採用`,
+      `選択方式: ${described.strategyLabel}`,
+      describeFormationChoice(formation, axis.horseName),
       `堅実パターンは3連単${formation.trifectaCount}点・3連複${formation.trioCount}点、合計${totalBets}点・想定投資額${totalBets * 100}円（1点100円換算）。重複組合せと追加券種は不採用`,
       ...(formation.caution ? [formation.caution] : []),
       formation.trigamiWarning,

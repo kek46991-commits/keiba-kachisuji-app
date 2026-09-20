@@ -44,8 +44,8 @@ describe("generateBettingRecommendation", () => {
   it("期待値プラス候補が3頭に届かない場合は、購入推奨なしの参考フォーメーションを返す", () => {
     const bets = generateBettingRecommendation([row(1, 20), row(2, 4), row(3, -2), row(4, null)]);
     expect(bets.referenceOnly).toBe(true);
-    expect(bets.totalBets).toBe(12);
-    expect(bets.trifecta).toContain("参考フォーメーション");
+    expect(bets.totalBets).toBe(28);
+    expect(bets.trifecta).toContain("参考ボックス");
     expect(bets.referenceNotice).toContain("購入推奨なし");
   });
 
@@ -56,9 +56,8 @@ describe("generateBettingRecommendation", () => {
     );
 
     expect(bets.referenceOnly).toBeUndefined();
-    expect(bets).toMatchObject({ trifectaCount: 12, trioCount: 4, quinellaCount: 4, wideCount: 4, totalBets: 24 });
-    expect(bets.quinella).not.toBe("対象外");
-    expect(bets.wide).toContain("ワイド4点");
+    expect(bets).toMatchObject({ trifectaCount: 24, trioCount: 4, totalBets: 28 });
+    expect(bets.trifecta).toContain("三連単ボックス");
     expect(bets.reasoning.join(" ")).toContain("公式オッズ未取得");
   });
 
@@ -74,7 +73,7 @@ describe("generateBettingRecommendation", () => {
     );
 
     expect(bets.referenceOnly).toBeUndefined();
-    expect(bets.trifecta).toContain("スコア順本線");
+    expect(bets.trifecta).toContain("三連単ボックス");
     expect(bets.trifectaCount).toBeGreaterThan(0);
   });
 
@@ -101,10 +100,26 @@ describe("generateBettingRecommendation", () => {
     expect(bets.trifecta).toContain("スコア順本線");
   });
 
-  it("能力差が小さい候補5頭なら分散した3連単12点と3連複4点を作る", () => {
+  it("上位4頭のスコアが拮抗した混戦は3連単ボックス24点と3連複ボックス4点にする", () => {
     const bets = generateBettingRecommendation([row(1, 30), row(2, 24), row(3, 18), row(4, 12), row(5, 6)]);
-    expect(bets).toMatchObject({ trifectaCount: 12, trioCount: 4, quinellaCount: 4, wideCount: 4, totalBets: 24 });
-    expect(bets.trifecta).toContain("1着1,2");
+    expect(bets).toMatchObject({ trifectaCount: 24, trioCount: 4, totalBets: 28 });
+    expect(bets.trifecta).toContain("1着1,2,3,4");
+    expect(bets.trio).toContain("ボックス");
+    expect(bets.reasoning.join(" ")).toContain("三連単ボックス");
     expect(bets.riskWarning).toContain("組合せオッズが未取得");
+  });
+
+  it("上位のスコア差が大きいレースは軸固定のフォーメーションを維持する", () => {
+    const spread = (horseNumber: number, score: number, expectedValue: number) => ({
+      ...row(horseNumber, expectedValue),
+      score,
+    });
+    const bets = generateBettingRecommendation([
+      spread(1, 90, 30), spread(2, 78, 24), spread(3, 70, 18), spread(4, 62, 12), spread(5, 55, 6),
+    ]);
+
+    expect(bets.trifecta).toContain("スコア順本線");
+    expect(bets).toMatchObject({ trifectaCount: 9, trioCount: 3 });
+    expect(bets.reasoning.join(" ")).toContain("三連単フォーメーション");
   });
 });

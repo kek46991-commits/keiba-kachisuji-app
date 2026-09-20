@@ -11,7 +11,7 @@ import { eq, and, desc, inArray } from "drizzle-orm";
 import { getNARScoreEnhancement } from "./oddsEngine";
 import { applyPredictionMetrics, computeExpectedValue } from "./predictionMetrics";
 import { resolveValidatedNarRace } from "./narRaceValidation";
-import { buildScoreFirstFormation, selectValueCandidates } from "./valueBetting";
+import { buildScoreFirstFormation, describeFormation, describeFormationChoice, selectValueCandidates } from "./valueBetting";
 import { analyzeRaceDiagnostics } from "./raceAnalysisDiagnostics";
 import { calculateThreeViewAnalyses } from "./dashboardRouter";
 import { buildAnaBettingRecommendationForRace } from "./anaUmaRouter";
@@ -851,11 +851,12 @@ export function generateNarBettingRecommendation(results: NarScoreResult[], opti
     const formation = buildScoreFirstFormation(scoreRanked.map(candidate => ({ horseNumber: candidate.horseNumber, score: candidate.totalScore })));
     if (!formation) return null;
     const axis = scoreRanked[0]!;
+    const described = describeFormation(formation, { reference: true });
     const totalBets = formation.trifectaCount + formation.trioCount;
-    const referenceNotice = "購入推奨なし：期待値が未算出または根拠不足のため、スコア順位だけを使った参考フォーメーションです。実際の購入・精算・実績集計の対象にはなりません。";
+    const referenceNotice = "購入推奨なし：期待値が未算出または根拠不足のため、スコア順位だけを使った参考買い目です。実際の購入・精算・実績集計の対象にはなりません。";
     return {
-      trifecta: `参考フォーメーション: 1着${formation.first.join(",")} / 2着${formation.second.join(",")} / 3着${formation.third.join(",")}（${formation.trifectaCount}点）`,
-      trio: formation.trioCount > 0 ? `参考カバー: ${formation.first.length > 1 ? `1着候補${formation.first.join(",")}を含む ${formation.trioPartners.join(",")}` : `${formation.axis} - ${formation.trioPartners.join(",")}`}（${formation.first.length > 1 ? "分散カバー" : "1頭軸流し"}・${formation.trioCount}点）` : "対象外",
+      trifecta: described.trifecta,
+      trio: described.trio,
       quinella: "対象外",
       wide: "対象外",
       exacta: "対象外",
@@ -872,7 +873,8 @@ export function generateNarBettingRecommendation(results: NarScoreResult[], opti
       referenceNotice,
       reasoning: [
         `通常買い目は見送り：${reason}`,
-        `◎${axis.horseName}（スコア1位）を軸に、スコア上位だけで参考フォーメーションを表示`,
+        `選択方式: ${described.strategyLabel}（スコア上位のみで構成）`,
+        describeFormationChoice(formation, axis.horseName),
         referenceNotice,
       ],
     };
@@ -882,10 +884,11 @@ export function generateNarBettingRecommendation(results: NarScoreResult[], opti
     const formation = buildScoreFirstFormation(scoreRanked.map(candidate => ({ horseNumber: candidate.horseNumber, score: candidate.totalScore })));
     if (formation) {
       const axis = scoreRanked[0]!;
+      const described = describeFormation(formation);
       const totalBets = formation.trifectaCount + formation.trioCount;
       return {
-        trifecta: `スコア順本線: 1着${formation.first.join(",")} / 2着${formation.second.join(",")} / 3着${formation.third.join(",")}（${formation.trifectaCount}点）`,
-        trio: formation.trioCount > 0 ? `スコア順カバー: ${formation.first.length > 1 ? `1着候補${formation.first.join(",")}を含む ${formation.trioPartners.join(",")}` : `${formation.axis} - ${formation.trioPartners.join(",")}`}（${formation.first.length > 1 ? "分散カバー" : "1頭軸流し"}・${formation.trioCount}点）` : "対象外",
+        trifecta: described.trifecta,
+        trio: described.trio,
         quinella: "対象外",
         wide: "対象外",
         exacta: "対象外",
@@ -899,8 +902,8 @@ export function generateNarBettingRecommendation(results: NarScoreResult[], opti
         formationCaution: formation.caution ?? undefined,
         formation: { axis: formation.axis, first: formation.first, second: formation.second, third: formation.third, trioPartners: formation.trioPartners },
         reasoning: [
-          "公式オッズ未取得のため、能力スコア順位だけで通常フォーメーションを構成",
-          formation.first.length > 1 ? `能力1・2位の差が${formation.scoreGap}点のため、${formation.first.join("・")}を1着候補へ分散し、1位不発時をカバー` : `◎${axis.horseName}（スコア1位）を1着軸に固定し、スコア2〜4位を2着、スコア2〜5位を3着候補に採用`,
+          `公式オッズ未取得のため、能力スコア順位だけで${described.strategyLabel}を構成`,
+          describeFormationChoice(formation, axis.horseName),
           `3連単${formation.trifectaCount}点・3連複${formation.trioCount}点、合計${totalBets}点。予想オッズは市場実勢とは異なり、的中・収益を保証しません。`,
           ...(formation.caution ? [formation.caution] : []),
         ],
@@ -933,8 +936,9 @@ export function generateNarBettingRecommendation(results: NarScoreResult[], opti
     return { trifecta: "見送り", trio: "見送り", quinella: "対象外", wide: "対象外", exacta: "対象外", trifectaCount: 0, trioCount: 0, quinellaCount: 0, wideCount: 0, exactaCount: 0, totalBets: 0, reasoning: [selection.reason, "フォーメーションを組むための候補が不足しています"] };
   }
   const axis = candidates[0]!;
-  const trifecta = `スコア順本線: 1着${formation.first.join(",")} / 2着${formation.second.join(",")} / 3着${formation.third.join(",")}（${formation.trifectaCount}点）`;
-  const trio = formation.trioCount > 0 ? `スコア順カバー: ${formation.first.length > 1 ? `1着候補${formation.first.join(",")}を含む ${formation.trioPartners.join(",")}` : `${formation.axis} - ${formation.trioPartners.join(",")}`}（${formation.first.length > 1 ? "分散カバー" : "1頭軸流し"}・${formation.trioCount}点）` : "対象外";
+  const described = describeFormation(formation);
+  const trifecta = described.trifecta;
+  const trio = described.trio;
   const totalBets = formation.trifectaCount + formation.trioCount;
 
   return {
@@ -954,7 +958,8 @@ export function generateNarBettingRecommendation(results: NarScoreResult[], opti
     formation: { axis: formation.axis, first: formation.first, second: formation.second, third: formation.third, trioPartners: formation.trioPartners },
     reasoning: [
       selection.reason,
-      formation.first.length > 1 ? `能力1・2位の差が${formation.scoreGap}点のため、${formation.first.join("・")}を1着候補へ分散し、1位不発時をカバー` : `◎${axis.horseName}（スコア1位）を1着軸に固定し、スコア2〜4位を2着、スコア2〜5位を3着候補に採用`,
+      `選択方式: ${described.strategyLabel}`,
+      describeFormationChoice(formation, axis.horseName),
       `堅実パターンは3連単${formation.trifectaCount}点・3連複${formation.trioCount}点、合計${totalBets}点・想定投資額${totalBets * 100}円（1点100円換算）`,
       ...(formation.caution ? [formation.caution] : []),
       formation.trigamiWarning,
