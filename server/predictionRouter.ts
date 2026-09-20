@@ -9,7 +9,7 @@ import { getDb } from "./db";
 import { races, entries, predictions, predictionTicketSets, venues, jockeyMaster, raceSchedules } from "../drizzle/schema";
 import { eq, and, gte, lte, asc, desc, sql, inArray } from "drizzle-orm";
 import { getOddsMovementBonus } from "./oddsEngine";
-import { applyPredictionMetrics } from "./predictionMetrics";
+import { applyPredictionMetrics, computeExpectedValue } from "./predictionMetrics";
 import { getSavedStructuredPrediction } from "./structuredPredictionService";
 import { savePredictionTicketSets } from "./predictionTicketSets";
 import { buildScoreFirstFormation, selectValueCandidates } from "./valueBetting";
@@ -948,18 +948,23 @@ export const predictionRouter = router({
         }
       }
 
-      const publicPredictions = scoredEntries.map(entry => ({
-        ...entry,
-        odds: entry.predictedOdds ?? null,
-        expectedValue: null,
-        oddsSource: "predicted" as const,
-        breakdown: {
-          ...entry.breakdown,
-          oddsScore: 0,
-          oddsMovementScore: 0,
-          marketSignalScore: 0,
-        },
-      }));
+      const publicPredictions = scoredEntries.map(entry => {
+        const officialOdds = entry.odds && entry.odds > 0 ? entry.odds : null;
+        return {
+          ...entry,
+          odds: officialOdds ?? entry.predictedOdds ?? null,
+          expectedValue: computeExpectedValue(entry.winProbability, officialOdds),
+          oddsSource: (officialOdds ? "official" : "predicted") as "official" | "predicted",
+          breakdown: officialOdds
+            ? entry.breakdown
+            : {
+                ...entry.breakdown,
+                oddsScore: 0,
+                oddsMovementScore: 0,
+                marketSignalScore: 0,
+              },
+        };
+      });
 
       return {
         race: { ...raceInfo, raceId },

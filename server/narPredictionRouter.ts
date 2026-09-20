@@ -9,7 +9,7 @@ import { getDb } from "./db";
 import { predictions, predictionTicketSets, races, entries } from "../drizzle/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { getNARScoreEnhancement } from "./oddsEngine";
-import { applyPredictionMetrics } from "./predictionMetrics";
+import { applyPredictionMetrics, computeExpectedValue } from "./predictionMetrics";
 import { resolveValidatedNarRace } from "./narRaceValidation";
 import { buildScoreFirstFormation, selectValueCandidates } from "./valueBetting";
 import { analyzeRaceDiagnostics } from "./raceAnalysisDiagnostics";
@@ -1130,6 +1130,12 @@ export const narPredictionRouter = router({
           ? locallyStoredEntries
           : await fetchNarEntries(validation.canonicalRaceId);
         const raceEntries = fetchedEntries.map(entry => ({ ...entry, odds: null, popularity: null }));
+        const officialMarketByHorseNumber = new Map(
+          savedEntries.map(entry => [entry.horseNumber, {
+            odds: entry.odds ? Number(entry.odds) : null,
+            popularity: entry.popularity ?? null,
+          }]),
+        );
         
         if (raceEntries.length === 0) {
           return {
@@ -1298,19 +1304,23 @@ export const narPredictionRouter = router({
           console.error("[NAR] 予想結果のDB保存に失敗:", saveErr.message);
         }
         
-        const publicResults = scored.map(result => ({
-          ...result,
-          odds: result.predictedOdds ?? null,
-          popularity: null,
-          expectedValue: null as number | null,
-          oddsSource: "predicted" as const,
-          breakdown: {
-            ...result.breakdown,
-            oddsScore: 0,
-            oddsMovementScore: 0,
-            marketSignalScore: 0,
-          },
-        }));
+        const publicResults = scored.map(result => {
+          const market = officialMarketByHorseNumber.get(result.horseNumber);
+          const officialOdds = market?.odds && market.odds > 0 ? market.odds : null;
+          return {
+            ...result,
+            odds: officialOdds ?? result.predictedOdds ?? null,
+            popularity: officialOdds ? market?.popularity ?? null : null,
+            expectedValue: computeExpectedValue(result.winProbability, officialOdds),
+            oddsSource: (officialOdds ? "official" : "predicted") as "official" | "predicted",
+            breakdown: {
+              ...result.breakdown,
+              oddsScore: 0,
+              oddsMovementScore: 0,
+              marketSignalScore: 0,
+            },
+          };
+        });
 
         return {
           success: true,
