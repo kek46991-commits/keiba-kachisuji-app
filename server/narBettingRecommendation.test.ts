@@ -38,7 +38,7 @@ describe("generateNarBettingRecommendation", () => {
     expect(bets.referenceOnly).toBeUndefined();
     expect(bets).toMatchObject({ trifectaCount: 24, trioCount: 4, totalBets: 28 });
     expect(bets.trifecta).toContain("三連単ボックス");
-    expect(bets.reasoning.join(" ")).toContain("公式オッズ未取得");
+    expect(bets.reasoning.join(" ")).toContain("組合せオッズが未取得");
   });
 
   it("上位4頭のスコアが拮抗した混戦は3連単ボックス24点と3連複ボックス4点にする", () => {

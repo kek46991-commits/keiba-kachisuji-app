@@ -465,7 +465,7 @@ export function generateBettingRecommendation(results: PredictionResult[], optio
           formationCaution: formation.caution ?? undefined,
           formation: { axis: formation.axis, first: formation.first, second: formation.second, third: formation.third, trioPartners: formation.trioPartners },
           reasoning: [
-            `公式オッズ未取得のため、能力スコア順位だけで${described.strategyLabel}を構成`,
+            `公式の組合せオッズが未取得のため、スコア順位だけで${described.strategyLabel}を構成`,
             describeFormationChoice(formation, axis.horseName),
             `3連単${formation.trifectaCount}点・3連複${formation.trioCount}点、合計${totalBets}点。予想オッズは市場実勢とは異なり、的中・収益を保証しません。`,
             ...(formation.caution ? [formation.caution] : []),

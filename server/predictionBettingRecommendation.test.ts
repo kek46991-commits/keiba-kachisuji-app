@@ -58,7 +58,7 @@ describe("generateBettingRecommendation", () => {
     expect(bets.referenceOnly).toBeUndefined();
     expect(bets).toMatchObject({ trifectaCount: 24, trioCount: 4, totalBets: 28 });
     expect(bets.trifecta).toContain("三連単ボックス");
-    expect(bets.reasoning.join(" ")).toContain("公式オッズ未取得");
+    expect(bets.reasoning.join(" ")).toContain("組合せオッズが未取得");
   });
 
   it("予想オッズモードは一部の補助項目が欠損してもスコア順の通常買い目を維持する", () => {

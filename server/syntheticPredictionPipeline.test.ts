@@ -33,6 +33,6 @@ describe("synthetic prediction pipeline", () => {
     expect(bets.wideCount).toBe(3);
     expect(bets.quinella).toBe("4-5,2-5,3-5");
     expect(bets.wide).toContain("ワイド3点");
-    expect(bets.reasoning.join(" ")).toContain("公式オッズ未取得");
+    expect(bets.reasoning.join(" ")).toContain("組合せオッズが未取得");
   });
 });
