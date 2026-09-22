@@ -142,7 +142,7 @@ async function main() {
   }
   evaluate("新実装: 能力×市場の混合", shippedRanked);
 
-  for (const abilityWeight of [0.05, 0.1, 0.15, 0.2, 0.3, 0.4]) {
+  for (const abilityWeight of [0.2, 0.3, 0.35, 0.4, 0.5]) {
     const ranked: Runner[][] = [];
     for (const { race, runners } of finishedRaces) {
       const raceInfo = {
