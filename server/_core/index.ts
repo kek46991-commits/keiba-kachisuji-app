@@ -16,6 +16,7 @@ import { fetchNarOddsHandler } from "../scheduled/fetchNarOdds";
 import { generateRacePredictionsHandler } from "../scheduled/generateRacePredictions";
 import { ingestRaceCardsHandler, ingestRaceOddsHandler, ingestRaceResultsHandler, ingestionStatusHandler, runIngestionHandler } from "../scraping/ingestionRoutes";
 import { startIngestionScheduler } from "../scraping/ingestionScheduler";
+import { registerHealthRoutes } from "../health";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -39,6 +40,9 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  // 死活監視はボディパーサより前に置き、余計な処理を通さず即応答する
+  registerHealthRoutes(app);
 
   // Stripe webhook needs raw body BEFORE json parser
   app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
