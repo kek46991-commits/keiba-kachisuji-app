@@ -3,6 +3,12 @@ import { trpc } from "@/lib/trpc";
 import Navbar from "@/components/Navbar";
 import { ChevronLeft, ChevronRight, Calendar, MapPin, Trophy, Clock, ExternalLink, Zap } from "lucide-react";
 import { Link } from "wouter";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "../../../server/routers";
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type DayAlert = RouterOutputs["anaUma"]["getDayAlerts"][number];
+type ScheduledRace = RouterOutputs["schedule"]["getByDate"][number];
 
 /** NAR競馬場コード（keiba.go.jp） */
 const NAR_VENUE_CODES: Record<string, string> = {
@@ -133,7 +139,7 @@ export default function RaceCalendarPage() {
     const jra = new Map<string, number>();
     const nar = new Map<string, number>();
     for (const r of todaySchedule ?? []) {
-      const target = (r as any).organizer === "NAR" ? nar : jra;
+      const target = r.organizer === "NAR" ? nar : jra;
       if (r.raceNumber === 0) {
         if (!target.has(r.venue)) target.set(r.venue, 0);
         continue;
@@ -159,18 +165,18 @@ export default function RaceCalendarPage() {
     const map: Record<number, { jraVenues: string[]; narVenues: string[]; venues: string[]; gradeRaces: Array<{ name: string; grade: string; venue: string; organizer?: string }> }> = {};
     if (monthData?.days) {
       for (const d of monthData.days) {
-        const jraVenues = (d as any).jraVenues || [];
-        const narVenues = (d as any).narVenues || [];
+        const jraVenues = d.jraVenues ?? [];
+        const narVenues = d.narVenues ?? [];
         
         let filteredVenues: string[];
         let filteredGradeRaces = d.gradeRaces;
         
         if (filter === "jra") {
           filteredVenues = jraVenues;
-          filteredGradeRaces = d.gradeRaces.filter((gr: any) => gr.organizer !== "NAR");
+          filteredGradeRaces = d.gradeRaces.filter(gr => gr.organizer !== "NAR");
         } else if (filter === "nar") {
           filteredVenues = narVenues;
-          filteredGradeRaces = d.gradeRaces.filter((gr: any) => gr.organizer === "NAR");
+          filteredGradeRaces = d.gradeRaces.filter(gr => gr.organizer === "NAR");
         } else {
           filteredVenues = [...jraVenues, ...narVenues];
         }
@@ -188,7 +194,7 @@ export default function RaceCalendarPage() {
     if (!daySchedule) return {};
     const filtered = filter === "all"
       ? daySchedule
-      : daySchedule.filter((r: any) => filter === "jra" ? r.organizer !== "NAR" : r.organizer === "NAR");
+      : daySchedule.filter(r => filter === "jra" ? r.organizer !== "NAR" : r.organizer === "NAR");
     
     const grouped: Record<string, typeof daySchedule> = {};
     for (const race of filtered) {
@@ -207,8 +213,8 @@ export default function RaceCalendarPage() {
   const narVenuesForDay = useMemo(() => {
     if (!daySchedule || filter === "jra") return [];
     return daySchedule
-      .filter((r: any) => r.organizer === "NAR" && r.raceNumber === 0)
-      .map((r: any) => r.venue);
+      .filter(r => r.organizer === "NAR" && r.raceNumber === 0)
+      .map(r => r.venue);
   }, [daySchedule, filter]);
 
   const handlePrevMonth = () => {
@@ -525,7 +531,7 @@ export default function RaceCalendarPage() {
                       </span>
                     </div>
                     <div className="space-y-2">
-                      {dayAlerts.slice(0, 5).map((alert: any) => (
+                      {dayAlerts.slice(0, 5).map((alert: DayAlert) => (
                         <Link
                           key={alert.raceId}
                           href={alert.organizer === "NAR" ? `/nar-predictions?date=${selectedDate}&venue=${encodeURIComponent(alert.venueName)}&race=${alert.raceNumber}` : `/predictions?date=${selectedDate}&venue=${encodeURIComponent(alert.venueName)}&race=${alert.raceNumber}`}
@@ -566,7 +572,7 @@ export default function RaceCalendarPage() {
 
                 {/* JRAレース詳細（個別レースデータあり） */}
                 {Object.entries(dayScheduleGrouped).map(([venue, races]) => {
-                  const organizer = (races as any)?.[0]?.organizer || "JRA";
+                  const organizer = (races as ScheduledRace[] | undefined)?.[0]?.organizer ?? "JRA";
                   return (
                     <div
                       key={venue}

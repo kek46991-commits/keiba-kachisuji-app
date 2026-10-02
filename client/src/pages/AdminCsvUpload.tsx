@@ -8,6 +8,36 @@ import { Link } from "wouter";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { HistoryBackButton } from "@/components/HistoryBackButton";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "../../../server/routers";
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type CsvUploadResult =
+  | RouterOutputs["csvUpload"]["uploadRaceList"]
+  | RouterOutputs["csvUpload"]["uploadHorseList"]
+  | RouterOutputs["csvUpload"]["uploadPayback"];
+type ReconciliationSummary = RouterOutputs["csvUpload"]["uploadPayback"]["reconciliationSummary"];
+
+/** CSV種別ごとに異なるアップロード結果を、画面表示用の共通形式へ正規化したもの。 */
+interface CsvUploadSummary {
+  inserted: number;
+  updated?: number;
+  skipped?: number;
+  errors: string[];
+  totalRows: number;
+  reconciliationSummary?: ReconciliationSummary;
+}
+
+function toCsvUploadSummary(res: CsvUploadResult): CsvUploadSummary {
+  return {
+    inserted: res.inserted,
+    updated: "updated" in res ? res.updated : undefined,
+    skipped: "skipped" in res ? res.skipped : undefined,
+    errors: res.errors,
+    totalRows: res.totalRows,
+    reconciliationSummary: "reconciliationSummary" in res ? res.reconciliationSummary : undefined,
+  };
+}
 
 type CsvType = "raceList" | "horseList" | "payback";
 type Organizer = "JRA" | "NAR";
@@ -31,7 +61,7 @@ export default function AdminCsvUpload() {
   const [encoding, setEncoding] = useState<CsvEncoding>("utf-8");
   const [hasHeader, setHasHeader] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<CsvUploadSummary | null>(null);
   const [fileName, setFileName] = useState<string>("");
   const [sourceKey, setSourceKey] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -99,7 +129,7 @@ export default function AdminCsvUpload() {
       const buffer = await file.arrayBuffer();
       const text = new TextDecoder(encoding).decode(buffer);
 
-      let res: any;
+      let res: CsvUploadResult;
       if (csvType === "raceList") {
         res = await uploadRaceList.mutateAsync({ csvContent: text, hasHeader, organizer, sourceKey, fileName: file.name });
       } else if (csvType === "horseList") {
@@ -108,7 +138,8 @@ export default function AdminCsvUpload() {
         res = await uploadPayback.mutateAsync({ csvContent: text, hasHeader, organizer, sourceKey, fileName: file.name });
       }
 
-      setResult(res);
+      const summary = toCsvUploadSummary(res);
+      setResult(summary);
       const [todayResponse] = await Promise.all([
         todaySettlement.refetch(),
         stats.refetch(),
@@ -118,20 +149,20 @@ export default function AdminCsvUpload() {
         unimportedRaceRanking.refetch(),
       ]);
       const today = todayResponse.data;
-      const reconciliation = res.reconciliationSummary;
-      if (reconciliation?.settledPredictions > 0) {
+      const reconciliation = summary.reconciliationSummary;
+      if (reconciliation && reconciliation.settledPredictions > 0) {
         const sign = (value: number) => value >= 0 ? "+" : "";
         toast.success("公式結果を反映しました", {
           description: `今回：的中 ${reconciliation.hitPredictions}件 / 収支 ${sign(reconciliation.profitAmount)}¥${reconciliation.profitAmount.toLocaleString()}　本日：的中 ${today?.hitCount ?? 0}件 / 収支 ${sign(today?.profitAmount ?? 0)}¥${(today?.profitAmount ?? 0).toLocaleString()}`,
           duration: 9000,
         });
       } else {
-        toast.success(`${res.inserted || 0}件追加、${res.updated || res.skipped || 0}件更新/スキップ`, {
+        toast.success(`${summary.inserted || 0}件追加、${summary.updated || summary.skipped || 0}件更新/スキップ`, {
           description: reconciliation ? `確定 ${reconciliation.confirmedRaces}R / 精算待ち ${reconciliation.pendingPredictions}件` : undefined,
         });
       }
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "アップロードに失敗しました");
     } finally {
       setUploading(false);
     }
@@ -465,7 +496,7 @@ export default function AdminCsvUpload() {
               </div>}
               {(csvType === "raceList" || csvType === "horseList") && <div className="rounded-lg bg-cyan-500/5 p-3 text-xs text-cyan-700 dark:text-cyan-200">{csvType === "raceList" ? "続けて同じ主催者の出馬表CSVを取り込むと、予想可能な状態になります。" : "出馬表を反映しました。予想ページでこのレースを選択して予想を実行できます。"}</div>}
               {csvType === "horseList" && <div className="rounded-lg bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-100">終了レースの結果を反映する場合は、着順入りの出馬表CSVを取り込んだ後に、同じ主催者・同じ開催日の払戻金CSVを取り込んでください。両方揃うと的中判定・回収額が自動更新されます。</div>}
-              {csvType === "horseList" && (result.inserted > 0 || result.updated > 0) && <Link href={organizer === "JRA" ? "/predictions" : "/nar-predictions"}><Button className="w-full">{organizer}予想画面を開く</Button></Link>}
+              {csvType === "horseList" && (result.inserted > 0 || (result.updated ?? 0) > 0) && <Link href={organizer === "JRA" ? "/predictions" : "/nar-predictions"}><Button className="w-full">{organizer}予想画面を開く</Button></Link>}
 
               {result.errors && result.errors.length > 0 && (
                 <div className="mt-3">

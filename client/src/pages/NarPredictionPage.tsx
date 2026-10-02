@@ -10,6 +10,26 @@ import { buildSavedScoreReferenceTicket, type DisplayTicket } from "@/lib/refere
 import { formatTicketTextsForDisplay } from "@/lib/ticketDisplay";
 import { formatBetSelectionForDisplay } from "@shared/formationDisplay";
 import { RaceSettlementCard } from "@/components/RaceSettlementCard";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "../../../server/routers";
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type AnaUmaAnalysis = NonNullable<RouterOutputs["anaUma"]["analyzeRace"]>;
+type AnaUmaCandidate = AnaUmaAnalysis["candidates"][number];
+
+/** パドック直前情報の入力値。未入力項目は null のまま保持して予想へ渡さない。 */
+interface PaddockEntry {
+  horseNumber: number;
+  heartRate: number | null;
+  excitement: number | null;
+  fatigue: number | null;
+  focus: number | null;
+  obedience: number | null;
+  bodyCondition: number | null;
+  preEjaculation: boolean | null;
+}
+
+type PaddockField = Exclude<keyof PaddockEntry, "horseNumber">;
 
 /**
  * 地方競馬（NAR）予想ページ
@@ -262,8 +282,8 @@ function NarRaceListView({ onSelectRace }: { onSelectRace: (race: NarRaceSelecti
                       })}
                       className="flex items-center justify-between p-3 rounded-lg transition-all hover:scale-[1.01] active:scale-[0.99] text-left w-full"
                       style={{
-                        backgroundColor: (race as any).hasPrediction ? "rgba(34,197,94,0.06)" : "rgba(255,255,255,0.03)",
-                        border: (race as any).hasPrediction ? "1px solid rgba(34,197,94,0.25)" : "1px solid rgba(255,255,255,0.08)",
+                        backgroundColor: race.hasPrediction ? "rgba(34,197,94,0.06)" : "rgba(255,255,255,0.03)",
+                        border: race.hasPrediction ? "1px solid rgba(34,197,94,0.25)" : "1px solid rgba(255,255,255,0.08)",
                       }}
                     >
                       <div className="flex items-center gap-3">
@@ -271,7 +291,7 @@ function NarRaceListView({ onSelectRace }: { onSelectRace: (race: NarRaceSelecti
                           <span className="text-xs font-bold px-2 py-1 rounded" style={{ backgroundColor: "rgba(255,165,0,0.15)", color: "#ffa500" }}>
                             {race.raceNumber}R
                           </span>
-                          {(race as any).hasPrediction && (
+                          {race.hasPrediction && (
                             <CheckCircle2 className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5" style={{ color: "#22c55e" }} />
                           )}
                         </div>
@@ -299,7 +319,7 @@ function NarRaceListView({ onSelectRace }: { onSelectRace: (race: NarRaceSelecti
                           <span className="text-[10px] px-2 py-0.5 rounded" style={{ backgroundColor: "rgba(100,100,100,0.3)", color: "#9ca3af" }}>
                             確定
                           </span>
-                        ) : (race as any).hasPrediction ? (
+                        ) : race.hasPrediction ? (
                           <span className="text-[10px] px-2 py-0.5 rounded font-medium" style={{ backgroundColor: "rgba(34,197,94,0.2)", color: "#22c55e" }}>
                             ✔ 予想済
                           </span>
@@ -361,16 +381,7 @@ function NarRacePredictionView({
 
   // パドック情報入力状態
   const [showPaddock, setShowPaddock] = useState(false);
-  const [paddockData, setPaddockData] = useState<Array<{
-    horseNumber: number;
-    heartRate: number | null;
-    excitement: number | null;
-    fatigue: number | null;
-    focus: number | null;
-    obedience: number | null;
-    bodyCondition: number | null;
-    preEjaculation: boolean | null;
-  }>>([]);
+  const [paddockData, setPaddockData] = useState<PaddockEntry[]>([]);
   const [sortBy, setSortBy] = useState<PredictionSortKey>("score");
   const [minWinProbability, setMinWinProbability] = useState(0);
   const [minExpectedValue, setMinExpectedValue] = useState(-9999);
@@ -384,7 +395,7 @@ function NarRacePredictionView({
   const savedLongshotTicket = formatTicketTextsForDisplay(parseTicket(savedTicketSets?.find(ticket => ticket.strategy === "longshot")?.ticketData));
 
   const visibleResults = useMemo(() => {
-    const raw = (runPrediction.data?.results ?? []) as Array<any>;
+    const raw = runPrediction.data?.results ?? [];
     return [...raw]
       .filter(result => (result.winProbability ?? 0) >= minWinProbability)
       .filter(result => minExpectedValue === -9999 || (result.expectedValue ?? -Infinity) >= minExpectedValue)
@@ -523,8 +534,8 @@ function NarRacePredictionView({
                     </thead>
                     <tbody>
                       {[...existingPrediction.entries]
-                        .sort((a: any, b: any) => a.horseNumber - b.horseNumber)
-                        .map((entry: any) => {
+                        .sort((a, b) => a.horseNumber - b.horseNumber)
+                        .map(entry => {
                           const isHonmei = entry.horseNumber === existingPrediction.prediction.honmei;
                           const isTaikou = entry.horseNumber === existingPrediction.prediction.taikou;
                           const isTanana = entry.horseNumber === existingPrediction.prediction.tanana;
@@ -977,7 +988,7 @@ function NarRacePredictionView({
 // ==========================================
 // 穴狙い詳細分析セクション
 // ==========================================
-function AnaUmaDetailSection({ data, hideMarketOdds = false }: { data: any; hideMarketOdds?: boolean }) {
+function AnaUmaDetailSection({ data, hideMarketOdds = false }: { data: AnaUmaAnalysis; hideMarketOdds?: boolean }) {
   return (
     <div className="rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,120,0,0.25)" }}>
       {/* ヘッダー */}
@@ -1000,10 +1011,10 @@ function AnaUmaDetailSection({ data, hideMarketOdds = false }: { data: any; hide
         {data.courseStats && (
           <div className="rounded-lg p-3" style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
             <p className="text-xs text-gray-400 mb-2">コース・距離: <span className="text-white font-medium">{data.courseLabel}</span></p>
-            {typeof data.courseStats.longshotRate === "number" ? (
+            {typeof data.courseStats.longshotPlaceRate === "number" ? (
               <p className="text-xs text-gray-400">
                 コース過去統計（波乱度）: 単勝6.0倍以上の穴馬が3着以内に入り込む確率は{" "}
-                <span className="text-orange-300 font-bold">約{data.courseStats.longshotRate}%（約{data.courseStats.longshotFrequency}レースに1回）</span>
+                <span className="text-orange-300 font-bold">約{data.courseStats.longshotPlaceRate}%（約{data.courseStats.longshotFrequency}レースに1回）</span>
               </p>
             ) : (
               <p className="text-xs text-gray-500">コース過去統計（波乱度）: データ集計中</p>
@@ -1019,7 +1030,7 @@ function AnaUmaDetailSection({ data, hideMarketOdds = false }: { data: any; hide
           <div>
             <p className="text-xs font-bold text-white mb-2">穴馬候補 総合スコア順（上位5頭）</p>
             <div className="space-y-2">
-              {data.candidates.slice(0, 5).map((c: any, idx: number) => (
+              {data.candidates.slice(0, 5).map((c: AnaUmaCandidate, idx: number) => (
                 <div key={c.horseNumber} className="flex items-center gap-2 p-2 rounded-lg" style={{
                   backgroundColor: idx === 0 ? "rgba(255,100,0,0.08)" : "rgba(255,255,255,0.02)",
                   border: idx === 0 ? "1px solid rgba(255,100,0,0.2)" : "1px solid rgba(255,255,255,0.04)",
@@ -1156,17 +1167,8 @@ function PaddockInputSection({
   setPaddockData,
 }: {
   headCount: number;
-  paddockData: Array<{
-    horseNumber: number;
-    heartRate: number | null;
-    excitement: number | null;
-    fatigue: number | null;
-    focus: number | null;
-    obedience: number | null;
-    bodyCondition: number | null;
-    preEjaculation: boolean | null;
-  }>;
-  setPaddockData: (data: typeof paddockData) => void;
+  paddockData: PaddockEntry[];
+  setPaddockData: (data: PaddockEntry[]) => void;
 }) {
   const getEntry = (horseNumber: number) => {
     return paddockData.find(p => p.horseNumber === horseNumber) || {
@@ -1181,7 +1183,7 @@ function PaddockInputSection({
     };
   };
 
-  const updateEntry = (horseNumber: number, field: string, value: any) => {
+  const updateEntry = (horseNumber: number, field: PaddockField, value: number | boolean | null) => {
     const existing = paddockData.find(p => p.horseNumber === horseNumber);
     if (existing) {
       setPaddockData(paddockData.map(p => p.horseNumber === horseNumber ? { ...p, [field]: value } : p));
@@ -1190,9 +1192,9 @@ function PaddockInputSection({
     }
   };
 
-  const RatingButton = ({ horseNumber, field, value, label }: { horseNumber: number; field: string; value: number; label: string }) => {
+  const RatingButton = ({ horseNumber, field, value, label }: { horseNumber: number; field: PaddockField; value: number; label: string }) => {
     const entry = getEntry(horseNumber);
-    const current = (entry as any)[field];
+    const current = entry[field];
     const isActive = current === value;
     return (
       <button

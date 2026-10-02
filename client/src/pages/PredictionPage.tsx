@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "../../../server/routers";
 import { Link, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -13,6 +15,12 @@ import { formatBetSelectionForDisplay } from "@shared/formationDisplay";
 import { publicOddsPublicationNotice, publicOddsPublicationState } from "@/lib/publicOddsPublication";
 import { buildPendingRaceExplanation } from "@/lib/pendingRaceExplanation";
 import { RaceSettlementCard } from "@/components/RaceSettlementCard";
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type PredictionRunResult = RouterOutputs["prediction"]["runPrediction"];
+type ExistingPrediction = NonNullable<RouterOutputs["prediction"]["getExistingPrediction"]>;
+type AnaUmaAnalysis = NonNullable<RouterOutputs["anaUma"]["analyzeRace"]>;
+type AnaUmaCandidate = AnaUmaAnalysis["candidates"][number];
 
 /**
  * 予想ページ
@@ -128,9 +136,9 @@ function RaceListView() {
                   <MapPin className="w-4 h-4" style={{ color: "#c9a84c" }} />
                   <h2 className="text-base font-bold text-white">{venueName}</h2>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                    (venueRaces![0] as any)?.organizer === "NAR" ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300"
+                    venueRaces![0]?.organizer === "NAR" ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300"
                   }`}>
-                    {(venueRaces![0] as any)?.organizer === "NAR" ? "NAR（地方）" : "JRA（中央）"}
+                    {venueRaces![0]?.organizer === "NAR" ? "NAR（地方）" : "JRA（中央）"}
                   </span>
                   <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: "rgba(201,168,76,0.15)", color: "#c9a84c" }}>
                     {venueRaces!.length}レース
@@ -138,8 +146,8 @@ function RaceListView() {
                 </div>
                 <div className="grid gap-2">
                   {venueRaces!.map(race => {
-                    const canPredict = Boolean((race as any).hasEntries);
-                    const isPartialEntryList = Boolean((race as any).predictionAvailability?.isPartialEntryList);
+                    const canPredict = Boolean(race.hasEntries);
+                    const isPartialEntryList = Boolean(race.predictionAvailability?.isPartialEntryList);
                     const cardKey = `${race.raceDate}-${race.venue}-${race.raceNumber}`;
                     const cardContent = <>
                       <div className="flex items-center gap-3">
@@ -147,7 +155,7 @@ function RaceListView() {
                           <span className="text-xs font-bold px-2 py-1 rounded" style={{ backgroundColor: "rgba(0,229,255,0.15)", color: "#00e5ff" }}>
                             {race.raceNumber}R
                           </span>
-                          {(race as any).hasPrediction && (
+                          {race.hasPrediction && (
                             <CheckCircle2 className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5" style={{ color: "#22c55e" }} />
                           )}
                         </div>
@@ -180,7 +188,7 @@ function RaceListView() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {(race as any).hasPrediction ? (
+                        {race.hasPrediction ? (
                           <span className="text-[10px] px-2 py-1 rounded font-medium" style={{ backgroundColor: "rgba(34,197,94,0.2)", color: "#22c55e" }}>
                             ✔ 予想済
                           </span>
@@ -202,14 +210,14 @@ function RaceListView() {
                     </>;
 
                     const cardStyle = {
-                      backgroundColor: (race as any).hasPrediction ? "rgba(34,197,94,0.06)" : canPredict ? "rgba(255,255,255,0.03)" : "rgba(245,158,11,0.035)",
-                      border: (race as any).hasPrediction ? "1px solid rgba(34,197,94,0.25)" : canPredict ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(245,158,11,0.18)",
+                      backgroundColor: race.hasPrediction ? "rgba(34,197,94,0.06)" : canPredict ? "rgba(255,255,255,0.03)" : "rgba(245,158,11,0.035)",
+                      border: race.hasPrediction ? "1px solid rgba(34,197,94,0.25)" : canPredict ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(245,158,11,0.18)",
                     };
 
                     return (
                       <Link
                         key={cardKey}
-                        href={`${(race as any).organizer === "NAR" ? "/nar-predictions" : "/predictions"}?date=${race.raceDate}&venue=${encodeURIComponent(race.venue)}&race=${race.raceNumber}`}
+                        href={`${race.organizer === "NAR" ? "/nar-predictions" : "/predictions"}?date=${race.raceDate}&venue=${encodeURIComponent(race.venue)}&race=${race.raceNumber}`}
                         aria-label={`${race.venue} ${race.raceNumber}R：${canPredict ? "予想を開く" : "出馬表データ待ちの詳細を開く"}`}
                         className="flex items-center justify-between p-3 rounded-lg transition-all hover:scale-[1.01] active:scale-[0.99]"
                         style={cardStyle}
@@ -306,13 +314,13 @@ function RacePredictionView({ date, venue, raceNumber }: { date: string; venue: 
         ) : runPrediction.data ? (
           <PredictionResultView
             data={runPrediction.data}
-            anaUmaData={anaUmaData}
+            anaUmaData={anaUmaData ?? undefined}
             raceContext={{ date, venue, raceNumber }}
             onRerun={handleRunPrediction}
             isRunning={runPrediction.isPending}
           />
         ) : existing ? (
-          <ExistingPredictionView data={existing} onRerun={handleRunPrediction} isRunning={runPrediction.isPending} anaUmaData={anaUmaData} />
+          <ExistingPredictionView data={existing} onRerun={handleRunPrediction} isRunning={runPrediction.isPending} anaUmaData={anaUmaData ?? undefined} />
         ) : runPrediction.error ? (
           <div className="text-center py-12">
             <AlertTriangle className="w-12 h-12 mx-auto mb-4" style={{ color: "#f59e0b" }} />
@@ -411,8 +419,8 @@ function NoPredictionView({ date, venue, raceNumber, onRun, isRunning }: {
 // 予想結果ビュー
 // ==========================================
 function PredictionResultView({ data, anaUmaData, raceContext, onRerun, isRunning }: {
-  data: any;
-  anaUmaData?: any;
+  data: PredictionRunResult;
+  anaUmaData?: AnaUmaAnalysis;
   raceContext?: { date: string; venue: string; raceNumber: number };
   onRerun?: () => void;
   isRunning?: boolean;
@@ -501,7 +509,7 @@ function PredictionResultView({ data, anaUmaData, raceContext, onRerun, isRunnin
         <div className="flex items-center gap-2 mb-2">
           <Target className="w-5 h-5" style={{ color: "#00e5ff" }} />
           <h2 className="text-base font-bold text-white">
-            {data.race.venueName ?? data.race.venue} {data.race.raceNumber}R {data.race.raceName && data.race.raceName !== `${data.race.raceNumber}R` ? data.race.raceName : ""}
+            {data.race.venueName} {data.race.raceNumber}R {data.race.raceName && data.race.raceName !== `${data.race.raceNumber}R` ? data.race.raceName : ""}
           </h2>
         </div>
         <div className="flex items-center gap-3 text-xs text-gray-400">
@@ -750,7 +758,7 @@ function PredictionResultView({ data, anaUmaData, raceContext, onRerun, isRunnin
 // ==========================================
 // 穴狙い詳細分析セクション（JRA用）
 // ==========================================
-function JraAnaUmaDetailSection({ data }: { data: any }) {
+function JraAnaUmaDetailSection({ data }: { data: AnaUmaAnalysis }) {
   return (
     <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(0,200,255,0.2)" }}>
       {/* ヘッダー */}
@@ -773,10 +781,10 @@ function JraAnaUmaDetailSection({ data }: { data: any }) {
         {data.courseStats && (
           <div className="rounded-lg p-3" style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
             <p className="text-xs text-gray-400 mb-2">コース・距離: <span className="text-white font-medium">{data.courseLabel}</span></p>
-            {typeof data.courseStats.longshotRate === "number" ? (
+            {typeof data.courseStats.longshotPlaceRate === "number" ? (
               <p className="text-xs text-gray-400">
                 コース過去統計（波乱度）: 単勝6.0倍以上の穴馬が3着以内に入り込む確率は{" "}
-                <span className="font-bold" style={{ color: "#00e5ff" }}>約{data.courseStats.longshotRate}%（約{data.courseStats.longshotFrequency}レースに1回）</span>
+                <span className="font-bold" style={{ color: "#00e5ff" }}>約{data.courseStats.longshotPlaceRate}%（約{data.courseStats.longshotFrequency}レースに1回）</span>
               </p>
             ) : (
               <p className="text-xs text-gray-500">コース過去統計（波乱度）: データ集計中</p>
@@ -792,7 +800,7 @@ function JraAnaUmaDetailSection({ data }: { data: any }) {
           <div>
             <p className="text-xs font-bold text-white mb-2">穴馬候補 総合スコア順（上位5頭）</p>
             <div className="space-y-2">
-              {data.candidates.slice(0, 5).map((c: any, idx: number) => (
+              {data.candidates.slice(0, 5).map((c: AnaUmaCandidate, idx: number) => (
                 <div key={c.horseNumber} className="flex items-center gap-2 p-2 rounded-lg" style={{
                   backgroundColor: idx === 0 ? "rgba(0,200,255,0.06)" : "rgba(255,255,255,0.02)",
                   border: idx === 0 ? "1px solid rgba(0,200,255,0.15)" : "1px solid rgba(255,255,255,0.04)",
@@ -886,7 +894,7 @@ function JraAnaUmaDetailSection({ data }: { data: any }) {
 // ==========================================
 // 既存予想ビュー
 // ==========================================
-function ExistingPredictionView({ data, onRerun, isRunning, anaUmaData }: { data: any; onRerun: () => void; isRunning: boolean; anaUmaData?: any }) {
+function ExistingPredictionView({ data, onRerun, isRunning, anaUmaData }: { data: ExistingPrediction; onRerun: () => void; isRunning: boolean; anaUmaData?: AnaUmaAnalysis }) {
   const prediction = data.prediction;
   const entryList = data.entries as Array<{ horseNumber: number; horseName: string; displayName?: string; jockey: string | null; odds: number | null }>;
   const entriesUpdatedAt = data.entriesUpdatedAt;

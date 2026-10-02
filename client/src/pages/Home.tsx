@@ -855,8 +855,8 @@ function HomeCalendarSection() {
     const map: Record<number, { jraVenues: string[]; narVenues: string[]; gradeRaces: Array<{ name: string; grade: string }> }> = {};
     if (monthData?.days) {
       for (const d of monthData.days) {
-        const jraVenues = (d as any).jraVenues || [];
-        const narVenues = (d as any).narVenues || [];
+        const jraVenues = d.jraVenues || [];
+        const narVenues = d.narVenues || [];
         if (jraVenues.length > 0 || narVenues.length > 0 || d.gradeRaces.length > 0) {
           map[d.day] = { jraVenues, narVenues, gradeRaces: d.gradeRaces };
         }
@@ -910,7 +910,7 @@ function HomeCalendarSection() {
 
   const todayStr = `${jstNow.getFullYear()}-${String(jstNow.getMonth() + 1).padStart(2, "0")}-${String(jstNow.getDate()).padStart(2, "0")}`;
   const waitingRaceCount = useMemo(
-    () => daySchedule?.filter((race: any) => race.actionStatus === "waiting").length ?? 0,
+    () => daySchedule?.filter(race => race.actionStatus === "waiting").length ?? 0,
     [daySchedule],
   );
 
@@ -1083,7 +1083,7 @@ function HomeCalendarSection() {
                       ) : (
                       <div className="grid grid-cols-1 gap-1">
                         {actualRaces.map(race => {
-                          const actionStatus = (race as any).actionStatus ?? (selectedDate! < todayStr ? "missing_result" : "predict");
+                          const actionStatus = race.actionStatus ?? (selectedDate! < todayStr ? "missing_result" : "predict");
                           const predictionHref = `${race.organizer === "NAR" ? "/nar-predictions" : "/predictions"}?date=${selectedDate}&venue=${encodeURIComponent(race.venue)}&race=${race.raceNumber}`;
                           const resultHref = `/race-result?date=${selectedDate}&venue=${encodeURIComponent(race.venue)}&race=${race.raceNumber}`;
                           return (

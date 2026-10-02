@@ -2,6 +2,12 @@ import Navbar from "@/components/Navbar";
 import { trpc } from "@/lib/trpc";
 import { useState, useMemo } from "react";
 import { Search, ChevronLeft, ChevronRight, BookOpen, X, Trophy, Activity, TrendingUp } from "lucide-react";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "../../../server/routers";
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type HorseDetail = NonNullable<RouterOutputs["encyclopedia"]["getHorseDetail"]>;
+type HorseRaceHistory = HorseDetail["raceHistory"];
 
 export default function HorseEncyclopediaPage() {
   const [search, setSearch] = useState("");
@@ -173,16 +179,16 @@ export default function HorseEncyclopediaPage() {
 }
 
 // ===== netkeiba準拠の詳細モーダル =====
-function HorseDetailModal({ detail, onClose }: { detail: any; onClose: () => void }) {
+function HorseDetailModal({ detail, onClose }: { detail: HorseDetail; onClose: () => void }) {
   const horse = detail.horse;
-  const raceHistory = detail.raceHistory || [];
+  const raceHistory: HorseRaceHistory = detail.raceHistory ?? [];
 
   // 成績を分析
   const stats = useMemo(() => {
     const total = raceHistory.length;
-    const wins = raceHistory.filter((r: any) => r.finishPosition === 1).length;
-    const top2 = raceHistory.filter((r: any) => r.finishPosition && r.finishPosition <= 2).length;
-    const top3 = raceHistory.filter((r: any) => r.finishPosition && r.finishPosition <= 3).length;
+    const wins = raceHistory.filter(r => r.finishPosition === 1).length;
+    const top2 = raceHistory.filter(r => r.finishPosition && r.finishPosition <= 2).length;
+    const top3 = raceHistory.filter(r => r.finishPosition && r.finishPosition <= 3).length;
     const winRate = total > 0 ? (wins / total * 100).toFixed(1) : "0.0";
     const placeRate = total > 0 ? (top2 / total * 100).toFixed(1) : "0.0";
     const showRate = total > 0 ? (top3 / total * 100).toFixed(1) : "0.0";
@@ -314,7 +320,7 @@ function HorseDetailModal({ detail, onClose }: { detail: any; onClose: () => voi
                     </tr>
                   </thead>
                   <tbody>
-                    {raceHistory.slice(0, 20).map((entry: any, idx: number) => (
+                    {raceHistory.slice(0, 20).map((entry, idx) => (
                       <tr key={idx} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)", backgroundColor: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)" }}>
                         <td className="px-2 py-1.5 text-center font-bold" style={{
                           color: entry.finishPosition === 1 ? "#fbbf24" :
@@ -327,7 +333,7 @@ function HorseDetailModal({ detail, onClose }: { detail: any; onClose: () => voi
                         <td className="px-2 py-1.5 text-center">
                           <span className="inline-block w-5 h-5 rounded-sm text-[9px] leading-5 text-center font-bold" style={{
                             backgroundColor: getGateColor(entry.gateNumber),
-                            color: [1, 2].includes(entry.gateNumber) ? "#000" : "#fff",
+                            color: entry.gateNumber !== null && [1, 2].includes(entry.gateNumber) ? "#000" : "#fff",
                           }}>
                             {entry.gateNumber || "—"}
                           </span>
@@ -427,14 +433,14 @@ function getGateColor(gate: number | null): string {
   return colors[gate] || "rgba(255,255,255,0.1)";
 }
 
-function getTrackAptitude(history: any[]): number {
+function getTrackAptitude(history: HorseRaceHistory): number {
   // ダート出走比率を計算（raceIdから推定）
   if (history.length === 0) return 50;
   // 簡易的に: 地方競馬はほぼダート
   return 80; // NAR中心なのでダート寄り
 }
 
-function getDistanceAptitude(history: any[]): number {
+function getDistanceAptitude(history: HorseRaceHistory): number {
   // 距離適性を出走距離から推定
   if (history.length === 0) return 50;
   return 50; // デフォルト中間

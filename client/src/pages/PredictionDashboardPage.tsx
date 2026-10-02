@@ -3,6 +3,7 @@ import Navbar from "@/components/Navbar";
 import { AnalysisMetricTooltip } from "@/components/AnalysisMetricTooltip";
 import { DataQualityPanel } from "@/components/DataQualityPanel";
 import { PerformanceSummaryPanel } from "@/components/PerformanceSummaryPanel";
+import type { ConfidenceLevel, HorseAnalysis } from "@/types/horseAnalysis";
 
 /**
  * 総合予想ダッシュボード
@@ -62,7 +63,7 @@ function ScoreBar({ label, value, color = "#00c8ff", metric }: { label: string; 
   );
 }
 
-function ConfidenceBadge({ level }: { level: string }) {
+function ConfidenceBadge({ level }: { level: ConfidenceLevel }) {
   const colors: Record<string, string> = {
     S: "bg-gradient-to-r from-yellow-400 to-amber-500 text-black",
     A: "bg-gradient-to-r from-cyan-400 to-blue-500 text-white",
@@ -96,7 +97,7 @@ function ViewCard({ title, icon, score, components, comment, color }: {
   );
 }
 
-function HorseAnalysisCard({ analysis, isExpanded, onToggle }: { analysis: any; isExpanded: boolean; onToggle: () => void }) {
+function HorseAnalysisCard({ analysis, isExpanded, onToggle }: { analysis: HorseAnalysis; isExpanded: boolean; onToggle: () => void }) {
   const { horseNumber, horseName, jockey, rating, threeView, shenDiagnosis } = analysis;
   const { ai, tipster, trainer, overall } = threeView;
   const ratingColors: Record<string, string> = { "◎": "#ff4444", "○": "#ff8800", "▲": "#ffcc00", "△": "#88cc00", "☆": "#888888" };
@@ -191,7 +192,7 @@ function HorseAnalysisCard({ analysis, isExpanded, onToggle }: { analysis: any; 
 
 export default function PredictionDashboardPage() {
   const [expandedHorse, setExpandedHorse] = useState<number | null>(null);
-  const analysisResults: any[] = [];
+  const analysisResults: HorseAnalysis[] = [];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
@@ -210,7 +211,7 @@ export default function PredictionDashboardPage() {
         {analysisResults.length > 0 && (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-              {analysisResults.slice(0, 4).map((a: any, i: number) => {
+              {analysisResults.slice(0, 4).map((a, i) => {
                 const bgColors = ["from-red-900/40 to-red-800/20", "from-orange-900/40 to-orange-800/20", "from-yellow-900/40 to-yellow-800/20", "from-green-900/40 to-green-800/20"];
                 const labels = ["◎ 本命", "○ 対抗", "▲ 単穴", "△ 連下"];
                 return (
@@ -225,7 +226,7 @@ export default function PredictionDashboardPage() {
             </div>
 
             <div className="space-y-0">
-              {analysisResults.map((analysis: any, index: number) => (
+              {analysisResults.map((analysis, index) => (
                 <HorseAnalysisCard key={analysis.horseNumber} analysis={analysis} isExpanded={expandedHorse === index} onToggle={() => setExpandedHorse(expandedHorse === index ? null : index)} />
               ))}
             </div>

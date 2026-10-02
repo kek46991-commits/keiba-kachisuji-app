@@ -4,7 +4,15 @@ import { toast } from "sonner";
 
 
 
-const navLinks = [
+interface NavLink {
+  label: string;
+  href: string;
+  /** アンカーでなく別ページへの導線。NEWバッジ付きで強調表示する。 */
+  isPage?: boolean;
+  highlight?: boolean;
+}
+
+const navLinks: NavLink[] = [
   { label: "競馬でGO!", href: "/" },
   { label: "今週のレース", href: "/#today-race", highlight: true },
   { label: "今日の予想", href: "/nar-predictions", isPage: true, highlight: true },
@@ -89,14 +97,14 @@ export default function Navbar() {
                 className="text-xs font-medium transition-colors duration-150"
                 style={{
                   fontFamily: "'Noto Sans JP', sans-serif",
-                  color: (link as any).isPage ? "#c9a84c" : link.highlight ? "#EF4444" : "#e2e8f0",
+                  color: link.isPage ? "#c9a84c" : link.highlight ? "#EF4444" : "#e2e8f0",
                   opacity: 1,
                   cursor: "pointer",
-                  fontWeight: (link as any).isPage ? 700 : undefined,
+                  fontWeight: link.isPage ? 700 : undefined,
                   textDecoration: "none",
                 }}
               >
-                {(link as any).isPage ? (
+                {link.isPage ? (
                   <span className="flex items-center gap-1">
                     <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#c9a84c", boxShadow: "0 0 4px #c9a84c" }} />
                     {link.label}
@@ -247,7 +255,7 @@ export default function Navbar() {
                   href={link.href}
                   className="flex items-center py-2.5 text-sm font-medium"
                   style={{
-                    color: (link as any).isPage ? "#c9a84c" : link.highlight ? "#EF4444" : "#e2e8f0",
+                    color: link.isPage ? "#c9a84c" : link.highlight ? "#EF4444" : "#e2e8f0",
                     fontFamily: "'Noto Sans JP', sans-serif",
                     borderBottom: "1px solid rgba(201,168,76,0.08)",
                     textDecoration: "none",
