@@ -36,7 +36,18 @@ AI解析による予想の提案に加え、公式レース結果との自動照
 ### 5. 日付・時刻表示
 * レース日・更新時刻はすべて JST（Asia/Tokyo）固定で整形し、見る人のタイムゾーンによる日付ズレを防ぐ
 
-### 6. アクセス制御（既定は全機能無料公開）
+### 6. 実データ取得（JRA / NAR）
+* JRA開催日程・NAR開催日程・出馬表・公式単勝オッズ・確定着順・確定払戻を定期取得し、取得できた実データだけをDBへ保存（`server/scheduled/`）
+* 取得に失敗した場合はHTTPステータス・DOM解析失敗・対象レース不在をログへ残し、架空の馬名・オッズ・着順は生成しない
+* 画面側は未取得レースを「未発表 / 保留」として表示し、デモデータへフォールバックしない
+* 起動時取込は段階化（当日カード → 直近結果 → 先読み → 過去バックフィル）し、当日分を最短で利用可能にする
+
+### 7. 予想アルゴリズム
+* 能力スコア（適性・騎手成績・馬体重・枠・血統など）を `server/predictionRouter.ts` の `calculateScore` で算出
+* 公式単勝オッズを暗黙確率へ変換し、能力スコア由来のsoftmax確率と対数空間でブレンド（`server/probabilityModel.ts`）
+* 買い目は上位4頭のスコア差が小さい混戦なら三連単/三連複ボックス、軸が明確ならフォーメーションへ自動切替（`server/valueBetting.ts`）。JRA/NARで同一ロジックを共有
+
+### 8. アクセス制御（既定は全機能無料公開）
 * 既定（`REQUIRE_PREMIUM` 未設定）では全ページ・全APIを誰でも無料で閲覧できる。アカウント登録もアクセスキーも不要（`server/_core/env.ts`）
 * `REQUIRE_PREMIUM=1` を設定した場合のみ、以下の有料ゲートが有効になる
 
@@ -58,18 +69,44 @@ AI解析による予想の提案に加え、公式レース結果との自動照
 | **API** | Express, tRPC v11, Zod |
 | **データベース** | MySQL, Drizzle ORM（マイグレーションは drizzle） |
 | **決済** | Stripe（サブスクリプション + 都度払いアクセスパス） |
-| **テスト** | Vitest (149テスト) |
+| **テスト** | Vitest（50ファイル / 168テスト） |
 | **ビルド** | Vite（クライアント） + esbuild（サーバー） |
+| **インフラ** | Docker, Render（Web Service） |
 
 ---
+
+## アーキテクチャ
+
+```text
+ブラウザ (React 19 + Vite)
+   │  React Query + tRPC client（型は AppRouter から推論）
+   ▼
+Express (server/_core/index.ts)
+   ├─ /api/health, /healthz        ヘルスチェック（DB非依存・ボディパーサより前段）
+   ├─ /api/trpc/*                  tRPC ルーター（server/routers.ts に集約）
+   ├─ /api/stripe/webhook          Stripe Webhook（rawボディ）
+   └─ 静的配信（dist/public）
+   │
+   ├─ ドメインロジック: 予想スコア / 確率モデル / 買い目生成 / 結果精算 / 成績集計
+   └─ Drizzle ORM ──▶ MySQL（races / entries / raceOdds / payouts / predictions ...）
+        ▲
+        └─ 定期取込（server/scheduled/*）──▶ JRA・NAR の公開データ
+```
+
+リクエストは「UI → tRPC procedure → ドメインモジュール → Drizzle」と一方向に流れ、
+スクレイピングや精算などの副作用は procedure から専用モジュールへ委譲しています（単一責任）。
 
 ## ディレクトリ構成
 
 ```text
 client/src/pages/       画面（予想・レース結果・今日の予想・履歴・ダッシュボード等）
 client/src/components/  RaceSettlementCard / PerformanceSummaryPanel 等の共通UI
+client/src/lib/         買い目整形・tRPCクライアント等の表示系ロジック
+client/src/types/       画面表示用のドメイン型
 server/                 tRPCルーター、結果照合・精算、成績集計、出走表マスター
-shared/                 馬名変換・買い目整形・日米弁異なるクライアント/サーバー共通ロジック
+server/scheduled/       JRA/NARの日程・出馬表・オッズ・結果の取得処理
+server/access/          有料判定・アクセスパス発行
+shared/                 馬名変換・買い目整形などクライアント/サーバー共通ロジック
 drizzle/                スキーマ定義とマイグレーション
 ```
 
@@ -78,12 +115,18 @@ drizzle/                スキーマ定義とマイグレーション
 ## セットアップ
 
 ```bash
-pnpm install
-pnpm db:push        # DATABASE_URL のMySQLへスキーマ適用
-pnpm dev            # 開発サーバー
-pnpm check          # 型チェック
-pnpm test           # Vitest
-pnpm build && pnpm start   # 本番ビルド・起動
+npm install
+npm run db:push     # DATABASE_URL のMySQLへスキーマ適用
+npm run dev         # 開発サーバー（http://localhost:3000）
+```
+
+### 型チェック・テスト・ビルド
+
+```bash
+npx tsc --noEmit    # 型チェック（npm run check と同じ）
+npx vitest run      # ユニットテスト（50ファイル / 168テスト）
+npm run build       # クライアント(Vite) + サーバー(esbuild) ビルド
+npm start           # ビルド済みサーバーを起動
 ```
 
 ## 環境変数
@@ -101,6 +144,15 @@ pnpm build && pnpm start   # 本番ビルド・起動
 | `INGESTION_BACKFILL_SKIP_THRESHOLD` | 過去分がこの件数以上確定済みなら起動時の過去取込を省略（既定50） |
 | `DISABLE_DATA_INGESTION` | `1` で自動取込を停止 |
 | `NODE_ENV` / `PORT` | 実行モードと待受ポート（既定 3000） |
+
+## ヘルスチェック
+
+| パス | 内容 |
+| :--- | :--- |
+| `/api/health` | `{"status":"ok","uptimeSeconds":...}` を返す軽量エンドポイント |
+| `/healthz` | 同一ハンドラの別名。GET / HEAD に対応 |
+
+DB・スクレイピング・認証を一切経由しないため、UptimeRobot等からのスリープ防止pingに利用できます（`server/health.ts`）。
 
 Stripe Webhook は `https://<本番ドメイン>/api/stripe/webhook` を登録し、`checkout.session.completed` を購読してください。
 
