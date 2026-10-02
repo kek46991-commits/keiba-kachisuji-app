@@ -4,7 +4,7 @@
  */
 import { z } from "zod";
 import { publicProcedure, router } from "./_core/trpc";
-import { calculateShenConditionScore, generateShenDiagnosis } from "./paddockShenEngine.ts";
+import { calculateShenConditionScore, generateShenDiagnosis, type PaddockInput } from "./paddockShenEngine.ts";
 import { getDb } from "./db";
 import { combinationOdds, entries, raceOdds, races, structuredPredictions } from "../drizzle/schema";
 import { count, eq, isNotNull, max, sql } from "drizzle-orm";
@@ -61,6 +61,27 @@ interface ThreeViewScore {
   };
 }
 
+/**
+ * 予想スコアの内訳。JRA/NAR や過去予想バックフィルで取得できる項目が異なるため、
+ * 3視点スコア側では全項目を任意として受け取り、欠落は中立値で扱う。
+ */
+export type ScoreBreakdownInput = {
+  base?: number;
+  bloodlineScore?: number;
+  trackConditionScore?: number;
+  gateScore?: number;
+  paceScore?: number;
+  classScore?: number;
+  jockeyBonus?: number;
+  paddockScore?: number;
+  intervalScore?: number;
+  weightScore?: number;
+  ageScore?: number;
+};
+
+/** パドック観察値（馬番付き） */
+export type PaddockObservation = PaddockInput & { horseNumber: number };
+
 export type ThreeViewAnalysisInput = {
   horseNumber: number;
   horseName: string;
@@ -69,16 +90,16 @@ export type ThreeViewAnalysisInput = {
   odds: number | null;
   popularity: number | null;
   expectedValue: number | null;
-  breakdown: any;
+  breakdown: ScoreBreakdownInput;
 };
 
-function calculateAIViewScore(breakdown: any): ThreeViewScore["ai"] {
+function calculateAIViewScore(breakdown: ScoreBreakdownInput): ThreeViewScore["ai"] {
   // ベーススコアを100点満点に正規化
-  const baseAbility = Math.min(100, Math.max(0, (breakdown.base / 30) * 100));
-  const bloodline = Math.min(100, Math.max(0, (breakdown.bloodlineScore / 15) * 100));
-  const courseAffinity = Math.min(100, Math.max(0, ((breakdown.trackConditionScore + breakdown.gateScore) / 20) * 100));
-  const pacePredict = Math.min(100, Math.max(0, ((breakdown.paceScore + 5) / 10) * 100));
-  const classLevel = Math.min(100, Math.max(0, ((breakdown.classScore + 5) / 10) * 100));
+  const baseAbility = Math.min(100, Math.max(0, ((breakdown.base ?? 0) / 30) * 100));
+  const bloodline = Math.min(100, Math.max(0, ((breakdown.bloodlineScore ?? 0) / 15) * 100));
+  const courseAffinity = Math.min(100, Math.max(0, (((breakdown.trackConditionScore ?? 0) + (breakdown.gateScore ?? 0)) / 20) * 100));
+  const pacePredict = Math.min(100, Math.max(0, (((breakdown.paceScore ?? 0) + 5) / 10) * 100));
+  const classLevel = Math.min(100, Math.max(0, (((breakdown.classScore ?? 0) + 5) / 10) * 100));
 
   const total = Math.round(
     baseAbility * 0.35 +
@@ -98,7 +119,7 @@ function calculateAIViewScore(breakdown: any): ThreeViewScore["ai"] {
   return { total, components: { baseAbility: Math.round(baseAbility), bloodline: Math.round(bloodline), courseAffinity: Math.round(courseAffinity), pacePredict: Math.round(pacePredict), classLevel: Math.round(classLevel) }, comment };
 }
 
-function calculateTipsterViewScore(breakdown: any, odds: number | null, popularity: number | null, expectedValue: number | null): ThreeViewScore["tipster"] {
+function calculateTipsterViewScore(breakdown: ScoreBreakdownInput, odds: number | null, popularity: number | null, expectedValue: number | null): ThreeViewScore["tipster"] {
   // オッズ妙味: 中穴が最も妙味あり
   let oddsValue = 50;
   if (odds) {
@@ -129,10 +150,10 @@ function calculateTipsterViewScore(breakdown: any, odds: number | null, populari
   }
 
   // 騎手力
-  const jockeyFactor = Math.min(100, Math.max(0, (breakdown.jockeyBonus / 15) * 100));
+  const jockeyFactor = Math.min(100, Math.max(0, ((breakdown.jockeyBonus ?? 0) / 15) * 100));
 
   // 枠順有利
-  const gateFactor = Math.min(100, Math.max(0, ((breakdown.gateScore + 5) / 10) * 100));
+  const gateFactor = Math.min(100, Math.max(0, (((breakdown.gateScore ?? 0) + 5) / 10) * 100));
 
   const total = Math.round(
     oddsValue * 0.25 +
@@ -152,13 +173,13 @@ function calculateTipsterViewScore(breakdown: any, odds: number | null, populari
   return { total, components: { oddsValue: Math.round(oddsValue), popularity: Math.round(popularityScore), expectedValue: Math.round(evScore), jockeyFactor: Math.round(jockeyFactor), gateFactor: Math.round(gateFactor) }, comment };
 }
 
-function calculateTrainerViewScore(breakdown: any, paddockData?: any): ThreeViewScore["trainer"] {
+function calculateTrainerViewScore(breakdown: ScoreBreakdownInput, paddockData?: PaddockObservation): ThreeViewScore["trainer"] {
   // 体調（Shen AI）
   let condition = 50;
   if (paddockData) {
     condition = calculateShenConditionScore(paddockData);
-  } else if (breakdown.paddockScore > 0) {
-    condition = Math.min(100, breakdown.paddockScore * 5);
+  } else if ((breakdown.paddockScore ?? 0) > 0) {
+    condition = Math.min(100, (breakdown.paddockScore ?? 0) * 5);
   }
 
   // ローテーション（出走間隔）
@@ -250,7 +271,7 @@ function calculateOverallScore(ai: ThreeViewScore["ai"], tipster: ThreeViewScore
   return { total, confidence, verdict, riskFactors, strongPoints };
 }
 
-export function calculateThreeViewAnalyses(results: ThreeViewAnalysisInput[], paddockData?: any[]) {
+export function calculateThreeViewAnalyses(results: ThreeViewAnalysisInput[], paddockData?: PaddockObservation[]) {
   const analyses: Array<{
     horseNumber: number;
     horseName: string;

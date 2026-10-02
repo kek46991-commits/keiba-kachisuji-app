@@ -116,6 +116,22 @@ interface ScoreBreakdown {
   total: number;
 }
 
+/** 予想APIが返すレース情報。racesテーブル行と開催スケジュール由来の暫定情報の共通項。 */
+export type PredictionRaceInfo = Pick<
+  typeof races.$inferSelect,
+  | "raceId"
+  | "raceName"
+  | "raceDate"
+  | "venueName"
+  | "raceNumber"
+  | "surface"
+  | "distance"
+  | "grade"
+  | "postTime"
+  | "trackCondition"
+  | "headCount"
+>;
+
 export interface PredictionResult {
   horseNumber: number;
   horseName: string;
@@ -688,7 +704,7 @@ export const predictionRouter = router({
       if (!db) throw new Error("DB接続エラー");
 
       let raceId = input.raceId;
-      let raceInfo: any = null;
+      let raceInfo: PredictionRaceInfo | null = null;
       let raceEntries: EntryData[] = [];
 
       // raceIdが指定されている場合はracesテーブルから取得
