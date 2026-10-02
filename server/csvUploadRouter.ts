@@ -1,3 +1,4 @@
+import { errorMessage } from "./errors";
 import { z } from "zod";
 import { adminProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
@@ -280,8 +281,8 @@ export const csvUploadRouter = router({
             });
             inserted++;
           }
-        } catch (e: any) {
-          errors.push(`行${i + 1}: ${e.message}`);
+        } catch (e) {
+          errors.push(`行${i + 1}: ${errorMessage(e)}`);
         }
       }
 
@@ -448,8 +449,8 @@ export const csvUploadRouter = router({
           await db.update(races)
             .set({ status: "entries_confirmed" })
             .where(and(eq(races.raceId, raceId), eq(races.organizer, input.organizer), sql`${races.status} <> 'results_confirmed'`));
-        } catch (e: any) {
-          errors.push(`行${i + 1}: ${e.message}`);
+        } catch (e) {
+          errors.push(`行${i + 1}: ${errorMessage(e)}`);
         }
       }
 
@@ -559,8 +560,8 @@ export const csvUploadRouter = router({
           inserted++;
           importedRaceIds.add(raceId);
 
-        } catch (e: any) {
-          errors.push(`行${i + 1}: ${e.message}`);
+        } catch (e) {
+          errors.push(`行${i + 1}: ${errorMessage(e)}`);
         }
       }
 

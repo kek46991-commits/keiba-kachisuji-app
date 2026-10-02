@@ -1,3 +1,4 @@
+import type { IncomingMessage } from "http";
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
@@ -48,7 +49,7 @@ async function startServer() {
   app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
 
   // Configure body parser
-  app.use(express.json({ limit: "50mb", verify: (req: any, _res, buf) => { req.rawBody = buf.toString(); } }));
+  app.use(express.json({ limit: "50mb", verify: (req, _res, buf) => { (req as IncomingMessage & { rawBody?: string }).rawBody = buf.toString(); } }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   registerStorageProxy(app);

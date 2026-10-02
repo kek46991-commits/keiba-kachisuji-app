@@ -18,7 +18,7 @@ import { blendAbilityWithMarket } from "./probabilityModel";
 import { getPredictionAvailability } from "./predictionAvailability";
 import { savePredictionTicketSets } from "./predictionTicketSets";
 
-type Db = any;
+type Db = NonNullable<Awaited<ReturnType<typeof import("./db").getDb>>>;
 
 export type BackfillSummary = {
   created: number;

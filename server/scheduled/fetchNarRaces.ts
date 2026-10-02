@@ -4,7 +4,7 @@
  * Heartbeat定期実行対応（毎日朝8時・昼12時・夕方16時に実行推奨）
  */
 import { Request, Response } from "express";
-import { getDb } from "../db";
+import { getDb, type Db } from "../db";
 import { races, entries } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -201,7 +201,7 @@ async function fetchNarEntries(raceId: string): Promise<NarEntryInfo[]> {
 /**
  * レース情報をDBに保存（UPSERT）
  */
-async function saveRacesToDb(db: any, racesData: NarRaceInfo[]): Promise<{ inserted: number; updated: number }> {
+async function saveRacesToDb(db: Db, racesData: NarRaceInfo[]): Promise<{ inserted: number; updated: number }> {
   let inserted = 0;
   let updated = 0;
   
@@ -247,7 +247,7 @@ async function saveRacesToDb(db: any, racesData: NarRaceInfo[]): Promise<{ inser
 /**
  * 出馬表をDBに保存（UPSERT）
  */
-async function saveEntriesToDb(db: any, raceId: string, entriesData: NarEntryInfo[]): Promise<{ inserted: number; updated: number }> {
+async function saveEntriesToDb(db: Db, raceId: string, entriesData: NarEntryInfo[]): Promise<{ inserted: number; updated: number }> {
   let inserted = 0;
   let updated = 0;
   

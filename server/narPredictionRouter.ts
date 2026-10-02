@@ -2,6 +2,7 @@
  * 地方競馬（NAR）予想ルーター
  * nar.netkeibaからレースデータ・出馬表を取得し、AIスコアリングで予想を実行
  */
+import { errorMessage } from "./errors";
 import { z } from "zod";
 import { publicProcedure, router } from "./_core/trpc";
 import { premiumProcedure } from "./access/premiumAccess";
@@ -288,7 +289,7 @@ export async function fetchNarEntries(raceId: string): Promise<NarEntryInfo[]> {
       const dbEntries = await db.select().from(entries).where(eq(entries.raceId, raceId));
       
       if (dbEntries.length > 0) {
-        entryList = dbEntries.map((e: any) => ({
+        entryList = dbEntries.map(e => ({
           gateNumber: e.gateNumber ?? 0,
           horseNumber: e.horseNumber ?? 0,
           horseName: e.horseName ?? "",
@@ -330,7 +331,7 @@ export async function fetchNarEntries(raceId: string): Promise<NarEntryInfo[]> {
             if (Math.abs(race.raceNumber - nkRaceNum) <= 1) {
               const dbEntries2 = await db.select().from(entries).where(eq(entries.raceId, race.raceId));
               if (dbEntries2.length > 0) {
-                entryList = dbEntries2.map((e: any) => ({
+                entryList = dbEntries2.map(e => ({
                   gateNumber: e.gateNumber ?? 0,
                   horseNumber: e.horseNumber ?? 0,
                   horseName: e.horseName ?? "",
@@ -1046,8 +1047,8 @@ export const narPredictionRouter = router({
         }));
         
         return { races: racesWithPrediction, error: null };
-      } catch (e: any) {
-        console.error("[NAR] getRaces error:", e.message);
+      } catch (e) {
+        console.error("[NAR] getRaces error:", errorMessage(e));
         return { races: [], error: "レース情報の取得に失敗しました" };
       }
     }),
@@ -1322,8 +1323,8 @@ export const narPredictionRouter = router({
             }
             console.log(`[NAR] 予想結果をDBに保存: ${validation.canonicalRaceId}`);
           }
-        } catch (saveErr: any) {
-          console.error("[NAR] 予想結果のDB保存に失敗:", saveErr.message);
+        } catch (saveErr) {
+          console.error("[NAR] 予想結果のDB保存に失敗:", errorMessage(saveErr));
         }
         
         const publicResults = scored.map(result => {
@@ -1355,11 +1356,11 @@ export const narPredictionRouter = router({
           localBiasNotice,
           validation,
         };
-      } catch (e: any) {
-        console.error("[NAR] runPrediction error:", e.message);
+      } catch (e) {
+        console.error("[NAR] runPrediction error:", errorMessage(e));
         return {
           success: false,
-          error: `予想実行エラー: ${e.message}`,
+          error: `予想実行エラー: ${errorMessage(e)}`,
           results: [],
           recommendation: null,
         };

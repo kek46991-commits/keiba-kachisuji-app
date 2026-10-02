@@ -1,4 +1,5 @@
 import { desc, eq } from "drizzle-orm";
+import type { Db } from "./db";
 import { combinationOdds } from "../drizzle/schema";
 import type { CoverageFormation } from "./valueBetting";
 
@@ -83,7 +84,7 @@ export function evaluateTrigamiRisk(
   return { status: "safe", totalTickets, coveredTickets, totalInvest, breakEvenOdds, minimumOdds, minimumPayout, missingTickets, message: `公式組合せオッズの全${totalTickets}点を確認済みです。最低想定払戻${minimumPayout.toLocaleString()}円は総投資${totalInvest.toLocaleString()}円以上です。` };
 }
 
-export async function getLatestCombinationOddsQuotes(db: any, raceId: string): Promise<CombinationOddsQuote[]> {
+export async function getLatestCombinationOddsQuotes(db: Db, raceId: string): Promise<CombinationOddsQuote[]> {
   const rows = await db.select({
     betType: combinationOdds.betType,
     combination: combinationOdds.combination,

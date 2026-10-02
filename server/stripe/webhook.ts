@@ -1,3 +1,4 @@
+import { errorMessage } from "../errors";
 import { Express, Request, Response } from "express";
 import Stripe from "stripe";
 import { ENV } from "../_core/env";
@@ -25,9 +26,9 @@ export function registerStripeWebhook(app: Express) {
             : Buffer.from(JSON.stringify(req.body));
 
         event = getStripe().webhooks.constructEvent(rawBody, sig, ENV.stripeWebhookSecret);
-      } catch (err: any) {
-        console.error("[Webhook] Signature verification failed:", err.message);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
+      } catch (err) {
+        console.error("[Webhook] Signature verification failed:", errorMessage(err));
+        return res.status(400).send(`Webhook Error: ${errorMessage(err)}`);
       }
 
       // テストイベント対応
