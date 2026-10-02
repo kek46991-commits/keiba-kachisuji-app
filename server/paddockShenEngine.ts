@@ -10,7 +10,7 @@
  * - 津液 = 体重・発汗バランス → 水分代謝
  */
 
-interface PaddockInput {
+export interface PaddockInput {
   heartRate?: number;
   horseWeight?: number;
   weightDiff?: number;
