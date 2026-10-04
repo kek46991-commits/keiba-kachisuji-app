@@ -1,0 +1,26 @@
+/**
+ * AIスコアをレース内で正規化し、比較可能な推定勝率と期待値を返す。
+ * これは確率を保証するものではなく、同一レース内での相対評価である。
+ */
+import { derivePredictedOdds } from "./predictedOdds";
+
+/** 推定勝率と単勝オッズから期待値(%)を求める。オッズが無い場合は算出しない。 */
+export function computeExpectedValue(winProbability: number, odds: number | null | undefined): number | null {
+  if (!odds || odds <= 0) return null;
+  return Math.round((((winProbability / 100) * odds - 1) * 100) * 10) / 10;
+}
+
+export function applyPredictionMetrics<T extends { score: number; odds: number | null }>(items: T[]) {
+  if (items.length === 0) return items.map(item => ({ ...item, winProbability: 0, expectedValue: null as number | null }));
+
+  const maxScore = Math.max(...items.map(item => item.score));
+  const temperature = 12;
+  const weights = items.map(item => Math.exp((item.score - maxScore) / temperature));
+  const totalWeight = weights.reduce((sum, value) => sum + value, 0) || 1;
+
+  return items.map((item, index) => {
+    const winProbability = Math.round((weights[index]! / totalWeight) * 1000) / 10;
+    const expectedValue = computeExpectedValue(winProbability, item.odds);
+    return { ...item, winProbability, predictedOdds: derivePredictedOdds(winProbability), expectedValue };
+  });
+}

@@ -1,30 +1,29 @@
 services:
+  # Dockerfile で起動する常駐 Express サーバー。
+  # DATABASE_URL を設定すれば外部 MySQL を使い、未設定ならコンテナ同梱の
+  # MariaDB とデモシードで起動する（無料プランは再起動でデータが消える）。
   - type: web
     name: keiba-kachisuji-web
-    env: docker
-    plan: starter
-    autoDeploy: true
+    runtime: docker
     dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore
+    branch: devin/1787386562-keiba-kachisuji-web
     healthCheckPath: /
     envVars:
-      - key: STRIPE_SECRET_KEY
+      - key: PORT
+        value: "10000"
+      - key: VITE_APP_ID
+        value: keiba-kachisuji-web
+      # 管理者として扱うログインメールアドレス（カンマ区切り）
+      - key: ADMIN_EMAILS
+        value: kek46991@gmail.com
+      # 以下は Render のダッシュボードで値を設定する（リポジトリには保存しない）
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
         sync: false
-      - key: STRIPE_PRICE_ID
+      - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
-      - key: APP_SECRET_KEY
-        sync: false
-      - key: APP_PRICE_LABEL
-        value: "月額 1,980円"
-      - key: COOKIE_SECURE
-        value: "1"
-      - key: SUBSCRIBERS_DB_PATH
-        value: /var/data/subscribers.db
-      - key: DATABASE_URL
-        value: ""
-        sync: false
-    disk:
-      name: subscribers-data
-      mountPath: /var/data
-      sizeGB: 1

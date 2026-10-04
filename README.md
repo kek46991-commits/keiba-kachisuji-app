@@ -1,276 +1,170 @@
-# 🏇 勝ち筋解析システム
+# 競馬でGO!（勝ち筋解析システム）
 
-**実データ × 機械学習 × バックテスト** で競馬の期待値を *検証* するための分析基盤。
+JRA（中央）・NAR（地方）の両方に対応した競馬予想・成績管理Webアプリケーション。  
+AI解析による予想の提案に加え、公式レース結果との自動照合、的中判定、回収率の自動集計までを1つの画面フローで扱えます。
 
-> ## ⚠️ 重要な免責事項
-> 競馬の馬券には **控除率 (テラ銭)** が約 20〜30% あり (単勝で約20%)、
-> 市場どおりに買うと払戻は平均的に投資の約 80% にしかなりません。
-> したがって **バックテストで回収率 100% 超 (ROI プラス) を継続的に達成できない限り、
-> 「儲かる」とは言えません**。本プロジェクトの第一目的は利益の保証ではなく、
-> **実データで検証可能な仕組みを作り、予測ロジックの有効性を定量評価すること** です。
-> 同梱の合成データでの結果はアルゴリズムが生成したダミーであり、実市場の成績を意味しません。
+公開デモ: https://keiba-kachisuji-web.onrender.com （Render無料プランのため、アイドル後の初回アクセスは起動に数十秒かかります）
 
-利用形態:
+---
 
-1. **データ駆動パイプライン (Python)** — `data/` → `features.py` → `model.py` → `backtest.py`。
-   実データ (または合成データ) を学習し、勝率を予測してバックテストする **正式な検証ロジック**。
-2. **Streamlitアプリ版 (`app.py`)** — 上記パイプラインを GUI 化。予測・バックテストをブラウザで実行。
-3. **静的Webサイト版 (`site/`)** — サーバー不要のデモ。**ただしパドック経験則は統計的根拠の無い
-   レガシー実装** であり、検証には Python パイプラインを使うこと。
+## 主な機能
 
-## 機能
+### 1. JRA/NAR予想の統合
+* 中央・地方のレースを共通のデータモデル（`races` / `entries` / `payouts` / `predictions`）で保持
+* 予想の生成・保存・買い目（3連単・3連複・馬連・馬単・ワイド）の管理を共通経路で処理
+* 結果照合と成績集計も中央・地方で同じロジック（`server/raceSettlementSummary.ts`）を使用
 
-- **データ駆動予測**: 過去成績・距離/競馬場適性・馬場などの特徴量から各馬の勝率を学習し、
-  レース内で合計100%に正規化した予測勝率を出力 (LightGBM、未導入環境では scikit-learn に自動フォールバック)
-- **バックテスト**: 学習期間/検証期間に時系列分割し、単勝 value / 予測1位 / 1番人気 などの
-  買い方の **的中率・回収率 (ROI)** を集計
-- **ボックス買い目計算機**: 三連単/三連複/馬連/馬単/ワイドの点数・投資額計算
-- **ビジュアル分析**: インタラクティブなグラフ表示（静的版はChart.js、Streamlit版はPlotly）
+### 2. 本物馬名交代
+* 予想エンジンが出力する「馬A・馬B…」等のダミー馬名は保存値を書き換えずそのまま保持
+* レースごとの出走表マスター（`race_entry_master`、キーは `raceKey + 馬番`）と照合し、表示面への解釈的解決
+* 出走表・買い目・解説文・レース結果・成績集計のすべてで実名表示（`shared/horseNameMapping.ts`）
+* マスター未登録時は元の保存値をそのまま表示するため、間違った馬名を出さない
 
-## 静的Webサイト版 (推奨・デプロイ向け)
+### 3. 的中判定・回収率の自動集計ダッシュボード
+* 公式着順（1〜3着）と確定払い戻しを保持し、推奨買い目と自動照合して「的中 / 不的中」を判定（`server/resultSettlement.ts`）
+* 券種ごとの順不同性を正しく扱う（3連単・馬単は順序依存、3連複・馬連・ワイドは順序非依存）
+* 着順確定済みで未精算の予想は、画面表示時に公式払い戻しから自動精算しDBへ永続化（`settlePendingConfirmedRaces`）
+* レース詳細・今日の予想一覧に「1〜3着の馬名と馬番 / 判定 / 回収金額 / 回収率 [%]」を表示
+* 予想履歴・ダッシュボードで通算および日別の「総投資額 / 総回収額 / 連続回収率 / 収支」をグラフ・数値で表示
+* 回収率 = 回収額 ÷ 投資額 × 100、収支 = 回収額 - 投資額（`shared/settlementDisplay.ts`）
+* 買い目・払い戻し・着順のいずれかが未取得の場合は「未精算」として扱い、誤って不的中扱いにしない
 
-ビルド不要の純粋なHTML/CSS/JS。`site/` ディレクトリをそのまま静的ホスティングに置くだけ。
+### 4. 買い目表示の整形
+* フォーメーション表記の重複馬番を表示用ロジックで排除し、「1着5 → 2着4,2,3 → 3着4,2,3,6 (9点)」形式へ自動整形（`client/src/lib/ticketDisplay.ts`）
+* 数量や分別自体は変更せず、表示するだけを整形
 
-### ローカルで確認
+### 5. 日付・時刻表示
+* レース日・更新時刻はすべて JST（Asia/Tokyo）固定で整形し、見る人のタイムゾーンによる日付ズレを防ぐ
 
-```bash
-cd site
-python -m http.server 8080
-# ブラウザで http://localhost:8080 を開く
-```
+### 6. 実データ取得（JRA / NAR）
+* JRA開催日程・NAR開催日程・出馬表・公式単勝オッズ・確定着順・確定払戻を定期取得し、取得できた実データだけをDBへ保存（`server/scheduled/`）
+* 取得に失敗した場合はHTTPステータス・DOM解析失敗・対象レース不在をログへ残し、架空の馬名・オッズ・着順は生成しない
+* 画面側は未取得レースを「未発表 / 保留」として表示し、デモデータへフォールバックしない
+* 起動時取込は段階化（当日カード → 直近結果 → 先読み → 過去バックフィル）し、当日分を最短で利用可能にする
 
-### デプロイ
+### 7. 予想アルゴリズム
+* 能力スコア（適性・騎手成績・馬体重・枠・血統など）を `server/predictionRouter.ts` の `calculateScore` で算出
+* 公式単勝オッズを暗黙確率へ変換し、能力スコア由来のsoftmax確率と対数空間でブレンド（`server/probabilityModel.ts`）
+* 買い目は上位4頭のスコア差が小さい混戦なら三連単/三連複ボックス、軸が明確ならフォーメーションへ自動切替（`server/valueBetting.ts`）。JRA/NARで同一ロジックを共有
 
-- **GitHub Pages**: リポジトリ設定で `site/` を公開ディレクトリに指定（または `site/` の中身をルートに配置）。
-- **Netlify**: Publish directory に `site` を指定（ビルドコマンドは不要）。
-- **Vercel**: Root Directory に `site` を指定（Framework Preset は "Other"）。
+### 8. アクセス制御（既定は全機能無料公開）
+* 既定（`REQUIRE_PREMIUM` 未設定）では全ページ・全APIを誰でも無料で閲覧できる。アカウント登録もアクセスキーも不要（`server/_core/env.ts`）
+* `REQUIRE_PREMIUM=1` を設定した場合のみ、以下の有料ゲートが有効になる
 
-構成:
+#### 有料モード（`REQUIRE_PREMIUM=1`）
+* 有料ページ（`/todays-predictions`、`/predictions`、`/nar-predictions`、`/dashboard`、`/prediction-history`）は未購入だと `/access-pass` へリダイレクト（`client/src/components/PremiumRoute.tsx`）
+* サーバー側でも `premiumProcedure` により有料APIを保護。クライアント変更ではデータを取得できない（`server/access/premiumAccess.ts`）
+* 有料判定は2系統：①ログインユーザーのストライプサブスクリプション（アクティブ/トライアル中） ②アカウント不要の期限付きアクセスパス（1日パス ¥480 / 30日パス ¥1,980）
+* アクセスパスは Stripe Checkout（都度払い）で購入。決済完了時に Webhook と成功画面のクレーム処理の両方が同じキーを決定論的に導出するため、二重発行されない（`server/access/issueAccessPass.ts`）
+* DBにはキーの SHA-256 ハッシュのみを保存し、生キーは購入者への表示と HttpOnly Cookie にのみ保持（`drizzle/0019_access_passes.sql`）
+* 期限切れ・失効済みキーは拒否します。別端末では `/access-pass` キー入力欄で解放できる
 
-```
-site/
-  index.html      # マークアップ
-  styles.css      # ダークテーマのスタイル
-  js/engine.js    # 解析エンジン (JavaScript移植版)
-  js/app.js       # UIロジック・Chart.js描画
-```
+---
 
-## データ駆動パイプライン (Python)
+## 構成技術
 
-```bash
-pip install -r requirements-ml.txt
+| レイヤー | 技術 |
+| :--- | :--- |
+| **フロントエンド** | React 19, Vite, TypeScript, Tailwind CSS, Radix UI, React Query, wouter |
+| **API** | Express, tRPC v11, Zod |
+| **データベース** | MySQL, Drizzle ORM（マイグレーションは drizzle） |
+| **決済** | Stripe（サブスクリプション + 都度払いアクセスパス） |
+| **テスト** | Vitest（50ファイル / 168テスト） |
+| **ビルド** | Vite（クライアント） + esbuild（サーバー） |
+| **インフラ** | Docker, Render（Web Service） |
 
-# 1) 合成データを生成 (実データを使う場合はこの手順を CSV 用意に置き換え)
-python -m data.fetch --out data/sample_races.csv --sqlite data/cache/races.sqlite
+---
 
-# 2) モデルを学習して保存 (特徴量重要度も表示)
-python model.py --csv data/sample_races.csv --out data/cache/model.pkl
-
-# 3) バックテストで的中率・回収率(ROI)を集計
-python backtest.py --csv data/sample_races.csv --train-frac 0.7 --ev-threshold 1.1
-```
-
-各引数を省略すると G1 専用の合成データで動作します。
-`data.fetch` の生成 CLI は `--seasons` と `--races-per-season` で G1 の量を調整で
-きます。
-
-### モジュール構成
-
-| モジュール | 役割 |
-|------------|------|
-| `data/fetch.py` | 過去レースの出走表・結果・確定オッズを CSV/SQLite で取得・保存。`grade` 列で G1/G2/G3/OP を表し、既定の合成データは G1 専用。`filter_grade()` で G1 へ絞り込める |
-| `features.py` | 各出走時点で **過去のみ参照** して特徴量を生成 (リーク防止)。通算/直近成績、距離・競馬場・馬場適性、休養、斤量など。確定オッズ・人気は市場情報リーク防止のため特徴量に含めない |
-| `model.py` | 1着確率を学習する二値分類器。推論時は **レース単位で softmax 正規化** し、G1 だけを学習・推論対象にする |
-| `backtest.py` | 時系列分割で学習/検証し、G1 だけを対象に `calc_box_tickets` で投資額を算出しつつ的中率・回収率を集計 |
-| `engine.py` | 予測勝率から期待値・判定を組み立てる (`analyze_entries`)。旧パドック経験則 (`analyze_horse`) はレガシー |
-
-### データスキーマ (`data/sample_races.csv` と同じ列を用意すれば実データを差し替え可能)
-
-`race_id, date, course, track_type, grade, distance, weather, track_moisture, field_size,
-horse_id, horse_name, umaban, waku, sex, age, jockey, weight_carried, horse_weight,
-horse_weight_diff, odds, popularity, finish_pos, is_synthetic`
-
-> **実データソースについて**: JRA / netkeiba 等のスクレイピングは利用規約・法的にグレーで
-> 安定取得も難しいため、本リポジトリでは同梱しません。上記スキーマの CSV を用意して
-> `data/fetch.py` の `load_races_csv` に渡せば、そのまま学習・バックテストできます。
-> `grade` 列が無い古い CSV / SQLite は自動的に `OP` として読み込みますが、学習・バックテストは `G1` のみを使用します。
-
-## Streamlitアプリ版
-
-```bash
-pip install -r requirements-ml.txt
-streamlit run app.py
-```
-
-- **🤖 データ駆動予測 (G1専用)**: CSV/合成データを G1 に絞って学習し、選択レースの予測勝率・期待値・買い目候補を表示
-- **🧪 バックテスト (G1専用)**: 学習割合・EV閾値・ボックス頭数を指定して G1 の回収率を検証
-- **🎰 買い目計算**: ボックス点数・投資額
-- **📝/📊 パドック (レガシー)**: 旧経験則のデモ (検証用途には非推奨)
-
-## Web SaaS 版
-
-`site/` の静的 UI をそのまま使う Web 版を、FastAPI + Stripe サブスクで公開する構
-成を追加しました。
-
-### ローカル起動
-
-```bash
-pip install -r requirements.txt
-DEMO_MODE=1 uvicorn web.server:app --port 8000
-```
-
-### Docker / PaaS
-
-```bash
-docker build -t keiba-kachisuji .
-docker run --rm -p 8000:8000 -e PORT=8000 -e DEMO_MODE=1 keiba-kachisuji
-```
-
-Render / Railway / Fly では、この Dockerfile をそのまま使い、環境変数
-`APP_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`
-を設定してください。Stripe の鍵が未設定でも landing page は表示され、checkout は
-`Stripe未設定` エラーを返します。
-
-## 共有リンク (トークン付き期限リンク)
-
-購読ゲート付きページ (`/app`, `/yoso1`, `/horses`, `/jockeys`) への一時アクセスを、
-**署名付き・期限付き・失効可能** な共有リンクで発行できます。管理者は
-`APP_SECRET_KEY` を Bearer トークンとして各 API を呼び出します。
-
-- 発行: `POST /api/share` — `target` / `ttl_seconds` / `max_uses` / `label` を指定。
-  レスポンスの `url` (`/s/<token>`) を配布します。
-- 利用: 受け取った人が `/s/<token>` を開くと、有効期限内かつ利用回数内であれば
-  短命 Cookie が付与され対象ページへ遷移します。
-- 一覧: `GET /api/share` — 発行済みリンクと利用回数・失効状態を返します。
-- 失効: `POST /api/share/{id}/revoke` — 即座にアクセスを無効化します。
-
-トークンは `itsdangerous` で署名され改ざんを検知します。有効期限・利用回数・失効は
-サーバー側 (SQLite / PostgreSQL) で追跡されるため、リンクを配布した後でも管理者が
-アクセスを取り消せます。`target` はホワイトリスト検証され、オープンリダイレクトを防ぎます。
-
-```bash
-curl -X POST http://localhost:8000/api/share \
-  -H "Authorization: Bearer $APP_SECRET_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"target": "/app", "ttl_seconds": 86400, "max_uses": 5, "label": "友人用"}'
-```
-
-## デプロイ
-
-この Web SaaS は、**常時起動の stateful ホスト** と **serverless** で要件が異なり
-ます。
-
-### 推奨: Render / Railway / Fly
-
-- Dockerfile からそのまま起動できます
-- SQLite で `web/subscribers.db` を使えるので MVP と相性が良いです
-- Render では persistent disk を `SUBSCRIBERS_DB_PATH` にマウントしてください
-- GitHub リポジトリをプロバイダ側で接続すると、branch への push で auto-deploy されます
-
-### Vercel / Netlify
-
-- Python は serverless function として動くため、ファイルシステムは **永続保存前提で
-はありません**
-- そのため SQLite の subscriber DB は保持されず、**`DATABASE_URL` で managed Post
-gres を必須にしてください**
-- `DATABASE_URL` なしで動かすと、デプロイはできますが webhook で subscriber を永続
-保存できません
-- Vercel は `vercel.json` をそのまま使い、`api/index.py` がエントリになります
-- Netlify は `netlify.toml` と `netlify/functions/app.py` を使いますが、こちらは Verc
-el より副次的な構成です
-
-## Vercel へのデプロイ手順
-
-Vercel は serverless なので、購入者情報を SQLite で保持しないでください。**Neon か Supabase の Postgres を必ず用意**し、`DATABASE_URL` を設定します。
-
-1. GitHub リポジトリを Vercel に Import します。
-2. Framework Preset は `Other` のままにします。
-3. Environment Variables を設定します。
-   - `STRIPE_SECRET_KEY`
-   - `STRIPE_PRICE_ID`
-   - `STRIPE_WEBHOOK_SECRET`
-   - `APP_SECRET_KEY`
-   - `PUBLIC_BASE_URL` = `https://あなたのVercelドメイン`
-   - `COOKIE_SECURE=1`
-   - `DATABASE_URL` = Neon / Supabase の接続文字列
-4. Neon / Supabase で無料 Postgres を作成します。
-   - Neon: Project を作成 → Connection string をコピー
-   - Supabase: Project を作成 → `Settings > Database > Connection string` をコピー
-5. Stripe ダッシュボードで Webhook を追加します。
-   - URL: `https://YOUR-DOMAIN/api/webhook`
-   - 少なくとも `checkout.session.completed` と `customer.subscription.*` を購読
-6. デプロイ後に確認します。
-   - `/` が表示されること
-   - `/app` が購読なしではリダイレクトすること
-   - `DEMO_MODE=1` の検証時は `/app` が開けること
-   - Checkout 完了後に `/access?session_id=...` で cookie が発行されること
-   - Webhook 後に購読状態が Postgres に保存されること
-
-補足: Vercel は root の `requirements.txt` を読みます。このリポジトリでは `requirements.txt` を web 用の薄い shim にし、重い ML 依存は `requirements-ml.txt` に分離しています。
-
-### Stripe Webhook
-
-Stripe ダッシュボードに以下の URL を登録してください。
+## アーキテクチャ
 
 ```text
-https://YOUR-DOMAIN/api/webhook
+ブラウザ (React 19 + Vite)
+   │  React Query + tRPC client（型は AppRouter から推論）
+   ▼
+Express (server/_core/index.ts)
+   ├─ /api/health, /healthz        ヘルスチェック（DB非依存・ボディパーサより前段）
+   ├─ /api/trpc/*                  tRPC ルーター（server/routers.ts に集約）
+   ├─ /api/stripe/webhook          Stripe Webhook（rawボディ）
+   └─ 静的配信（dist/public）
+   │
+   ├─ ドメインロジック: 予想スコア / 確率モデル / 買い目生成 / 結果精算 / 成績集計
+   └─ Drizzle ORM ──▶ MySQL（races / entries / raceOdds / payouts / predictions ...）
+        ▲
+        └─ 定期取込（server/scheduled/*）──▶ JRA・NAR の公開データ
 ```
 
-チェックアウト完了とサブスクリプション更新はこの webhook で subscriber DB に反映し
-ます。
+リクエストは「UI → tRPC procedure → ドメインモジュール → Drizzle」と一方向に流れ、
+スクレイピングや精算などの副作用は procedure から専用モジュールへ委譲しています（単一責任）。
 
-## デスクトップアプリ
+## ディレクトリ構成
 
-Streamlit アプリを起動するデスクトップ向けランチャーと、PyInstaller 用のパッケー
-ジ定義を同梱しています。
+```text
+client/src/pages/       画面（予想・レース結果・今日の予想・履歴・ダッシュボード等）
+client/src/components/  RaceSettlementCard / PerformanceSummaryPanel 等の共通UI
+client/src/lib/         買い目整形・tRPCクライアント等の表示系ロジック
+client/src/types/       画面表示用のドメイン型
+server/                 tRPCルーター、結果照合・精算、成績集計、出走表マスター
+server/scheduled/       JRA/NARの日程・出馬表・オッズ・結果の取得処理
+server/access/          有料判定・アクセスパス発行
+shared/                 馬名変換・買い目整形などクライアント/サーバー共通ロジック
+drizzle/                スキーマ定義とマイグレーション
+```
 
-### ローカルでビルド
+---
+
+## セットアップ
 
 ```bash
-pip install -r requirements-ml.txt
-pip install pyinstaller
-pyinstaller keiba-app.spec
+npm install
+npm run db:push     # DATABASE_URL のMySQLへスキーマ適用
+npm run dev         # 開発サーバー（http://localhost:3000）
 ```
 
-### CI での配布
-
-GitHub Actions が Windows / macOS 向けのバイナリをビルドし、Actions の artifact ま
-たは
-タグ付きリリース (`v*`) からダウンロードできるようにします。
-
-### 直接起動
+### 型チェック・テスト・ビルド
 
 ```bash
-python desktop.py
+npx tsc --noEmit    # 型チェック（npm run check と同じ）
+npx vitest run      # ユニットテスト（50ファイル / 168テスト）
+npm run build       # クライアント(Vite) + サーバー(esbuild) ビルド
+npm start           # ビルド済みサーバーを起動
 ```
 
-必要ならポートを固定して起動できます。
+## 環境変数
 
-```bash
-python desktop.py --port 8501
-```
+| 変数 | 用途 |
+| :--- | :--- |
+| `DATABASE_URL` | MySQL接続文字列（必須）例: `mysql://user:pass@host:3306/keiba` |
+| `JWT_SECRET` | セッション署名・アクセスキー導出の秘密鍵（必須） |
+| `STRIPE_SECRET_KEY` | Stripeシークレットキー（決済に必須） |
+| `STRIPE_WEBHOOK_SECRET` | Stripe Webhook署名検証用（決済に必須） |
+| `VITE_APP_ID` | アプリ識別子 |
+| `OAUTH_SERVER_URL` / `OWNER_OPEN_ID` | ログイン連携を使う場合に設定 |
+| `BUILT_IN_FORGE_API_URL` / `BUILT_IN_FORGE_API_KEY` | AI解析APIを使う場合に設定 |
+| `INGESTION_BACKFILL_DAYS` / `INGESTION_FORWARD_DAYS` | 起動時に取り込む過去日数・先読み日数（既定7） |
+| `INGESTION_BACKFILL_SKIP_THRESHOLD` | 過去分がこの件数以上確定済みなら起動時の過去取込を省略（既定50） |
+| `DISABLE_DATA_INGESTION` | `1` で自動取込を停止 |
+| `NODE_ENV` / `PORT` | 実行モードと待受ポート（既定 3000） |
 
-## 勝率・期待値の考え方
+## ヘルスチェック
 
-- **予測勝率**: モデルが出力する確率を **レース内で softmax 正規化** するため、出走馬の合計は 1。
-  旧来の `total_score / 150` (合計が 1 にならない) を置き換える統計的な確率。
-- **期待値 (EV)**: `EV = 予測勝率 × 単勝オッズ`。これは単勝 100 円に対する **期待払戻倍率 (= 回収率)**。
-- **損益分岐は EV = 1.0**。ただし控除率 (単勝で約20%) のため市場どおりに買うと EV は平均 約0.8。
-  EV > 1.0 を継続できる買い目を見つけられて初めて利益が期待できる。
+| パス | 内容 |
+| :--- | :--- |
+| `/api/health` | `{"status":"ok","uptimeSeconds":...}` を返す軽量エンドポイント |
+| `/healthz` | 同一ハンドラの別名。GET / HEAD に対応 |
 
-### 期待値の判定基準 (控除率を考慮)
+DB・スクレイピング・認証を一切経由しないため、UptimeRobot等からのスリープ防止pingに利用できます（`server/health.ts`）。
 
-| 期待値 (回収率) | 判定 |
-|-----------------|------|
-| 1.3以上 | 🔥 妙味大・強い買い |
-| 1.1以上 | ⭐ 期待値あり・買い |
-| 1.0以上 | 👀 損益分岐付近・小口 |
-| 0.8以上 | △ 控除率相当・見送り寄り |
-| 0.8未満 | ✗ 期待値不足・見送り |
+Stripe Webhook は `https://<本番ドメイン>/api/stripe/webhook` を登録し、`checkout.session.completed` を購読してください。
 
-## テスト
+## 無料での公開デプロイ（Render + 無料MySQL）
 
-```bash
-pip install pytest
-pytest -q
-```
+Express常駐サーバー＋MySQL構成のため、静的ホスティング（Vercel/Netlifyの静的公開）では動作しません。無料枠で公開する場合は Render（Web Service / Free）＋ MySQL互換の無料DB（TiDB Cloud Serverless など）を使います。
+
+1. Render で「New +」→「Blueprint」からこのリポジトリを選ぶと、ルートの `render.yaml`（`runtime: docker`）が読み込まれる。
+2. データを永続させる場合は無料MySQLを作成し `DATABASE_URL` を設定する（TiDB Cloud Serverless はTLS必須のため `?ssl={"minVersion":"TLSv1.2"}` を付与）:
+   `mysql://<user>:<pass>@<host>:4000/keiba?ssl={"minVersion":"TLSv1.2"}`
+   `DATABASE_URL` を空のままにすると、コンテナ同梱の MariaDB とデモシードで起動する（外部DB不要だが、再起動でデータは消えるためデモ用途）。
+3. `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` はRenderのダッシュボードで設定する（`render.yaml` では `sync: false` にしており値はリポジトリに保存しない）。未設定でもサーバーは起動し、決済導線のみ無効になる。`JWT_SECRET` はRenderが自動生成する。
+4. デプロイ時に `pnpm build` と `drizzle-kit push`（`drizzle/schema.ts` を正としてスキーマ反映）が実行され、`https://<service>.onrender.com` が発行される。
+
+無料プランは一定時間アクセスがないとスリープし、次のアクセスで数十秒かかる点に注意してください。

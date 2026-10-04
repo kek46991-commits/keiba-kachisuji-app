@@ -1,16 +1,18 @@
-FROM python:3.12-slim
+FROM node:22-bookworm-slim
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends mariadb-server ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY requirements.txt /app/requirements.txt
-COPY requirements-ml.txt /app/requirements-ml.txt
-COPY web/requirements.txt /app/web/requirements.txt
+COPY . .
 
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r /app/requirements-ml.txt -r /app/requirements.txt
+RUN corepack enable \
+  && pnpm install --frozen-lockfile \
+  && pnpm build
 
-COPY . /app
+ENV NODE_ENV=production
+EXPOSE 10000
 
-ENV PORT=8000
-
-CMD ["sh", "-c", "uvicorn web.server:app --host 0.0.0.0 --port ${PORT:-8000}"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
